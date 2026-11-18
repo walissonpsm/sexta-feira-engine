@@ -63,7 +63,7 @@ if [ -d interface ]; then
         if printf '%s' "$sem_ns" | grep -qiE 'https?://|(src|href|action|poster|data)[[:space:]]*=[[:space:]]*["'\'']?//|url\([[:space:]]*["'\'']?//|@import'; then
             falha "$nome: endereço externo (http, https, // ou @import)"
         fi
-        if printf '%s' "$sem_ns" | grep -qE 'fetch[[:space:]]*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon|importScripts|import[[:space:]]*\(|new[[:space:]]+(Shared)?Worker|serviceWorker|RTCPeerConnection|WebTransport|window\.open|location(\.href)?[[:space:]]*='; then
+        if printf '%s' "$sem_ns" | grep -qE 'fetch[[:space:]]*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon|importScripts|import[[:space:]]*\(|new[[:space:]]+(Shared)?Worker|serviceWorker|RTCPeerConnection|WebTransport|window\.open|location(\.href)?[[:space:]]*=([^=]|$)'; then
             falha "$nome: chamada de rede (fetch, XMLHttpRequest...). O canal com a Sexta-Feira entra numa versão futura, com regra própria"
         fi
     done < <(find interface -mindepth 1 -maxdepth 1 -type f -print0)

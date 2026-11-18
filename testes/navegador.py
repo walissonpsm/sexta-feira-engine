@@ -133,5 +133,19 @@ class Tela(unittest.TestCase):
         self.assertEqual(pg.erros, [])
 
 
+    def test_nome_de_cada_agente_aparece_e_recebe_o_clique(self):
+        pg = self.abre()
+        for i in range(6):
+            wrap = pg.locator(".nr:not(.centro)").nth(i)
+            rot = wrap.locator(".rot").bounding_box()
+            x, y = rot["x"] + rot["width"] / 2, rot["y"] + rot["height"] / 2
+            topo = pg.evaluate("([x, y]) => { const e = document.elementFromPoint(x, y); const b = e && e.closest('.nr'); return b ? b.getAttribute('aria-label') : null; }", [x, y])
+            self.assertEqual(topo, wrap.get_attribute("aria-label"), "algo cobre o nome do agente %d" % i)
+            pg.mouse.click(x, y)
+            self.assertEqual(pg.locator(".nr.sel").count(), 1, "o clique no nome do agente %d não abriu o detalhe" % i)
+            pg.keyboard.press("Escape")
+        self.assertEqual(pg.erros, [])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -63,19 +63,19 @@ h3 + .ln { border-top: 0; }
 .avisos .kv { display: flex; justify-content: space-between; font-size: 19px; padding: 8px 0; border-top: 1px solid rgba(110, 125, 255, .28); }
 
 /* o centro: neurônios */
-.nr { position: absolute; display: block; padding: 0; border-radius: 10px; }
-.nr canvas { display: block; width: 100%; height: 100%; mix-blend-mode: screen; pointer-events: none; }
+.nr { position: absolute; display: block; padding: 0; border-radius: 10px; mix-blend-mode: screen; }   /* o blend fica na caixa: o centro (z-index) não esconde os vizinhos */
+.nr canvas { display: block; width: 100%; height: 100%; pointer-events: none; }
 .nr .rot { position: absolute; left: 10px; bottom: 4px; font-size: 19px; font-weight: 700; color: var(--c, #fff); text-shadow: 0 0 8px #000, 0 0 3px #000; pointer-events: none; }
 .nr.sel { box-shadow: 0 0 0 1.5px var(--c), 0 0 22px var(--c); }
 .nr.pulso { animation: pulso .55s ease-out; }
 @keyframes pulso { 0% { box-shadow: 0 0 0 1.5px var(--c), 0 0 34px var(--c); } 100% { box-shadow: 0 0 0 0 transparent; } }
-.nr.centro { cursor: default; z-index: 2; }
-.nr.centro .rot { top: 6px; bottom: auto; }
+.nr.centro { cursor: default; z-index: 2; pointer-events: none; }   /* o Núcleo não é botão: o clique passa para quem está por baixo */
+.nr.centro .rot { top: 76%; bottom: auto; left: 12%; }
 .fios { left: 0; top: 0; width: 1672px; height: 941px; pointer-events: none; z-index: 1; }
 .fios line { stroke: var(--c); stroke-opacity: .5; stroke-width: 1.5; stroke-dasharray: 4 6; }
 .fios circle { fill: var(--c); filter: drop-shadow(0 0 6px var(--c)); }
-.satelite { z-index: 3; width: 74px; height: 74px; border: 2px solid var(--cor-corretora); border-radius: 8px; background: rgba(0, 0, 0, .7);
-  display: grid; place-items: center; text-align: center; font-size: 14px; font-weight: 700; color: var(--cor-corretora); line-height: 1.1; pointer-events: none; }
+.satelite { z-index: 3; width: 62px; height: 62px; border: 2px solid var(--cor-corretora); border-radius: 8px; background: rgba(0, 0, 0, .7);
+  display: grid; place-items: center; text-align: center; font-size: 12px; font-weight: 700; color: var(--cor-corretora); line-height: 1.1; pointer-events: none; }
 
 /* faixa de baixo */
 .bx { left: 12px; right: 12px; top: 668px; height: 190px; display: flex; gap: 14px; }

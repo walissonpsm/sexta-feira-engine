@@ -141,7 +141,7 @@
     });
     // a Corretora: módulo satélite PARADO ao lado do Robô (não gira, não pulsa)
     var s = el('div', 'satelite', null, tela);
-    s.style.left = (g.ag.robo.x + g.ag.robo.w - 78) + 'px'; s.style.top = (g.ag.robo.y - 44) + 'px';
+    s.style.left = (g.ag.robo.x + g.ag.robo.w - 62) + 'px'; s.style.top = (g.ag.robo.y + g.ag.robo.h - 64) + 'px';   // canto livre do Robô, fora da caixa do Núcleo
     el('span', null, 'Corretora', s);
     s.setAttribute('aria-label', 'Corretora: módulo satélite do Robô');
   }
@@ -202,11 +202,12 @@
 
   function desenhaEsq() {
     esvazia(painel.esq);
+    painel.lista = {}; painel.volta = null;
     if (!sel) {
       var h = el('h3', null, 'Agentes', painel.esq); el('small', null, AGENTES.length + ' agentes', h);
       AGENTES.forEach(function (a) {
         var d = dados.agentes[a.id];
-        var b = el('button', 'ln', null, painel.esq); b.type = 'button'; b.setAttribute('aria-label', a.nome + ': abrir o detalhe');
+        var b = el('button', 'ln', null, painel.esq); b.type = 'button'; painel.lista[a.id] = b; b.setAttribute('aria-label', a.nome + ': abrir o detalhe');
         b.addEventListener('click', function () { abrir(a.id); });
         var pt = el('span', 'pt', null, b); pt.style.setProperty('--c', cor(a));
         var n = el('span', 'n', a.nome, b);
@@ -218,7 +219,7 @@
     var ag = AGENTES.filter(function (x) { return x.id === sel; })[0], d2 = dados.agentes[sel];
     var t = el('h3', null, ag.nome, painel.esq);
     t.style.color = cor(ag);
-    var v = el('button', 'volta', '← voltar', t); v.type = 'button'; v.addEventListener('click', function () { abrir(null); });
+    var v = el('button', 'volta', '← voltar', t); v.type = 'button'; painel.volta = v; v.addEventListener('click', function () { abrir(null); });
     var det = el('div', 'det', null, painel.esq);
     if (!d2) { el('div', 'vazio', 'Sem dados deste agente.', det); return; }
     el('div', 'grande ' + classeEstado(d2.estado), ESTADOS[d2.estado], det);
@@ -281,9 +282,13 @@
   }
 
   function abrir(id) {
+    var antes = sel;
     sel = id === sel ? null : id;
     AGENTES.forEach(function (a) { nr[a.id].wrap.classList.toggle('sel', a.id === sel); });
     desenhaEsq();
+    // o painel foi refeito: devolve o foco do teclado (ao "voltar" quando abriu, ao botão do agente quando fechou)
+    var alvo = sel ? painel.volta : (antes && painel.lista[antes]);
+    if (alvo && document.activeElement === document.body) alvo.focus();
   }
 
   // ---------------------------------------------------------------- escala, leve e laço de animação

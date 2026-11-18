@@ -39,10 +39,10 @@ git init -q --bare "$TMP/v"
 git -C "$TMP/v" bundle verify "$B" >/dev/null 2>&1 || recusa "bundle verify reprovou"
 git -C "$TMP/v" fetch -q "$B" '+refs/tags/*:refs/tags/*' >/dev/null 2>&1 || recusa "o fetch das tags do bundle falhou (clone raso?)"
 git -C "$TMP/v" fsck --connectivity-only >/dev/null 2>&1 || recusa "o bundle não traz todos os objetos"
-ANTERIOR="$(git tag --list 'v[0-9]*' --sort=-version:refname | grep -vx "v$V" | head -n1 || true)"
+ANTERIOR="$(git tag --list 'v[0-9]*' | sort -V | awk -v c="v$V" '$0 == c { print prev; exit } { prev = $0 }')"   # a tag logo abaixo desta (vazio na primeira versão)
 if [ -n "$ANTERIOR" ]; then
     git -C "$TMP/v" merge-base --is-ancestor "$ANTERIOR" "v$V" || recusa "a versão anterior ($ANTERIOR) não é ancestral de v$V"
 fi
-git clone --quiet --no-checkout "$B" "$TMP/c" >/dev/null 2>&1
-[ "$(git -C "$TMP/c" show "refs/tags/v$V:VERSAO" | tr -d '[:space:]')" = "$V" ] || { echo "empacotar: VERSAO dentro da tag não bate" >&2; exit 1; }
+git clone --quiet --no-checkout "$B" "$TMP/c" >/dev/null 2>&1 || recusa "não consegui clonar o bundle"
+[ "$(git -C "$TMP/c" show "refs/tags/v$V:VERSAO" | tr -d '[:space:]')" = "$V" ] || recusa "a VERSAO dentro da tag não bate"
 echo "bundle pronto: $B ($(sha256sum "$B" | cut -d' ' -f1))"

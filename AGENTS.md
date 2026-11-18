@@ -99,10 +99,10 @@ Só as 2 últimas versões ficam aqui. Formato: o que mudou · arquivos · não 
   `eval` na tela (só o `neuronio.html` fica fora da regra do HTML dinâmico); o selo "DADOS FICTÍCIOS" mora no `index.html` e só sai quando houver dados reais (aí a regra do
   `conferir.sh` muda junto); `VERSAO_ENGINE` em `tela.js` = `VERSAO`; `publicar/` nunca é recriada; o desenho do neurônio (`neuronio.js`, gerado do `neuronio.html`) não se edita à mão sem o dono.
 - Como testar: `bash testes/conferir.sh`, `bash testes/atualizador.sh`, `bash testes/empacotar.sh` (sobre o último commit) e, na nuvem, `python3 testes/navegador.py`.
-- Auditoria independente: (a preencher)
+- Auditoria independente (agente separado): sem defeito grave. Achou e foi corrigido: (a) o canvas do Núcleo cobria os nomes e roubava o clique de Ações e ETFs e Cripto (o `mix-blend-mode` passou para a caixa `.nr`, o centro ficou com `pointer-events: none`, e há teste que clica no nome de cada agente); (b) `empacotar.sh` não apagava o bundle se o clone ou a `VERSAO` da tag falhasse (agora usa `recusa`); (c) a tag anterior era "a maior diferente" e agora é a logo abaixo (`sort -V`); (d) `location[[:space:]]*=` reprovava `===` (agora `=([^=]|$)`); (e) o foco do teclado se perdia ao abrir o detalhe (volta para o botão "voltar" e depois para o agente) e o `role="application"` virou `region`; (f) o satélite da Corretora saiu de dentro da caixa do Núcleo. Não corrigido por decisão: as regras 3 e 3b do `conferir.sh` são `grep` e podem ser burladas (`'inner'+'HTML'`); a barreira real é a CSP `connect-src 'self'` do servidor da Sexta-Feira.
 - Armadilhas: (1) os neurônios pequenos não animam no modo leve (só o brilho do pulso); (2) as telas cuja proporção não é 16:9 ganham faixas pretas (a tela é escalada inteira);
   (3) `mix-blend-mode: screen` nos canvases deixa os neurônios se sobreporem sem cobrir o vizinho; (4) o teste do modo leve conta chamadas de `drawImage`, não quadros por segundo reais;
-  (5) nada visto no PC real nem no systemd.
+  (5) o `testes/atualizador.sh` troca `VERSAO` e `VERSAO_ENGINE` juntos (`poe_versao`); quem criar versões de teste à mão faz o mesmo, senão o `conferir.sh` reprova; (6) o `conferir.sh` não é barreira completa contra código malicioso (só pega o óbvio); (7) nada visto no PC real nem no systemd.
 
 ### v0.1.1 — a chave do espelho na pasta de segredos (18/11)
 
