@@ -20,11 +20,11 @@ Não depende de nada externo: abre direto em qualquer navegador moderno.
 
 ## Instalação (uma vez)
 
-1. Baixe `sexta-feira-engine-vX.Y.Z.bundle` para `~/Downloads`.
-2. Rode `bash instalar-engine.sh` (se ainda não tem a pasta, extraia o script do bundle: `git clone sexta-feira-engine-vX.Y.Z.bundle /tmp/engine && bash /tmp/engine/instalar-engine.sh`).
+1. Baixe `sexta-feira-engine-vX.Y.Z.bundle` e `instalar-engine.sh` para `~/Downloads`.
+2. Rode `bash ~/Downloads/instalar-engine.sh`.
 3. Pronto: a pasta fica em `~/sexta-feira-engine` e o atualizador liga sozinho no systemd do usuário.
 
-Espelho opcional no GitHub: coloque a chave em `~/sexta-feira-engine-segredos/github/id_ed25519` (deploy key com escrita) antes de instalar.
+Espelho opcional no GitHub: coloque a chave em `~/sexta-feira-engine-segredos/github/id_ed25519` (deploy key com escrita) antes de instalar, ou depois e rode `~/sexta-feira-engine/atualizar-engine.sh --espelhar`.
 
 ## Atualização
 

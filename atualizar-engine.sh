@@ -16,6 +16,7 @@
 set -euo pipefail
 
 ENGINE_DIR="${ENGINE_DIR:-$HOME/sexta-feira-engine}"
+export ENGINE_DIR
 DOWNLOADS_DIR="${DOWNLOADS_DIR:-$HOME/Downloads}"
 SYSTEMD_USER_DIR="${SYSTEMD_USER_DIR:-$HOME/.config/systemd/user}"
 SEM_SYSTEMD="${SEM_SYSTEMD:-0}"
@@ -136,7 +137,7 @@ desfazer_unidades_novas() {   # usado no rollback: tira o que a tentativa acabou
 }
 
 montar_publicar() { bash "$ENGINE_DIR/ferramentas/montar-publicar.sh" "$ENGINE_DIR" >/dev/null; }
-rodar_conferencia() { ENGINE_DIR="$ENGINE_DIR" bash "$ENGINE_DIR/testes/conferir.sh" >/dev/null; }
+rodar_conferencia() { bash "$ENGINE_DIR/testes/conferir.sh" >/dev/null; }
 
 # --- conferência do arquivo (clone descartável) -------------------------------------------------------------------------
 examinar_bundle() {   # $1 = bundle, $2 = versão do nome. Mensagem de motivo em stderr se reprovar.

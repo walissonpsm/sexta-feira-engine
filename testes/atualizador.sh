@@ -44,15 +44,16 @@ git bundle create "$T/sexta-feira-engine-v0.1.0.bundle" --branches --tags >/dev/
 
 # 1. instalação inicial ---------------------------------------------------------------------------------------------------
 cp "$T/sexta-feira-engine-v0.1.0.bundle" "$DOWNLOADS_DIR/"
-bash "$FONTE/instalar-engine.sh" >/dev/null 2>&1
+bash "$FONTE/instalar-engine.sh" >"$T/inst.log" 2>&1 || cat "$T/inst.log" >&2
 confere "instalação inicial deixa a v0.1.0" '[ "$(instalado)" = 0.1.0 ]'
 confere "instalação cria publicar/ com index.html" '[ -f "$ENGINE_DIR/publicar/index.html" ] && [ -f "$ENGINE_DIR/publicar/neuronio.html" ]'
 confere "estado/ tem permissão 700" '[ "$(stat -c %a "$ENGINE_DIR/estado")" = 700 ]'
 confere "unidades copiadas" '[ -f "$SYSTEMD_USER_DIR/engine-atualizador.path" ] && [ -f "$SYSTEMD_USER_DIR/engine-atualizador.timer" ] && [ -f "$SYSTEMD_USER_DIR/engine-atualizador.service" ]'
 confere "instalado no branch main" '[ "$(git -C "$ENGINE_DIR" symbolic-ref --short HEAD)" = main ]'
-bash "$FONTE/instalar-engine.sh" >/dev/null 2>&1
+bash "$FONTE/instalar-engine.sh" >"$T/inst.log" 2>&1 || cat "$T/inst.log" >&2
 confere "segunda instalação é recusada" '[ $? -ne 0 ] || ! bash "$FONTE/instalar-engine.sh" >/dev/null 2>&1'
 confere "sem nada novo o automático sai calado" '[ -z "$(A --auto 2>&1)" ]'
+# shellcheck disable=SC2034  # usada dentro de eval
 INODE_ANTES="$(stat -c %i "$ENGINE_DIR/publicar")"
 
 # 2. atualização 0.1.0 para 0.1.1 ------------------------------------------------------------------------------------------
@@ -112,6 +113,7 @@ echo '<script>fetch("https://exemplo.invalid/x")</script>' > interface/ruim.html
 git add -A; git commit -q -m "v0.1.3 ruim"; git tag v0.1.3
 git bundle create "$T/sexta-feira-engine-v0.1.3.bundle" --branches --tags >/dev/null 2>&1
 cp "$T/sexta-feira-engine-v0.1.3.bundle" "$DOWNLOADS_DIR/"
+# shellcheck disable=SC2034  # usada dentro de eval
 COMMIT_ANTES="$(git -C "$ENGINE_DIR" rev-parse HEAD)"
 A --auto >"$T/saida" 2>&1
 confere "teste que falha: volta para a versão anterior" '[ "$(instalado)" = 0.1.2 ] && [ "$(git -C "$ENGINE_DIR" rev-parse HEAD)" = "$COMMIT_ANTES" ]'

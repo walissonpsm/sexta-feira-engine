@@ -16,6 +16,7 @@ ENGINE_DIR="${ENGINE_DIR:-$HOME/sexta-feira-engine}"
 DOWNLOADS_DIR="${DOWNLOADS_DIR:-$HOME/Downloads}"
 SYSTEMD_USER_DIR="${SYSTEMD_USER_DIR:-$HOME/.config/systemd/user}"
 SEGREDOS_DIR="${SEGREDOS_DIR:-$HOME/sexta-feira-engine-segredos}"
+export ENGINE_DIR SEGREDOS_DIR
 SEM_SYSTEMD="${SEM_SYSTEMD:-0}"
 RE_BUNDLE='^sexta-feira-engine-v([0-9]+\.[0-9]+\.[0-9]+)\.bundle$'
 
@@ -102,7 +103,7 @@ if ! git -C "$ENGINE_DIR" checkout --quiet -B main "refs/tags/v$V"; then
 fi
 
 ERRO_TESTE="$(mktemp "${TMPDIR:-/tmp}/engine-conferir.XXXXXX")"
-if ! ENGINE_DIR="$ENGINE_DIR" bash "$ENGINE_DIR/testes/conferir.sh" >/dev/null 2>"$ERRO_TESTE"; then
+if ! bash "$ENGINE_DIR/testes/conferir.sh" >/dev/null 2>"$ERRO_TESTE"; then
     erro "a rodada de teste reprovou:"; cat "$ERRO_TESTE" >&2 || true
     rm -f -- "$ERRO_TESTE"; limpar; exit 1
 fi
@@ -123,7 +124,7 @@ fi
 
 # --- espelho (opcional) -------------------------------------------------------------------------------------------------
 if [ -f "$SEGREDOS_DIR/github/id_ed25519" ]; then
-    SEGREDOS_DIR="$SEGREDOS_DIR" ENGINE_DIR="$ENGINE_DIR" bash "$ENGINE_DIR/atualizar-engine.sh" --espelhar \
+    bash "$ENGINE_DIR/atualizar-engine.sh" --espelhar \
         || erro "aviso: o espelho no GitHub não funcionou agora (a instalação está certa). Tente depois: $ENGINE_DIR/atualizar-engine.sh --espelhar"
 else
     log "espelho no GitHub desligado (sem a chave em $SEGREDOS_DIR/github/id_ed25519). Para ligar depois: coloque a chave e rode $ENGINE_DIR/atualizar-engine.sh --espelhar"
