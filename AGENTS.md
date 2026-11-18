@@ -15,8 +15,9 @@ parte "inteligente" é o seu próprio atualizador (`atualizar-engine.sh`).
 É independente da Sexta-Feira: instalador e atualizador próprios, sem Docker, sem Núcleo, sem agentes. Nomes na tela: FIIs, Ações e ETFs,
 Cripto, Radar, Robô, Corretora, Segurança, Núcleo (os mesmos do repositório `sexta-feira`).
 
-Arquivos: `interface/` (o que vai para a tela), `instalar-engine.sh`, `atualizar-engine.sh`, `systemd/` (3 unidades do atualizador),
-`testes/conferir.sh` (a rodada de teste), `ferramentas/montar-publicar.sh` (monta `publicar/`) e `ferramentas/empacotar.sh` (só na nuvem).
+Arquivos: `interface/` (o que vai para a tela: `index.html`, `tela.css`, `tela.js`, `cores.css`, `neuronio.js`, `dados-ficticios.js` e o `neuronio.html` do dono),
+`instalar-engine.sh`, `atualizar-engine.sh`, `systemd/` (3 unidades do atualizador), `testes/conferir.sh` (a rodada de teste), `testes/atualizador.sh`,
+`testes/empacotar.sh`, `testes/navegador.py` (só na nuvem), `ferramentas/montar-publicar.sh` (monta `publicar/`) e `ferramentas/empacotar.sh` (só na nuvem).
 
 ## 2. Regra desta pasta: não editar
 
@@ -33,8 +34,8 @@ Arquivos: `interface/` (o que vai para a tela), `instalar-engine.sh`, `atualizar
 Igual ao da Sexta-Feira (seção 3 do `AGENTS.md` de lá), em resumo:
 
 1. **Nuvem** (sessão do Claude): pedido resumido; desenho no Opus e 1º "sim"; código no Sonnet e 2º "sim"; branch `claude/...` (nunca a pasta
-   instalada); `testes/conferir.sh` e os testes do atualizador; **auditoria independente** (obrigatória quando muda código); documentos da
-   versão (`VERSAO`, topo do `CHANGELOG.md`, seção 7 daqui); `ferramentas/empacotar.sh` cria a tag leve `vX.Y.Z` e o bundle. A sessão só
+   instalada); `testes/conferir.sh`, os testes do atualizador e do empacotador e, se mudou a tela, `python3 testes/navegador.py`; **auditoria independente** (obrigatória quando muda código); documentos da
+   versão (`VERSAO`, topo do `CHANGELOG.md`, seção 7 daqui); `ferramentas/empacotar.sh` cria a tag leve `vX.Y.Z` e o bundle (o clone da nuvem NÃO pode ser raso: `git rev-parse --is-shallow-repository` tem de dar `false`, senão o bundle sai sem os objetos antigos, o `verify` passa e o PC recusa na hora de buscar as tags; o empacotador recusa clone raso e refaz a conferência do atualizador, apagando o bundle se falhar). A sessão só
    empurra o branch `claude/...`, nunca `main` nem tags.
 2. **PC** (atualizador, sozinho): `engine-atualizador.path` (muda `~/Downloads`) e `.timer` (1 h) chamam `atualizar-engine.sh --auto`. Uma
    instância por vez (`flock`). Escolhe o bundle mais novo que o instalado e que o de `atualizador-ignorar.txt`, espera o download parar de
@@ -70,16 +71,38 @@ O repositório é **PÚBLICO**. Nele só entram código e design: nunca dados, t
 - `publicar/` NUNCA é recriada, só tem o conteúdo trocado (`ferramentas/montar-publicar.sh`): o serviço do mapa a monta somente leitura
   e perderia o diretório se ele fosse substituído.
 - Nomes em `interface/`: `[a-z0-9_-]+.(html|js|css|woff2|svg|json)`, até 4 MB, sem subpasta e sem link. É o mesmo filtro do servidor.
+- Dados: por enquanto só `dados-ficticios.js` (`window.SF_DADOS`, `formato: 1`, `ficticio: true`). Esse formato é o contrato dos dados reais, que entram um bloco por vez;
+  a tela só aceita o que passa pela lista branca de `tela.js` (`limpa`): ids de agente fixos, estados fixos, textos curtos, inteiros pequenos. Nunca valor, quantidade, preço ou segmento.
+- Mesma origem do mapa (decisão do dono em 18/11, aceita): antes de a engine ganhar o canal de pedidos (`POST /ajuste`), decidir se ela exige confirmação própria ou se o
+  servidor da Sexta-Feira distingue a origem. Até lá o `conferir.sh` proíbe chamadas de rede na interface.
 
 ## 6. Planos
 
-v0.2.0: a tela do mapa com dados fictícios (bordas como a moldura da Sexta-Feira, neurônio no centro, modo leve para a GPU); depois dados
-reais um bloco por vez, canal de pedidos (botões, lista fixa) e conversa (só sugere, nunca executa); CPU, GPU e RAM como neurônios
-menores (exige o backend publicar essas medidas).
+v0.2.0 (entregue): a tela do mapa com dados fictícios. Próximos, um de cada vez e cada um com os seus dois "sim": dados reais um bloco por vez (exige a
+Sexta-Feira publicar o bloco e decidir o caminho dos dados: o `conferir.sh` hoje proíbe `fetch`); canal de pedidos (botões, lista fixa, com a decisão da seção 5);
+conversa (só sugere, nunca executa); CPU, GPU e RAM como neurônios menores (exige o backend publicar essas medidas). Nada na Sexta-Feira muda antes de o desenho
+da engine estar pronto (decisão do dono, 18/11).
 
 ## 7. Registro das últimas entregas (leia antes de mexer)
 
 Só as 2 últimas versões ficam aqui. Formato: o que mudou · arquivos · não mexer · como testar · armadilhas.
+
+### v0.2.0 — a tela do mapa, com dados fictícios (18/11)
+
+- O que mudou: `interface/index.html` virou a tela (neurônio da Sexta-Feira no centro, seis agentes como neurônios menores, Corretora como satélite parado ao lado do Robô,
+  moldura em volta com as medidas do mapa, 1672×941 escalado inteiro). Tudo fictício, com selo "DADOS FICTÍCIOS". `neuronio.js` é o motor do `neuronio.html` em forma de
+  fábrica (`Neuronio.criar(canvas, opções)`); `cores.css` guarda só as cores (o dono edita; os neurônios leem as mesmas variáveis); modo leve (`?leve=1`, botão, movimento reduzido).
+  `ferramentas/empacotar.sh` recusa clone raso e refaz a conferência do atualizador (o bundle da Sexta-Feira v0.55.0 saiu incompleto por isso).
+- Arquivos: `interface/{index.html,tela.css,tela.js,cores.css,neuronio.js,dados-ficticios.js}`, `testes/{conferir.sh,empacotar.sh,navegador.py}`, `ferramentas/empacotar.sh`,
+  `README.md`, `AGENTS.md`, `CHANGELOG.md`, `VERSAO`.
+- NÃO mexer: `interface/neuronio.html` é do dono (laboratório de cores); `tela.js` só usa `textContent` e lista branca (`limpa`); o `conferir.sh` proíbe rede, `innerHTML` e
+  `eval` na tela (só o `neuronio.html` fica fora da regra do HTML dinâmico); o selo "DADOS FICTÍCIOS" mora no `index.html` e só sai quando houver dados reais (aí a regra do
+  `conferir.sh` muda junto); `VERSAO_ENGINE` em `tela.js` = `VERSAO`; `publicar/` nunca é recriada; o desenho do neurônio (`neuronio.js`, gerado do `neuronio.html`) não se edita à mão sem o dono.
+- Como testar: `bash testes/conferir.sh`, `bash testes/atualizador.sh`, `bash testes/empacotar.sh` (sobre o último commit) e, na nuvem, `python3 testes/navegador.py`.
+- Auditoria independente: (a preencher)
+- Armadilhas: (1) os neurônios pequenos não animam no modo leve (só o brilho do pulso); (2) as telas cuja proporção não é 16:9 ganham faixas pretas (a tela é escalada inteira);
+  (3) `mix-blend-mode: screen` nos canvases deixa os neurônios se sobreporem sem cobrir o vizinho; (4) o teste do modo leve conta chamadas de `drawImage`, não quadros por segundo reais;
+  (5) nada visto no PC real nem no systemd.
 
 ### v0.1.1 — a chave do espelho na pasta de segredos (18/11)
 
@@ -97,21 +120,3 @@ Só as 2 últimas versões ficam aqui. Formato: o que mudou · arquivos · não 
 - Como testar: `bash testes/conferir.sh` e `bash testes/atualizador.sh`.
 - Armadilhas: (1) a v0.1.0 nunca foi instalada no PC, então não há migração do caminho antigo. (2) Se `~/sexta-feira-segredos` não existir, o
   espelho só fica desligado (o instalador avisa).
-
-### v0.1.0 — primeira versão (18/11)
-
-- O que mudou: repositório criado com a interface mínima (`neuronio.html` igual ao arquivo do dono, `index.html` com link), instalador,
-  atualizador (`--auto`, manual, caminho do bundle, `--voltar`, `--espelhar`), unidades do systemd, `testes/conferir.sh`, `ferramentas/`.
-- Arquivos: tudo na raiz; `LICENSE` não muda.
-- NÃO mexer: `CLAUDE.md` = `@AGENTS.md`; `examinar_bundle` é a mesma função no instalador e no atualizador (o `conferir.sh` compara);
-  `publicar/` não é recriada; `interface/neuronio.html` é do dono (cores dele).
-- Auditoria independente (feita nesta versão, agente separado): achou e foi corrigido (a) tag de versão recusada ficava no repositório e subia ao
-  espelho (agora `recusar` apaga a tag); (b) `git reset --keep` sem guarda (agora `voltar_commit` avisa e para); (c) `StartLimitIntervalSec=0` no
-  serviço e `TimeoutStartSec=15min` (o `.path` parava de vigiar depois de muitas mudanças em `~/Downloads`); (d) TOCTOU: soma, conferência
-  e fetch agora usam uma cópia do bundle em `estado/`; (e) `notify-send --`; (f) `-i` do ssh com aspas; (g) `transfer.fsckObjects`; (h) link
-  simbólico e dono também no modo manual; (i) versões sem zero à esquerda; (j) `publicar/` limpa também subpasta/link; (k) mais padrões de rede e segredo
-  no `conferir.sh`; (l) testes sem asserções vazias. Não corrigido por decisão: recusa por "arquivo mexido à mão" ou "fora do main" também
-  grava a soma (igual ao atualizador da Sexta-Feira; o manual com o caminho do bundle ignora a lista).
-- Como testar: `bash testes/conferir.sh` e `bash testes/atualizador.sh` (instala e atualiza numa pasta temporária, sem systemd).
-- Armadilhas: (1) sem `shellcheck` o conferir só confere a sintaxe. (2) O espelho liga sozinho quando a deploy key existe. (3) Nada visto
-  em systemd real; no PC o primeiro disparo do `.path` mostra o que faltou.

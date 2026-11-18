@@ -58,7 +58,8 @@ fi
 if [ -d interface ]; then
     while IFS= read -r -d '' f; do
         nome="$(basename "$f")"
-        sem_ns="$(sed -E 's#xmlns(:[a-z]+)?="http://www\.w3\.org/[^"]*"##g' "$f")"
+        # o endereço do espaço de nomes do SVG (um identificador, não uma requisição) é a única exceção, como atributo xmlns ou como texto
+        sem_ns="$(sed -E -e 's#xmlns(:[a-z]+)?="http://www\.w3\.org/[^"]*"##g' -e "s#['\"]http://www\.w3\.org/2000/svg['\"]#''#g" "$f")"
         if printf '%s' "$sem_ns" | grep -qiE 'https?://|(src|href|action|poster|data)[[:space:]]*=[[:space:]]*["'\'']?//|url\([[:space:]]*["'\'']?//|@import'; then
             falha "$nome: endereço externo (http, https, // ou @import)"
         fi
@@ -67,6 +68,35 @@ if [ -d interface ]; then
         fi
     done < <(find interface -mindepth 1 -maxdepth 1 -type f -print0)
     [ "$FALHAS" -eq 0 ] && ok "interface/ sem endereço externo nem chamada de rede"
+fi
+
+# 3b. a tela (v0.2.0): texto só por textContent, scripts só locais, selo de dados fictícios ----------------------------------------
+# neuronio.html é o laboratório do dono (usa innerHTML nos botões de cor, sem dado externo): fica fora só desta regra de HTML dinâmico.
+if [ -d interface ]; then
+    f0=$FALHAS
+    while IFS= read -r -d '' f; do
+        nome="$(basename "$f")"
+        [ "$nome" = "neuronio.html" ] && continue
+        if grep -qE 'innerHTML|outerHTML|insertAdjacentHTML|document\.write|[^A-Za-z_.]eval[[:space:]]*\(|new[[:space:]]+Function|set(Timeout|Interval)[[:space:]]*\([[:space:]]*["'\'']' "$f"; then
+            falha "$nome: HTML dinâmico ou código em texto (innerHTML, eval, setTimeout com texto...). Todo texto entra por textContent"
+        fi
+    done < <(find interface -mindepth 1 -maxdepth 1 -type f \( -name '*.js' -o -name '*.html' \) -print0)
+    while IFS= read -r -d '' f; do
+        nome="$(basename "$f")"
+        while IFS= read -r alvo; do
+            [[ "$alvo" =~ ^[a-z0-9_-]+\.(js|css|svg|json)$ ]] || falha "$nome: <script>/<link> aponta para algo que não é arquivo local simples: $alvo"
+            [ -f "interface/$alvo" ] || falha "$nome: aponta para $alvo, que não existe em interface/"
+        done < <(grep -oE '<(script|link)[^>]*(src|href)="[^"]*"' "$f" | grep -oE '(src|href)="[^"]*"' | sed -E 's/^(src|href)="//; s/"$//')
+    done < <(find interface -mindepth 1 -maxdepth 1 -type f -name '*.html' -print0)
+    if [ -f interface/dados-ficticios.js ]; then
+        grep -qE 'ficticio:[[:space:]]*true' interface/dados-ficticios.js || falha "dados-ficticios.js tem de declarar ficticio: true"
+        grep -q 'DADOS FICTÍCIOS' interface/index.html 2>/dev/null || falha "index.html tem de ter o selo DADOS FICTÍCIOS (enquanto a tela usar dados fictícios)"
+    fi
+    if [ -f interface/tela.js ] && [ -n "${v:-}" ]; then
+        vt="$(sed -n "s/^[[:space:]]*var VERSAO_ENGINE = '\([0-9.]*\)';.*/\1/p" interface/tela.js | head -n1)"
+        [ "$vt" = "$v" ] || falha "VERSAO_ENGINE em tela.js ($vt) diferente de VERSAO ($v)"
+    fi
+    [ "$FALHAS" -eq "$f0" ] && ok "tela: sem HTML dinâmico, scripts locais, selo e versão em dia"
 fi
 
 # 4. nenhum segredo nos arquivos versionados ---------------------------------------------------------------------------

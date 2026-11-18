@@ -13,6 +13,8 @@ SAIDA="$(cd "${1:-.}" && pwd)"
 cd "$RAIZ"
 
 [ -z "$(git status --porcelain)" ] || { echo "empacotar: há alterações sem commit" >&2; exit 1; }
+# clone raso gera bundle sem os objetos antigos: o "git bundle verify" passa, mas o fetch das tags no PC falha (aconteceu na Sexta-Feira v0.55.0)
+[ "$(git rev-parse --is-shallow-repository)" = "false" ] || { echo "empacotar: este clone é raso; rode: git fetch --unshallow" >&2; exit 1; }
 V="$(tr -d '[:space:]' < VERSAO)"
 [[ "$V" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "empacotar: VERSAO inválida: $V" >&2; exit 1; }
 TOPO="$(sed -n 's/^## v\([0-9][0-9.]*\) .*/\1/p' CHANGELOG.md | head -n1)"
@@ -29,10 +31,18 @@ B="$SAIDA/sexta-feira-engine-v$V.bundle"
 rm -f -- "$B"
 git bundle create "$B" --branches --tags >/dev/null 2>&1
 
-# conferência como o atualizador faz
+# conferência como o atualizador faz (examinar_bundle): verify, o MESMO fetch das tags num repositório vazio, objetos completos e
+# a versão anterior como ancestral. Qualquer falha apaga o bundle: nunca sobra um arquivo que o PC recusaria.
 TMP="$(mktemp -d)"; trap 'rm -rf -- "$TMP"' EXIT
-git init -q "$TMP/v"
-( cd "$TMP/v" && git bundle verify "$B" >/dev/null 2>&1 ) || { echo "empacotar: bundle verify reprovou" >&2; exit 1; }
+recusa() { rm -f -- "$B"; echo "empacotar: $1 (bundle apagado)" >&2; exit 1; }
+git init -q --bare "$TMP/v"
+git -C "$TMP/v" bundle verify "$B" >/dev/null 2>&1 || recusa "bundle verify reprovou"
+git -C "$TMP/v" fetch -q "$B" '+refs/tags/*:refs/tags/*' >/dev/null 2>&1 || recusa "o fetch das tags do bundle falhou (clone raso?)"
+git -C "$TMP/v" fsck --connectivity-only >/dev/null 2>&1 || recusa "o bundle não traz todos os objetos"
+ANTERIOR="$(git tag --list 'v[0-9]*' --sort=-version:refname | grep -vx "v$V" | head -n1 || true)"
+if [ -n "$ANTERIOR" ]; then
+    git -C "$TMP/v" merge-base --is-ancestor "$ANTERIOR" "v$V" || recusa "a versão anterior ($ANTERIOR) não é ancestral de v$V"
+fi
 git clone --quiet --no-checkout "$B" "$TMP/c" >/dev/null 2>&1
 [ "$(git -C "$TMP/c" show "refs/tags/v$V:VERSAO" | tr -d '[:space:]')" = "$V" ] || { echo "empacotar: VERSAO dentro da tag não bate" >&2; exit 1; }
 echo "bundle pronto: $B ($(sha256sum "$B" | cut -d' ' -f1))"

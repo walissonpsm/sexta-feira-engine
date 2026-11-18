@@ -4,17 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sexta-Feira Engine</title>
-<style>
-  html, body { margin: 0; height: 100%; background: #000; color: #e8e6ff; font-family: system-ui, sans-serif; }
-  main { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
-  a { color: #8b3dff; }
-</style>
+<link rel="stylesheet" href="cores.css">
+<link rel="stylesheet" href="tela.css">
 </head>
 <body>
-<main>
-  <h1>Sexta-Feira Engine</h1>
-  <p>Interface em construção.</p>
-  <p><a href="neuronio.html">Ver o neurônio</a></p>
-</main>
+<div id="palco">
+  <div id="tela" role="application" aria-label="Sexta-Feira: mapa dos agentes (dados fictícios)">
+    <div class="selo" id="selo" role="status">DADOS FICTÍCIOS</div>
+  </div>
+</div>
+<noscript><p class="sem-js">A Sexta-Feira Engine precisa de JavaScript para desenhar a tela. Nada é carregado de fora.</p></noscript>
+<script src="dados-ficticios.js"></script>
+<script src="neuronio.js"></script>
+<script src="tela.js"></script>
 </body>
 </html>

@@ -1,0 +1,25 @@
+/* Sexta-Feira Engine: as cores. É o arquivo que o dono edita (só variáveis; nada de layout aqui).
+   Os neurônios também leem estas variáveis, então mudar uma cor muda a borda e o neurônio dela. */
+:root {
+  /* cada agente (os valores do neuronio.html) */
+  --cor-sexta-feira: #8B3DFF;
+  --cor-fiis: #00E676;
+  --cor-acoes-etfs: #00D4FF;
+  --cor-cripto: #FF7A00;
+  --cor-radar: #B388FF;
+  --cor-robo: #FFD600;
+  --cor-seguranca: #FF2E55;
+  --cor-corretora: #FFD600;
+
+  /* a moldura (as mesmas do mapa) */
+  --fundo: #000000;
+  --borda: #4d5bff;
+  --borda-roxa: #a45cff;
+  --borda-ciano: #33c8ff;
+  --texto: #e8ecff;
+  --texto-fraco: #9aa3c7;
+  --ok: #2ee66b;
+  --atencao: #ffc34d;
+  --ruim: #ff6b7a;
+  --ciano: #4fd0ff;
+}

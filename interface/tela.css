@@ -1,0 +1,98 @@
+/* Sexta-Feira Engine v0.2.0: o layout. As cores ficam em cores.css. A tela é desenhada em 1672×941 e escalada inteira (transform),
+   as mesmas medidas da moldura do mapa da Sexta-Feira. Só leitura: nada aqui pede dado nem chama rede. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--fundo); color: var(--texto); overflow: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-weight: 500; line-height: 1.2; }
+.sem-js { position: fixed; inset: 0; margin: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--texto-fraco); }
+#palco { position: fixed; inset: 0; overflow: hidden; background: var(--fundo); }
+#tela { position: absolute; left: 0; top: 0; width: 1672px; height: 941px; transform-origin: 0 0; }
+#tela > * { position: absolute; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: inherit; }
+button:focus-visible, a:focus-visible { outline: 2px solid #c9b8ff; outline-offset: 2px; }
+button:disabled { cursor: not-allowed; }
+a { color: var(--ciano); text-decoration: none; }
+
+/* caixas */
+.cx { background: linear-gradient(180deg, rgba(10, 14, 40, .88), rgba(6, 8, 26, .92)); border: 1.5px solid var(--borda); border-radius: 12px;
+  box-shadow: 0 0 14px rgba(77, 91, 255, .35), inset 0 0 22px rgba(77, 91, 255, .10); padding: 12px 16px; overflow: hidden; }
+.cx.roxa { border-color: var(--borda-roxa); box-shadow: 0 0 14px rgba(170, 90, 255, .5), inset 0 0 22px rgba(150, 70, 255, .14); }
+.cx.ciano { border-color: var(--borda-ciano); box-shadow: 0 0 14px rgba(50, 190, 255, .45), inset 0 0 22px rgba(40, 160, 255, .12); }
+.cx h3 { margin: 0 0 8px; font-size: 19px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.cx h3 small { font-size: 14px; font-weight: 500; color: var(--texto-fraco); }
+.cx h3 .volta { margin-left: auto; font-size: 15px; color: var(--ciano); }
+.v { color: var(--ok); } .am { color: var(--atencao); } .ruim { color: var(--ruim); } .ap { color: var(--texto-fraco); }
+.vazio { color: var(--texto-fraco); font-size: 16px; padding: 8px 0; }
+
+/* topo */
+.topo { left: 4px; right: 4px; top: 6px; height: 78px; display: flex; gap: 6px; }
+.topo .cx { display: flex; align-items: center; gap: 14px; padding: 0 18px; min-width: 0; white-space: nowrap; }
+.topo .logo { flex: 462 1 0; } .topo .estado { flex: 420 1 0; } .topo .relogio { flex: 246 0 0; justify-content: space-between; }
+.topo .nm { font-size: 30px; font-weight: 700; color: #fff; line-height: 1.05; } .topo .sb { font-size: 19px; color: var(--ciano); }
+.topo .b { font-size: 20px; font-weight: 700; color: #fff; }
+.topo .hr { font-size: 31px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+.topo .a { font-size: 15px; color: #c9d2f2; }
+.bola { width: 26px; height: 26px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 14px var(--ok); flex: none; }
+.bola.am { background: var(--atencao); box-shadow: 0 0 14px var(--atencao); } .bola.ruim { background: var(--ruim); box-shadow: 0 0 14px var(--ruim); }
+
+/* o selo "dados fictícios": mora no index.html, entra no topo pelo tela.js e fica sempre à vista (sem o JS, aparece no canto) */
+.selo { right: 12px; top: 96px; z-index: 50; padding: 6px 14px; font-size: 18px; font-weight: 700; letter-spacing: 1.5px; color: #1a1200;
+  background: var(--atencao); border: 2px solid #fff3c9; border-radius: 10px; box-shadow: 0 0 18px rgba(255, 195, 77, .6); pointer-events: none; }
+.topo .selo { position: static; flex: 270 0 0; display: grid; place-items: center; height: 78px; font-size: 24px; border-radius: 12px; }
+
+/* colunas */
+.esq { left: 12px; top: 100px; width: 344px; height: 554px; }
+.tarefas { right: 12px; top: 100px; width: 343px; height: 250px; }
+.avisos { right: 12px; top: 366px; width: 343px; height: 288px; }
+.ln { display: flex; align-items: center; gap: 12px; height: 62px; border-top: 1px solid rgba(110, 125, 255, .28); padding: 0 4px; width: 100%; }
+h3 + .ln { border-top: 0; }
+.ln .pt { width: 18px; height: 18px; border-radius: 50%; flex: none; background: var(--c, var(--ok)); box-shadow: 0 0 10px var(--c, var(--ok)); }
+.ln .n { font-size: 19px; color: #fff; min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ln .n small { display: block; font-size: 14px; color: var(--texto-fraco); }
+.ln .h { font-size: 17px; color: var(--ciano); font-variant-numeric: tabular-nums; }
+.ln.sel { background: rgba(77, 91, 255, .16); border-radius: 8px; }
+.tf { display: flex; gap: 12px; align-items: center; height: 46px; }
+.tf .pt { width: 18px; height: 18px; border-radius: 50%; background: #2aa8ff; box-shadow: 0 0 10px #2aa8ff; flex: none; }
+.tf .pt.pe { background: var(--atencao); box-shadow: 0 0 10px var(--atencao); }
+.tf .t { font-size: 17px; color: #fff; min-width: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tf .t small { display: block; font-size: 14px; color: var(--ciano); } .tf .t small.am { color: var(--atencao); }
+.tf .h { font-size: 17px; color: var(--ciano); font-variant-numeric: tabular-nums; }
+.det .kv { display: flex; justify-content: space-between; font-size: 18px; padding: 9px 0; border-top: 1px solid rgba(110, 125, 255, .28); }
+.det .kv span:first-child { color: var(--texto-fraco); }
+.det .grande { font-size: 30px; font-weight: 700; color: #fff; margin: 4px 0 8px; display: flex; align-items: center; gap: 12px; }
+.avisos .num { font-size: 64px; font-weight: 700; color: #fff; line-height: 1; margin: 6px 0 10px; }
+.avisos .kv { display: flex; justify-content: space-between; font-size: 19px; padding: 8px 0; border-top: 1px solid rgba(110, 125, 255, .28); }
+
+/* o centro: neurônios */
+.nr { position: absolute; display: block; padding: 0; border-radius: 10px; }
+.nr canvas { display: block; width: 100%; height: 100%; mix-blend-mode: screen; pointer-events: none; }
+.nr .rot { position: absolute; left: 10px; bottom: 4px; font-size: 19px; font-weight: 700; color: var(--c, #fff); text-shadow: 0 0 8px #000, 0 0 3px #000; pointer-events: none; }
+.nr.sel { box-shadow: 0 0 0 1.5px var(--c), 0 0 22px var(--c); }
+.nr.pulso { animation: pulso .55s ease-out; }
+@keyframes pulso { 0% { box-shadow: 0 0 0 1.5px var(--c), 0 0 34px var(--c); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.nr.centro { cursor: default; z-index: 2; }
+.nr.centro .rot { top: 6px; bottom: auto; }
+.fios { left: 0; top: 0; width: 1672px; height: 941px; pointer-events: none; z-index: 1; }
+.fios line { stroke: var(--c); stroke-opacity: .5; stroke-width: 1.5; stroke-dasharray: 4 6; }
+.fios circle { fill: var(--c); filter: drop-shadow(0 0 6px var(--c)); }
+.satelite { z-index: 3; width: 74px; height: 74px; border: 2px solid var(--cor-corretora); border-radius: 8px; background: rgba(0, 0, 0, .7);
+  display: grid; place-items: center; text-align: center; font-size: 14px; font-weight: 700; color: var(--cor-corretora); line-height: 1.1; pointer-events: none; }
+
+/* faixa de baixo */
+.bx { left: 12px; right: 12px; top: 668px; height: 190px; display: flex; gap: 14px; }
+.bx .cx { min-width: 0; padding: 12px 18px; } .bx .logs { flex: 530 1 0; } .bx .dest { flex: 558 1 0; } .bx .stat { flex: 531 1 0; }
+.lg { display: flex; gap: 12px; font-size: 16px; height: 27px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg .h { color: var(--ciano); font-variant-numeric: tabular-nums; } .lg .a { color: #fff; font-weight: 700; }
+.dest .t { font-size: 24px; font-weight: 700; color: #fff; margin: 4px 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dest .l { font-size: 18px; color: #c9d2f2; padding: 3px 0; }
+.stat .m { display: flex; justify-content: space-between; font-size: 20px; padding: 7px 0; border-top: 1px solid rgba(110, 125, 255, .28); }
+.stat .m span:last-child { color: var(--texto-fraco); }
+
+/* rodapé */
+.rp { left: 4px; right: 4px; top: 872px; height: 64px; display: flex; align-items: center; gap: 16px; padding: 0 22px; font-size: 19px; white-space: nowrap; overflow: hidden; }
+.rp .esp { margin-left: auto; }
+.rp button.cfg { border: 1.5px solid rgba(110, 125, 255, .45); border-radius: 10px; padding: 8px 18px; font-size: 17px; background: rgba(20, 24, 70, .5); }
+.rp button.cfg:disabled { opacity: .45; }
+.rp button.leve { border: 1.5px solid rgba(110, 125, 255, .6); border-radius: 10px; padding: 8px 18px; font-size: 17px; }
+.rp button.leve[aria-pressed=true] { color: #d7ffe4; border-color: var(--ok); background: rgba(46, 230, 107, .12); }
+.rp .em-breve { color: var(--texto-fraco); font-size: 15px; }
+@media (prefers-reduced-motion: reduce) { .nr.pulso { animation: none; } }
