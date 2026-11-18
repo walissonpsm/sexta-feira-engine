@@ -8,7 +8,7 @@
 # (engine-atualizador.path e .timer) no systemd do usuário. Se existir a deploy key em
 # ~/sexta-feira-engine-segredos/github/id_ed25519, liga também o espelho no GitHub. Não usa sudo, Docker nem rede (fora o espelho).
 # Se já existir ~/sexta-feira-engine, recusa: use o atualizar-engine.sh.
-# Variáveis para teste: ENGINE_DIR, DOWNLOADS_DIR, SYSTEMD_USER_DIR, SEGREDOS_DIR, SEM_SYSTEMD=1.
+# Variáveis para teste: ENGINE_DIR, DOWNLOADS_DIR, SYSTEMD_USER_DIR, SEGREDOS_DIR, SEM_SYSTEMD=1, ENGINE_TESTE=1 (aceita rodar como root).
 
 set -euo pipefail
 
@@ -29,7 +29,7 @@ case "${1:-}" in
     -*) erro "opção desconhecida: $1"; exit 2 ;;
 esac
 
-[ "$(id -u)" -ne 0 ] || { erro "não rode como root"; exit 2; }
+[ "$(id -u)" -ne 0 ] || [ "${ENGINE_TESTE:-0}" = 1 ] || { erro "não rode como root"; exit 2; }
 for c in git sha256sum flock; do command -v "$c" >/dev/null 2>&1 || { erro "falta o comando $c"; exit 2; }; done
 if [ "$SEM_SYSTEMD" != 1 ]; then
     command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1 \

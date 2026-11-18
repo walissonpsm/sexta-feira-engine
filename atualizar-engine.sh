@@ -11,7 +11,7 @@
 # Só avança (fast-forward) e só se você não alterou arquivos versionados. Se o teste (testes/conferir.sh), a pasta publicar/ ou o
 # systemd falhar, a versão anterior volta e o bundle recusado nunca mais é tentado sozinho. Não usa sudo, Docker nem rede (fora o
 # git push do espelho) e nunca lê nada de ~/sexta-feira. Só apaga dentro de estado/ e publicar/.
-# Variáveis para teste: ENGINE_DIR, DOWNLOADS_DIR, SYSTEMD_USER_DIR, SEGREDOS_DIR, SEM_SYSTEMD=1, ESTAVEL_SEG, MAX_ESPERA.
+# Variáveis para teste: ENGINE_DIR, DOWNLOADS_DIR, SYSTEMD_USER_DIR, SEGREDOS_DIR, SEM_SYSTEMD=1, ESTAVEL_SEG, MAX_ESPERA, ENGINE_TESTE=1 (aceita rodar como root).
 
 set -euo pipefail
 
@@ -38,7 +38,7 @@ case "${1:-}" in
     *) BUNDLE_ARG="$1" ;;
 esac
 
-[ "$(id -u)" -ne 0 ] || { echo "não rode como root" >&2; exit 2; }
+[ "$(id -u)" -ne 0 ] || [ "${ENGINE_TESTE:-0}" = 1 ] || { echo "não rode como root" >&2; exit 2; }
 
 D() { git -C "$ENGINE_DIR" "$@"; }
 log() { echo "engine-atualizador: $*"; }

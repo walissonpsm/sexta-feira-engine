@@ -14,6 +14,7 @@ trap 'rm -rf -- "$T"' EXIT
 export HOME="$T/home"; mkdir -p "$HOME/Downloads"
 export ENGINE_DIR="$T/home/sexta-feira-engine" DOWNLOADS_DIR="$HOME/Downloads" SYSTEMD_USER_DIR="$T/home/units"
 export SEGREDOS_DIR="$T/home/segredos" SEM_SYSTEMD=1 ESTAVEL_SEG=0 MAX_ESPERA=3
+export ENGINE_TESTE=1
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
 
 PASSOU=0; FALHOU=0
@@ -80,7 +81,7 @@ git bundle create "$T/sexta-feira-engine-v0.1.2.bundle" --branches >/dev/null 2>
 cp "$T/sexta-feira-engine-v0.1.2.bundle" "$DOWNLOADS_DIR/"
 A --auto >"$T/saida" 2>&1
 confere "bundle sem tag não instala" '[ "$(instalado)" = 0.1.1 ]'
-confere "bundle sem tag NÃO é registrado em lista" '[ ! -s "$ESTADO/atualizador-falhou.txt" ] && [ ! -e "$ENGINE_DIR/estado/atualizador-falhou.txt" ]'
+confere "bundle sem tag NÃO é registrado em lista" '[ ! -e "$ENGINE_DIR/estado/atualizador-falhou.txt" ]'
 git tag v0.1.3   # tag com número diferente do VERSAO de dentro
 git bundle create "$T/x.bundle" --branches --tags >/dev/null 2>&1
 mv "$T/x.bundle" "$DOWNLOADS_DIR/sexta-feira-engine-v0.1.3.bundle"
