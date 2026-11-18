@@ -1,5 +1,11 @@
 # Changelog — Sexta-Feira Engine
 
+## v0.1.1 — a chave do espelho na pasta de segredos (18/11)
+
+- A deploy key do espelho passa a ficar em `~/sexta-feira-segredos/sexta-feira-engine/github/id_ed25519` (subpasta só do engine; a Sexta-Feira nunca a monta em contêiner).
+- O instalador avisa se a pasta `github` não estiver em modo 700 ou a chave em 600.
+- Textos, README e `AGENTS.md` atualizados; testes do espelho com chave.
+
 ## v0.1.0 — primeira versão (18/11)
 
 - A interface (front end) da Sexta-Feira ganha repositório próprio, com instalador e atualizador independentes da Sexta-Feira (sem Docker, sem Núcleo, sem agentes).

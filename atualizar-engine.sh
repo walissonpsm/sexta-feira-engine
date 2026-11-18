@@ -67,7 +67,7 @@ flock -n 9 || { [ "$AUTO" -eq 1 ] && exit 0; erro "já há outro atualizador rod
 VERSAO_INSTALADA="$(tr -d '[:space:]' < "$ENGINE_DIR/VERSAO")"
 
 # --- espelho opcional ---------------------------------------------------------------------------------------------------
-SEGREDOS_DIR="${SEGREDOS_DIR:-$HOME/sexta-feira-engine-segredos}"
+SEGREDOS_DIR="${SEGREDOS_DIR:-$HOME/sexta-feira-segredos/sexta-feira-engine}"   # só a chave de github/ daqui; o resto de sexta-feira-segredos é da Sexta-Feira
 ENGINE_ORIGIN="${ENGINE_ORIGIN:-git@github.com:walissonpsm/sexta-feira-engine.git}"
 
 ligar_espelho() {   # com a deploy key no lugar, configura o origin e liga o espelho (marca em estado/espelho)

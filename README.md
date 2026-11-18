@@ -24,7 +24,15 @@ Não depende de nada externo: abre direto em qualquer navegador moderno.
 2. Rode `bash ~/Downloads/instalar-engine.sh`.
 3. Pronto: a pasta fica em `~/sexta-feira-engine` e o atualizador liga sozinho no systemd do usuário.
 
-Espelho opcional no GitHub: coloque a chave em `~/sexta-feira-engine-segredos/github/id_ed25519` (deploy key com escrita) antes de instalar, ou depois e rode `~/sexta-feira-engine/atualizar-engine.sh --espelhar`.
+Espelho opcional no GitHub: coloque a chave em `~/sexta-feira-segredos/sexta-feira-engine/github/id_ed25519` (deploy key com escrita) antes de instalar, ou depois e rode `~/sexta-feira-engine/atualizar-engine.sh --espelhar`. Como criar a chave:
+
+```bash
+mkdir -p ~/sexta-feira-segredos/sexta-feira-engine/github
+chmod 700 ~/sexta-feira-segredos ~/sexta-feira-segredos/sexta-feira-engine ~/sexta-feira-segredos/sexta-feira-engine/github
+ssh-keygen -t ed25519 -N "" -C "sexta-feira-engine deploy" -f ~/sexta-feira-segredos/sexta-feira-engine/github/id_ed25519
+```
+
+Depois cadastre o `id_ed25519.pub` em *Settings → Deploy keys* do repositório com "Allow write access". A Sexta-Feira só monta as subpastas `planilhas/`, `binance/` e `bitget/` dessa pasta: a `sexta-feira-engine/` fica fora de qualquer contêiner.
 
 ## Atualização
 

@@ -6,7 +6,7 @@
 #
 # Cria ~/sexta-feira-engine (clone do bundle, no branch main), roda o teste, monta publicar/, cria estado/ e liga o atualizador
 # (engine-atualizador.path e .timer) no systemd do usuário. Se existir a deploy key em
-# ~/sexta-feira-engine-segredos/github/id_ed25519, liga também o espelho no GitHub. Não usa sudo, Docker nem rede (fora o espelho).
+# ~/sexta-feira-segredos/sexta-feira-engine/github/id_ed25519, liga também o espelho no GitHub. Não usa sudo, Docker nem rede (fora o espelho).
 # Se já existir ~/sexta-feira-engine, recusa: use o atualizar-engine.sh.
 # Variáveis para teste: ENGINE_DIR, DOWNLOADS_DIR, SYSTEMD_USER_DIR, SEGREDOS_DIR, SEM_SYSTEMD=1, ENGINE_TESTE=1 (aceita rodar como root).
 
@@ -15,7 +15,7 @@ set -euo pipefail
 ENGINE_DIR="${ENGINE_DIR:-$HOME/sexta-feira-engine}"
 DOWNLOADS_DIR="${DOWNLOADS_DIR:-$HOME/Downloads}"
 SYSTEMD_USER_DIR="${SYSTEMD_USER_DIR:-$HOME/.config/systemd/user}"
-SEGREDOS_DIR="${SEGREDOS_DIR:-$HOME/sexta-feira-engine-segredos}"
+SEGREDOS_DIR="${SEGREDOS_DIR:-$HOME/sexta-feira-segredos/sexta-feira-engine}"
 export ENGINE_DIR SEGREDOS_DIR
 SEM_SYSTEMD="${SEM_SYSTEMD:-0}"
 RE_BUNDLE='^sexta-feira-engine-v((0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*))\.bundle$'
@@ -124,6 +124,9 @@ fi
 
 # --- espelho (opcional) -------------------------------------------------------------------------------------------------
 if [ -f "$SEGREDOS_DIR/github/id_ed25519" ]; then
+    # só avisa (não muda nada nas suas pastas de segredos)
+    [ "$(stat -c %a "$SEGREDOS_DIR/github" 2>/dev/null)" = 700 ] || erro "aviso: a pasta $SEGREDOS_DIR/github deveria estar em modo 700 (chmod 700)"
+    [ "$(stat -c %a "$SEGREDOS_DIR/github/id_ed25519" 2>/dev/null)" = 600 ] || erro "aviso: a chave $SEGREDOS_DIR/github/id_ed25519 deveria estar em modo 600 (chmod 600)"
     bash "$ENGINE_DIR/atualizar-engine.sh" --espelhar \
         || erro "aviso: o espelho no GitHub não funcionou agora (a instalação está certa). Tente depois: $ENGINE_DIR/atualizar-engine.sh --espelhar"
 else

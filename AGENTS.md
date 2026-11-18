@@ -44,7 +44,7 @@ Igual ao da Sexta-Feira (seção 3 do `AGENTS.md` de lá), em resumo:
    frente (`merge --ff-only`), roda `testes/conferir.sh`, remonta `publicar/`, sincroniza as unidades e avisa na área de trabalho.
 3. **Rollback automático**: se o teste, a `publicar/` ou o systemd falhar, `git reset --keep` para o commit anterior, `publicar/` refeita da
    versão anterior, soma em `atualizador-falhou.txt` (o automático nunca mais tenta AQUELE arquivo; bundle refeito tem soma nova).
-4. **Espelho** (opcional): com a deploy key em `~/sexta-feira-engine-segredos/github/id_ed25519`, depois de instalar o atualizador empurra
+4. **Espelho** (opcional): com a deploy key em `~/sexta-feira-segredos/sexta-feira-engine/github/id_ed25519` (subpasta só do engine dentro da pasta de segredos da Sexta-Feira; ela nunca é montada em contêiner e o engine só lê esse arquivo), depois de instalar o atualizador empurra
    `main` e as tags ao GitHub. Falha do espelho só avisa (não há rollback).
 5. **À mão** (só com o "sim" do Walisson): `./atualizar-engine.sh` (bundle mais novo), `./atualizar-engine.sh /caminho.bundle`,
    `--voltar vX.Y.Z` (volta e grava `atualizador-ignorar.txt`; para reinstalar a versão recusada, apague esse arquivo e rode com o caminho do `.bundle`), `--espelhar`.
@@ -60,7 +60,8 @@ O repositório é **PÚBLICO**. Nele só entram código e design: nunca dados, t
 - A interface só nomeia o que a Sexta-Feira publicar para o mapa; nunca link, fonte, servidor, texto de IA, trecho de PDF, token ou chave.
 - Todo texto vindo da Sexta-Feira entra na tela por `textContent`, nunca `innerHTML`.
 - Nada é carregado da internet (sem CDN, fonte externa, `fetch` para fora). `testes/conferir.sh` reprova.
-- Segredos nunca em conversa nem no git. Não leia nem repita o conteúdo da pasta de segredos.
+- Segredos nunca em conversa nem no git. Não leia nem repita o conteúdo da pasta de segredos. O engine só lê a chave `github/id_ed25519` da
+  subpasta `~/sexta-feira-segredos/sexta-feira-engine/`; nunca toca em `planilhas/`, `binance/` nem `bitget/`.
 
 ## 5. Contrato com a Sexta-Feira
 
@@ -79,6 +80,20 @@ menores (exige o backend publicar essas medidas).
 ## 7. Registro das últimas entregas (leia antes de mexer)
 
 Só as 2 últimas versões ficam aqui. Formato: o que mudou · arquivos · não mexer · como testar · armadilhas.
+
+### v0.1.1 — a chave do espelho na pasta de segredos (18/11)
+
+- O que mudou: o padrão de `SEGREDOS_DIR` passou de `~/sexta-feira-engine-segredos` para `~/sexta-feira-segredos/sexta-feira-engine` (a chave
+  continua em `github/id_ed25519`). O instalador avisa (sem mudar nada) se a pasta `github` não estiver em 700 ou a chave em 600. Textos,
+  README e este arquivo atualizados. O teste do atualizador passou a usar versões `7.0.x` (não depende mais da versão do repositório) e
+  ganhou casos da chave (espelho liga sozinho, `core.sshCommand`, avisos de permissão).
+- Arquivos: `atualizar-engine.sh`, `instalar-engine.sh`, `testes/atualizador.sh`, `README.md`, `AGENTS.md`, `CHANGELOG.md`, `VERSAO`.
+- NÃO mexer: a pasta `sexta-feira-segredos/` é da Sexta-Feira (o atualizador dela só cria `binance/` e `bitget/` e o `docker-compose.yml` monta
+  `planilhas/`, `binance/` e `bitget/`): o engine só usa a subpasta `sexta-feira-engine/`. Quem mexer no `docker-compose.yml` da Sexta-Feira nunca
+  deve montar a pasta inteira.
+- Como testar: `bash testes/conferir.sh` e `bash testes/atualizador.sh`.
+- Armadilhas: (1) a v0.1.0 nunca foi instalada no PC, então não há migração do caminho antigo. (2) Se `~/sexta-feira-segredos` não existir, o
+  espelho só fica desligado (o instalador avisa).
 
 ### v0.1.0 — primeira versão (18/11)
 
