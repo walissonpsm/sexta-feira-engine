@@ -14,7 +14,8 @@ trap 'rm -rf -- "$T"' EXIT
 
 export HOME="$T/casa"; mkdir -p "$HOME/Downloads"
 export ENGINE_DIR="$T/casa/sexta-feira-engine" DOWNLOADS_DIR="$HOME/Downloads" SYSTEMD_USER_DIR="$T/casa/units"
-export SEGREDOS_DIR="$T/casa/sexta-feira-segredos/sexta-feira-engine" SEM_SYSTEMD=1 ESTAVEL_SEG=0 MAX_ESPERA=3
+SEG="$T/casa/sexta-feira-segredos/sexta-feira-engine"   # o padrão do engine com HOME=$T/casa; SEGREDOS_DIR não é exportado de propósito
+export SEM_SYSTEMD=1 ESTAVEL_SEG=0 MAX_ESPERA=3
 export ENGINE_TESTE=1
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
 
@@ -158,10 +159,11 @@ rm -f "$DOWNLOADS_DIR"/*.bundle
 # 9. espelho: a chave no caminho padrão liga o espelho sozinho ---------------------------------------------------------------
 git init -q --bare "$T/espelho.git"
 export ENGINE_ORIGIN="$T/espelho.git"
+confere "SEGREDOS_DIR não está definido: vale o caminho padrão do código" '[ -z "${SEGREDOS_DIR:-}" ]'
 A --espelhar >"$T/saida" 2>&1
 confere "sem a chave o espelho fica desligado (não empurra nada)" '! git -C "$T/espelho.git" rev-parse -q --verify refs/heads/main >/dev/null && [ ! -e "$ENGINE_DIR/estado/espelho" ]'
-mkdir -p "$SEGREDOS_DIR/github"; chmod 700 "$SEGREDOS_DIR/github"
-printf 'chave falsa de teste\n' > "$SEGREDOS_DIR/github/id_ed25519"; chmod 600 "$SEGREDOS_DIR/github/id_ed25519"
+mkdir -p "$SEG/github"; chmod 700 "$SEG/github"
+printf 'chave falsa de teste\n' > "$SEG/github/id_ed25519"; chmod 600 "$SEG/github/id_ed25519"
 A --espelhar >"$T/saida" 2>&1
 confere "com a chave no caminho padrão o espelho liga" '[ -e "$ENGINE_DIR/estado/espelho" ] && [ "$(git -C "$ENGINE_DIR" remote get-url origin)" = "$T/espelho.git" ]'
 confere "core.sshCommand usa a chave e IdentitiesOnly" 'git -C "$ENGINE_DIR" config core.sshCommand | grep -q "IdentitiesOnly=yes" && git -C "$ENGINE_DIR" config core.sshCommand | grep -q "github/id_ed25519"'
@@ -170,11 +172,12 @@ confere "--espelhar empurra as tags" 'git -C "$T/espelho.git" rev-parse -q --ver
 confere "o caminho padrão fica dentro de sexta-feira-segredos/sexta-feira-engine" 'grep -q "sexta-feira-segredos/sexta-feira-engine" "$ENGINE_DIR/atualizar-engine.sh" && ! grep -q "sexta-feira-engine-segredos" "$ENGINE_DIR/atualizar-engine.sh" "$ENGINE_DIR/instalar-engine.sh"'
 
 # 10. instalador avisa permissão ruim da chave ------------------------------------------------------------------------------
-chmod 755 "$SEGREDOS_DIR/github"; chmod 644 "$SEGREDOS_DIR/github/id_ed25519"
-ENGINE_DIR="$T/casa/engine2" SYSTEMD_USER_DIR="$T/casa/units2" DOWNLOADS_DIR="$T/dl2" bash -c 'mkdir -p "$DOWNLOADS_DIR"; cp "'"$T/sexta-feira-engine-v$BASE.bundle"'" "$DOWNLOADS_DIR/"; bash "'"$FONTE"'/instalar-engine.sh"' >"$T/inst2.log" 2>&1
+git init -q --bare "$T/espelho2.git"
+chmod 755 "$SEG/github"; chmod 644 "$SEG/github/id_ed25519"
+ENGINE_ORIGIN="$T/espelho2.git" ENGINE_DIR="$T/casa/engine2" SYSTEMD_USER_DIR="$T/casa/units2" DOWNLOADS_DIR="$T/dl2" bash -c 'mkdir -p "$DOWNLOADS_DIR"; cp "'"$T/sexta-feira-engine-v$BASE.bundle"'" "$DOWNLOADS_DIR/"; bash "'"$FONTE"'/instalar-engine.sh"' >"$T/inst2.log" 2>&1
 confere "instalador avisa pasta fora de 700" 'grep -q "modo 700" "$T/inst2.log"'
 confere "instalador avisa chave fora de 600" 'grep -q "modo 600" "$T/inst2.log"'
-confere "instalador não muda as permissões" '[ "$(stat -c %a "$SEGREDOS_DIR/github")" = 755 ] && [ "$(stat -c %a "$SEGREDOS_DIR/github/id_ed25519")" = 644 ]'
+confere "instalador não muda as permissões" '[ "$(stat -c %a "$SEG/github")" = 755 ] && [ "$(stat -c %a "$SEG/github/id_ed25519")" = 644 ]'
 
 echo
 echo "resultado: $PASSOU ok, $FALHOU falha(s)"

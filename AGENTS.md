@@ -91,6 +91,9 @@ Só as 2 últimas versões ficam aqui. Formato: o que mudou · arquivos · não 
 - NÃO mexer: a pasta `sexta-feira-segredos/` é da Sexta-Feira (o atualizador dela só cria `binance/` e `bitget/` e o `docker-compose.yml` monta
   `planilhas/`, `binance/` e `bitget/`): o engine só usa a subpasta `sexta-feira-engine/`. Quem mexer no `docker-compose.yml` da Sexta-Feira nunca
   deve montar a pasta inteira.
+- Auditoria independente (agente separado): sem defeito grave. Corrigido: o teste agora usa de verdade o caminho padrão (SEGREDOS_DIR não é exportado),
+  o caso do instalador usa um espelho próprio, `ligar_espelho` recusa também pasta em link simbólico e o README não manda mudar a permissão da
+  pasta-mãe `~/sexta-feira-segredos` (é da Sexta-Feira).
 - Como testar: `bash testes/conferir.sh` e `bash testes/atualizador.sh`.
 - Armadilhas: (1) a v0.1.0 nunca foi instalada no PC, então não há migração do caminho antigo. (2) Se `~/sexta-feira-segredos` não existir, o
   espelho só fica desligado (o instalador avisa).

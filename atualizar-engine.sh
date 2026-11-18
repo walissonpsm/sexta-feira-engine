@@ -72,7 +72,7 @@ ENGINE_ORIGIN="${ENGINE_ORIGIN:-git@github.com:walissonpsm/sexta-feira-engine.gi
 
 ligar_espelho() {   # com a deploy key no lugar, configura o origin e liga o espelho (marca em estado/espelho)
     local chave="$SEGREDOS_DIR/github/id_ed25519" chave_q atual
-    [ -f "$chave" ] && [ ! -L "$chave" ] || return 0
+    { [ -f "$chave" ] && [ ! -L "$chave" ] && [ ! -L "$SEGREDOS_DIR" ] && [ ! -L "$SEGREDOS_DIR/github" ]; } || return 0   # sem atalho em nenhum nível
     printf -v chave_q '%q' "$chave"
     D config core.sshCommand "ssh -i $chave_q -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o BatchMode=yes"
     atual="$(D remote get-url origin 2>/dev/null || true)"
