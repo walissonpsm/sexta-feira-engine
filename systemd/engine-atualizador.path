@@ -1,0 +1,9 @@
+[Unit]
+Description=Sexta-Feira Engine: acorda o atualizador quando ~/Downloads muda
+
+[Path]
+PathChanged=%h/Downloads
+Unit=engine-atualizador.service
+
+[Install]
+WantedBy=default.target

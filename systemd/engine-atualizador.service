@@ -1,0 +1,7 @@
+[Unit]
+Description=Sexta-Feira Engine: atualizador automático
+
+[Service]
+Type=oneshot
+ExecStart=%h/sexta-feira-engine/atualizar-engine.sh --auto
+TimeoutStartSec=10min
