@@ -33,9 +33,15 @@ git checkout -q -B main 2>/dev/null
 git add -A && git commit -q -m "base de teste" --allow-empty
 BASE="$(tr -d '[:space:]' < VERSAO)"   # a versão que está sendo testada; as de teste são 7.0.x
 
+poe_versao() {   # $1 = X.Y.Z; grava VERSAO e acompanha o VERSAO_ENGINE da tela (o conferir.sh exige que os dois batam)
+    printf '%s\n' "$1" > VERSAO
+    [ -f interface/tela.js ] && sed -i "s/^\([[:space:]]*var VERSAO_ENGINE = '\)[0-9.]*';/\1$1';/" interface/tela.js
+    return 0
+}
+
 nova_versao() {   # $1 = X.Y.Z; faz commit com VERSAO e CHANGELOG novos e empacota
     local v="$1"
-    printf '%s\n' "$v" > VERSAO
+    poe_versao "$v"
     printf '# Changelog — Sexta-Feira Engine\n\n## v%s — teste (18/11)\n\n- mudança de teste %s.\n\n' "$v" "$v" > .novo && sed -n "/^## v$BASE /,\$p" CHANGELOG.md >> .novo && mv .novo CHANGELOG.md
     echo "<!-- $v -->" >> interface/index.html
     git add -A && git commit -q -m "v$v" && git tag "v$v"
@@ -80,7 +86,7 @@ rm -f "$DOWNLOADS_DIR/sexta-feira-engine-v$BASE.bundle"
 
 # 4. bundle sem tag / VERSAO que não bate -------------------------------------------------------------------------------------
 cd "$FONTE" || exit 1
-printf '7.0.2\n' > VERSAO; sed -i '0,/^## v7.0.1/s//## v7.0.2/' CHANGELOG.md; git add -A; git commit -q -m "sem tag"
+poe_versao 7.0.2; sed -i '0,/^## v7.0.1/s//## v7.0.2/' CHANGELOG.md; git add -A; git commit -q -m "sem tag"
 git bundle create "$T/sexta-feira-engine-v7.0.2.bundle" --branches >/dev/null 2>&1   # sem --tags: não leva a tag v7.0.2
 cp "$T/sexta-feira-engine-v7.0.2.bundle" "$DOWNLOADS_DIR/"
 A --auto >"$T/saida" 2>&1
@@ -120,7 +126,7 @@ rm -f "$DOWNLOADS_DIR"/*.bundle
 
 # 6. rollback quando o teste falha ------------------------------------------------------------------------------------------
 git reset -q --hard v7.0.2
-printf '7.0.3\n' > VERSAO; sed -i '0,/^## v7.0.2/s//## v7.0.3/' CHANGELOG.md
+poe_versao 7.0.3; sed -i '0,/^## v7.0.2/s//## v7.0.3/' CHANGELOG.md
 echo '<script>fetch("https://exemplo.invalid/x")</script>' > interface/ruim.html   # a conferência de rede reprova
 git add -A; git commit -q -m "v7.0.3 ruim"; git tag v7.0.3
 git bundle create "$T/sexta-feira-engine-v7.0.3.bundle" --branches --tags >/dev/null 2>&1
