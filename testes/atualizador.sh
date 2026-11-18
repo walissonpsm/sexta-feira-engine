@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # variáveis lidas dentro de eval
 # Testa o instalador e o atualizador numa pasta temporária, sem systemd e sem tocar na sua instalação.
 # Cobre: instalação inicial; atualização 0.1.0 para 0.1.1; versão menor; bundle sem tag; pasta mexida à mão; rollback quando o
 # teste falha; bundle refeito depois de recusado; --voltar; espelho em repositório local.
@@ -71,8 +72,9 @@ confere "já atualizada: sai calada" '[ ! -s "$T/saida" ]'
 cp "$T/sexta-feira-engine-v0.1.0.bundle" "$DOWNLOADS_DIR/"
 A --auto >/dev/null 2>&1
 confere "versão menor é ignorada" '[ "$(instalado)" = 0.1.1 ]'
-! A "$DOWNLOADS_DIR/sexta-feira-engine-v0.1.0.bundle" >/dev/null 2>&1
-confere "versão menor por caminho é recusada" '[ "$(instalado)" = 0.1.1 ]'
+# shellcheck disable=SC2034  # RC é lida dentro de eval
+A "$DOWNLOADS_DIR/sexta-feira-engine-v0.1.0.bundle" >"$T/saida" 2>&1; RC=$?
+confere "versão menor por caminho é recusada com motivo" '[ "$RC" -ne 0 ] && grep -q "não é mais nova" "$T/saida" && [ "$(instalado)" = 0.1.1 ]'
 rm -f "$DOWNLOADS_DIR/sexta-feira-engine-v0.1.0.bundle"
 
 # 4. bundle sem tag / VERSAO que não bate -------------------------------------------------------------------------------------
@@ -82,15 +84,24 @@ git bundle create "$T/sexta-feira-engine-v0.1.2.bundle" --branches >/dev/null 2>
 cp "$T/sexta-feira-engine-v0.1.2.bundle" "$DOWNLOADS_DIR/"
 A --auto >"$T/saida" 2>&1
 confere "bundle sem tag não instala" '[ "$(instalado)" = 0.1.1 ]'
+confere "bundle sem tag: motivo no journal" 'grep -q "não tem a tag" "$T/saida"'
 confere "bundle sem tag NÃO é registrado em lista" '[ ! -e "$ENGINE_DIR/estado/atualizador-falhou.txt" ]'
 git tag v0.1.3   # tag com número diferente do VERSAO de dentro
 git bundle create "$T/x.bundle" --branches --tags >/dev/null 2>&1
 mv "$T/x.bundle" "$DOWNLOADS_DIR/sexta-feira-engine-v0.1.3.bundle"
 rm -f "$DOWNLOADS_DIR/sexta-feira-engine-v0.1.2.bundle"
 A --auto >"$T/saida" 2>&1
-confere "VERSAO de dentro diferente do nome não instala" '[ "$(instalado)" = 0.1.1 ]'
+confere "VERSAO de dentro diferente do nome não instala, com motivo" '[ "$(instalado)" = 0.1.1 ] && grep -q "não bate com o nome" "$T/saida"'
 rm -f "$DOWNLOADS_DIR"/*.bundle
 git tag -d v0.1.3 >/dev/null; git reset -q --hard v0.1.1; git tag -d v0.1.2 >/dev/null 2>&1 || true
+
+# 4b. bundle que é link simbólico no Downloads é ignorado pelo automático
+nova_versao 0.1.9
+ln -s "$T/sexta-feira-engine-v0.1.9.bundle" "$DOWNLOADS_DIR/sexta-feira-engine-v0.1.9.bundle"
+A --auto >"$T/saida" 2>&1
+confere "link simbólico em ~/Downloads é ignorado" '[ "$(instalado)" = 0.1.1 ]'
+rm -f "$DOWNLOADS_DIR"/*.bundle
+git tag -d v0.1.9 >/dev/null; git reset -q --hard v0.1.1
 
 # 5. pasta mexida à mão -----------------------------------------------------------------------------------------------------
 nova_versao 0.1.2
@@ -119,6 +130,8 @@ A --auto >"$T/saida" 2>&1
 confere "teste que falha: volta para a versão anterior" '[ "$(instalado)" = 0.1.2 ] && [ "$(git -C "$ENGINE_DIR" rev-parse HEAD)" = "$COMMIT_ANTES" ]'
 confere "rollback: publicar/ sem o arquivo ruim" '[ ! -e "$ENGINE_DIR/publicar/ruim.html" ]'
 confere "rollback: soma registrada" 'grep -q "v0.1.3" "$ENGINE_DIR/estado/atualizador-falhou.txt"'
+confere "rollback: tag recusada não fica no repositório (não sobe ao espelho)" '! git -C "$ENGINE_DIR" rev-parse -q --verify refs/tags/v0.1.3 >/dev/null'
+confere "rollback: publicar/ manteve o inode" '[ "$(stat -c %i "$ENGINE_DIR/publicar")" = "$INODE_ANTES" ]'
 confere "rollback: pasta limpa" '[ -z "$(git -C "$ENGINE_DIR" status --porcelain --untracked-files=no)" ]'
 rm -f "$DOWNLOADS_DIR"/*.bundle
 
@@ -137,8 +150,9 @@ confere "--voltar grava atualizador-ignorar.txt" '[ "$(tr -d "[:space:]" < "$ENG
 cp "$T/sexta-feira-engine-v0.1.3.bundle" "$DOWNLOADS_DIR/"
 A --auto >"$T/saida" 2>&1
 confere "depois do --voltar o automático não reinstala a recusada" '[ "$(instalado)" = 0.1.1 ]'
-! A --voltar v0.1.5 >/dev/null 2>&1
-confere "--voltar para tag desconhecida é recusado" '[ "$(instalado)" = 0.1.1 ]'
+# shellcheck disable=SC2034  # RC é lida dentro de eval
+A --voltar v0.1.5 >"$T/saida" 2>&1; RC=$?
+confere "--voltar para tag desconhecida é recusado" '[ "$RC" -ne 0 ] && [ "$(instalado)" = 0.1.1 ]'
 rm -f "$DOWNLOADS_DIR"/*.bundle
 
 # 9. espelho em repositório local --------------------------------------------------------------------------------------------

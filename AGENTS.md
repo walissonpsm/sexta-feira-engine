@@ -47,7 +47,7 @@ Igual ao da Sexta-Feira (seção 3 do `AGENTS.md` de lá), em resumo:
 4. **Espelho** (opcional): com a deploy key em `~/sexta-feira-engine-segredos/github/id_ed25519`, depois de instalar o atualizador empurra
    `main` e as tags ao GitHub. Falha do espelho só avisa (não há rollback).
 5. **À mão** (só com o "sim" do Walisson): `./atualizar-engine.sh` (bundle mais novo), `./atualizar-engine.sh /caminho.bundle`,
-   `--voltar vX.Y.Z` (volta e grava `atualizador-ignorar.txt`), `--espelhar`.
+   `--voltar vX.Y.Z` (volta e grava `atualizador-ignorar.txt`; para reinstalar a versão recusada, apague esse arquivo e rode com o caminho do `.bundle`), `--espelhar`.
 
 Quem mudar o atualizador atualiza esta seção no mesmo commit.
 
@@ -87,6 +87,13 @@ Só as 2 últimas versões ficam aqui. Formato: o que mudou · arquivos · não 
 - Arquivos: tudo na raiz; `LICENSE` não muda.
 - NÃO mexer: `CLAUDE.md` = `@AGENTS.md`; `examinar_bundle` é a mesma função no instalador e no atualizador (o `conferir.sh` compara);
   `publicar/` não é recriada; `interface/neuronio.html` é do dono (cores dele).
+- Auditoria independente (feita nesta versão, agente separado): achou e foi corrigido (a) tag de versão recusada ficava no repositório e subia ao
+  espelho (agora `recusar` apaga a tag); (b) `git reset --keep` sem guarda (agora `voltar_commit` avisa e para); (c) `StartLimitIntervalSec=0` no
+  serviço e `TimeoutStartSec=15min` (o `.path` parava de vigiar depois de muitas mudanças em `~/Downloads`); (d) TOCTOU: soma, conferência
+  e fetch agora usam uma cópia do bundle em `estado/`; (e) `notify-send --`; (f) `-i` do ssh com aspas; (g) `transfer.fsckObjects`; (h) link
+  simbólico e dono também no modo manual; (i) versões sem zero à esquerda; (j) `publicar/` limpa também subpasta/link; (k) mais padrões de rede e segredo
+  no `conferir.sh`; (l) testes sem asserções vazias. Não corrigido por decisão: recusa por "arquivo mexido à mão" ou "fora do main" também
+  grava a soma (igual ao atualizador da Sexta-Feira; o manual com o caminho do bundle ignora a lista).
 - Como testar: `bash testes/conferir.sh` e `bash testes/atualizador.sh` (instala e atualiza numa pasta temporária, sem systemd).
 - Armadilhas: (1) sem `shellcheck` o conferir só confere a sintaxe. (2) O espelho liga sozinho quando a deploy key existe. (3) Nada visto
   em systemd real; no PC o primeiro disparo do `.path` mostra o que faltou.

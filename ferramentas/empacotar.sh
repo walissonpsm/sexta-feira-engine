@@ -14,7 +14,7 @@ cd "$RAIZ"
 
 [ -z "$(git status --porcelain)" ] || { echo "empacotar: há alterações sem commit" >&2; exit 1; }
 V="$(tr -d '[:space:]' < VERSAO)"
-[[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "empacotar: VERSAO inválida: $V" >&2; exit 1; }
+[[ "$V" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "empacotar: VERSAO inválida: $V" >&2; exit 1; }
 TOPO="$(sed -n 's/^## v\([0-9][0-9.]*\) .*/\1/p' CHANGELOG.md | head -n1)"
 [ "$TOPO" = "$V" ] || { echo "empacotar: o topo do CHANGELOG ($TOPO) não é a VERSAO ($V)" >&2; exit 1; }
 bash testes/conferir.sh >/dev/null || { echo "empacotar: testes/conferir.sh reprovou" >&2; exit 1; }

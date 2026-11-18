@@ -18,7 +18,7 @@ SYSTEMD_USER_DIR="${SYSTEMD_USER_DIR:-$HOME/.config/systemd/user}"
 SEGREDOS_DIR="${SEGREDOS_DIR:-$HOME/sexta-feira-engine-segredos}"
 export ENGINE_DIR SEGREDOS_DIR
 SEM_SYSTEMD="${SEM_SYSTEMD:-0}"
-RE_BUNDLE='^sexta-feira-engine-v([0-9]+\.[0-9]+\.[0-9]+)\.bundle$'
+RE_BUNDLE='^sexta-feira-engine-v((0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*))\.bundle$'
 
 erro() { echo "instalar-engine: $*" >&2; }
 log() { echo "instalar-engine: $*"; }
@@ -46,7 +46,7 @@ examinar_bundle() {   # $1 = bundle, $2 = versão do nome. Mensagem de motivo em
         cd "$tmp"
         git init -q v
         ( cd v && git bundle verify "$b" >/dev/null 2>&1 ) || { echo "git bundle verify reprovou o arquivo" >&2; exit 1; }
-        git -c core.hooksPath=/dev/null clone --quiet --no-checkout "$b" c >/dev/null 2>&1 || { echo "não consegui abrir o bundle" >&2; exit 1; }
+        git -c core.hooksPath=/dev/null -c transfer.fsckObjects=true clone --quiet --no-checkout "$b" c >/dev/null 2>&1 || { echo "não consegui abrir o bundle" >&2; exit 1; }
         cd c
         git rev-parse -q --verify "refs/tags/v$v^{commit}" >/dev/null || { echo "o bundle não tem a tag v$v" >&2; exit 1; }
         vi="$(git show "refs/tags/v$v:VERSAO" 2>/dev/null | tr -d '[:space:]')" || vi=""
@@ -72,12 +72,12 @@ examinar_bundle() {   # $1 = bundle, $2 = versão do nome. Mensagem de motivo em
 BUNDLE=""; V=""
 if [ -n "${1:-}" ]; then
     BUNDLE="$1"
-    [ -f "$BUNDLE" ] || { erro "não achei $BUNDLE"; exit 1; }
+    { [ -f "$BUNDLE" ] && [ ! -L "$BUNDLE" ]; } || { erro "não achei $BUNDLE (ou é link)"; exit 1; }
     [[ "$(basename "$BUNDLE")" =~ $RE_BUNDLE ]] || { erro "o nome tem de ser sexta-feira-engine-vX.Y.Z.bundle"; exit 1; }
     V="${BASH_REMATCH[1]}"
 else
     for f in "$DOWNLOADS_DIR"/sexta-feira-engine-v*.bundle; do
-        [ -f "$f" ] && [ ! -L "$f" ] || continue
+        { [ -f "$f" ] && [ ! -L "$f" ] && [ -O "$f" ]; } || continue
         [[ "$(basename "$f")" =~ $RE_BUNDLE ]] || continue
         if [ -z "$V" ] || maior "${BASH_REMATCH[1]}" "$V"; then V="${BASH_REMATCH[1]}"; BUNDLE="$f"; fi
     done
@@ -132,5 +132,5 @@ fi
 
 log "Sexta-Feira Engine v$V instalada em $ENGINE_DIR"
 if command -v notify-send >/dev/null 2>&1; then
-    notify-send -a "Sexta-Feira Engine" "Sexta-Feira Engine v$V instalada" "Atualizações: coloque o novo .bundle em ~/Downloads." >/dev/null 2>&1 || true
+    notify-send -a "Sexta-Feira Engine" -- "Sexta-Feira Engine v$V instalada" "Atualizações: coloque o novo .bundle em ~/Downloads." >/dev/null 2>&1 || true
 fi

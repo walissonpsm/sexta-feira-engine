@@ -4,7 +4,6 @@ Description=Sexta-Feira Engine: rede de segurança do atualizador (a cada 1 h)
 [Timer]
 OnBootSec=5min
 OnUnitActiveSec=1h
-Persistent=true
 Unit=engine-atualizador.service
 
 [Install]

@@ -23,7 +23,7 @@ SEM_SYSTEMD="${SEM_SYSTEMD:-0}"
 ESTAVEL_SEG="${ESTAVEL_SEG:-5}"
 MAX_ESPERA="${MAX_ESPERA:-120}"
 ESTADO="$ENGINE_DIR/estado"
-RE_BUNDLE='^sexta-feira-engine-v([0-9]+\.[0-9]+\.[0-9]+)\.bundle$'
+RE_BUNDLE='^sexta-feira-engine-v((0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*))\.bundle$'
 
 AUTO=0; VOLTAR=""; ESPELHAR=0; BUNDLE_ARG=""
 
@@ -31,7 +31,7 @@ uso() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-}" in
     --auto) AUTO=1 ;;
-    --voltar) VOLTAR="${2:-}"; [[ "$VOLTAR" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "uso: --voltar vX.Y.Z" >&2; exit 2; } ;;
+    --voltar) VOLTAR="${2:-}"; [[ "$VOLTAR" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "uso: --voltar vX.Y.Z" >&2; exit 2; } ;;
     --espelhar) ESPELHAR=1 ;;
     -h|--help) uso; exit 0 ;;
     "") ;;
@@ -51,7 +51,7 @@ maior() { [ "$1" != "$2" ] && [ "$(mais_nova "$1" "$2")" = "$1" ]; }   # $1 é e
 
 avisar() {   # aviso na área de trabalho; nunca derruba a atualização
     if command -v notify-send >/dev/null 2>&1; then
-        notify-send -a "Sexta-Feira Engine" "$1" "${2:-}" >/dev/null 2>&1 || true
+        notify-send -a "Sexta-Feira Engine" -- "$1" "${2:-}" >/dev/null 2>&1 || true
     fi
 }
 
@@ -71,9 +71,10 @@ SEGREDOS_DIR="${SEGREDOS_DIR:-$HOME/sexta-feira-engine-segredos}"
 ENGINE_ORIGIN="${ENGINE_ORIGIN:-git@github.com:walissonpsm/sexta-feira-engine.git}"
 
 ligar_espelho() {   # com a deploy key no lugar, configura o origin e liga o espelho (marca em estado/espelho)
-    local chave="$SEGREDOS_DIR/github/id_ed25519" atual
+    local chave="$SEGREDOS_DIR/github/id_ed25519" chave_q atual
     [ -f "$chave" ] && [ ! -L "$chave" ] || return 0
-    D config core.sshCommand "ssh -i $chave -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o BatchMode=yes"
+    printf -v chave_q '%q' "$chave"
+    D config core.sshCommand "ssh -i $chave_q -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o BatchMode=yes"
     atual="$(D remote get-url origin 2>/dev/null || true)"
     if [ -z "$atual" ]; then D remote add origin "$ENGINE_ORIGIN"
     elif [[ "$atual" == *.bundle ]]; then D remote set-url origin "$ENGINE_ORIGIN"; fi
@@ -136,6 +137,14 @@ desfazer_unidades_novas() {   # usado no rollback: tira o que a tentativa acabou
     NOVAS_UNIDADES=()
 }
 
+voltar_commit() {   # rollback do código; se nem isso o git deixar, avisa claro e para
+    if ! D reset --keep -q "$1"; then
+        erro "CRÍTICO: não consegui voltar o código para $1. Rode: git -C $ENGINE_DIR reset --keep $1"
+        avisar "Engine: rollback falhou" "Não consegui voltar o código. Veja o journal: journalctl --user -u engine-atualizador -e"
+        exit 1
+    fi
+}
+
 montar_publicar() { bash "$ENGINE_DIR/ferramentas/montar-publicar.sh" "$ENGINE_DIR" >/dev/null; }
 rodar_conferencia() { bash "$ENGINE_DIR/testes/conferir.sh" >/dev/null; }
 
@@ -148,7 +157,7 @@ examinar_bundle() {   # $1 = bundle, $2 = versão do nome. Mensagem de motivo em
         cd "$tmp"
         git init -q v
         ( cd v && git bundle verify "$b" >/dev/null 2>&1 ) || { echo "git bundle verify reprovou o arquivo" >&2; exit 1; }
-        git -c core.hooksPath=/dev/null clone --quiet --no-checkout "$b" c >/dev/null 2>&1 || { echo "não consegui abrir o bundle" >&2; exit 1; }
+        git -c core.hooksPath=/dev/null -c transfer.fsckObjects=true clone --quiet --no-checkout "$b" c >/dev/null 2>&1 || { echo "não consegui abrir o bundle" >&2; exit 1; }
         cd c
         git rev-parse -q --verify "refs/tags/v$v^{commit}" >/dev/null || { echo "o bundle não tem a tag v$v" >&2; exit 1; }
         vi="$(git show "refs/tags/v$v:VERSAO" 2>/dev/null | tr -d '[:space:]')" || vi=""
@@ -199,8 +208,8 @@ escolher_bundle() {   # imprime "versão caminho" do mais novo que vale a pena, 
         v="${BASH_REMATCH[1]}"
         maior "$v" "$VERSAO_INSTALADA" || continue
         if [ -n "$ign" ] && ! maior "$v" "$ign"; then continue; fi
+        { [ -f "$f" ] && [ ! -L "$f" ] && [ -O "$f" ]; } || continue
         if [ "$AUTO" -eq 1 ]; then
-            { [ -f "$f" ] && [ ! -L "$f" ] && [ -O "$f" ]; } || continue
             soma="$(soma_de "$f")"
             if [ -f "$ESTADO/atualizador-falhou.txt" ] && grep -q "^$soma " "$ESTADO/atualizador-falhou.txt"; then continue; fi
         fi
@@ -225,7 +234,7 @@ if [ -n "$VOLTAR" ]; then
     [ -z "$(D status --porcelain --untracked-files=no)" ] || { erro "há arquivos versionados alterados à mão; recuso"; exit 1; }
     [ "$(D symbolic-ref --short -q HEAD || true)" = main ] || { erro "a pasta instalada não está no main; recuso"; exit 1; }
     anterior="$(D rev-parse HEAD)"
-    D reset --keep -q "refs/tags/$VOLTAR"
+    D reset --keep -q "refs/tags/$VOLTAR" || { erro "o git não conseguiu voltar para $VOLTAR (nada foi alterado)"; exit 1; }
     if rodar_conferencia && montar_publicar && sincronizar_unidades; then
         printf '%s\n' "$VERSAO_INSTALADA" > "$ESTADO/atualizador-ignorar.txt"
         log "voltei de v$VERSAO_INSTALADA para $VOLTAR; o automático só instala versão acima de v$VERSAO_INSTALADA"
@@ -234,7 +243,7 @@ if [ -n "$VOLTAR" ]; then
     fi
     erro "a rodada de teste da $VOLTAR falhou; volto para v$VERSAO_INSTALADA"
     desfazer_unidades_novas
-    D reset --keep -q "$anterior"
+    voltar_commit "$anterior"
     montar_publicar || true
     sincronizar_unidades || true
     exit 1
@@ -243,7 +252,7 @@ fi
 # --- escolha do pacote --------------------------------------------------------------------------------------------------
 BUNDLE=""; VNOVA=""
 if [ -n "$BUNDLE_ARG" ]; then
-    [ -f "$BUNDLE_ARG" ] || { erro "não achei $BUNDLE_ARG"; exit 1; }
+    { [ -f "$BUNDLE_ARG" ] && [ ! -L "$BUNDLE_ARG" ]; } || { erro "não achei $BUNDLE_ARG (ou é link)"; exit 1; }
     nome="$(basename "$BUNDLE_ARG")"
     [[ "$nome" =~ $RE_BUNDLE ]] || { erro "o nome tem de ser sexta-feira-engine-vX.Y.Z.bundle"; exit 1; }
     VNOVA="${BASH_REMATCH[1]}"; BUNDLE="$BUNDLE_ARG"
@@ -263,15 +272,19 @@ if ! esperar_estavel "$BUNDLE"; then
     erro "o arquivo $(basename "$BUNDLE") não parou de crescer (ou sumiu); tento de novo no próximo disparo"
     exit 0
 fi
-SOMA="$(soma_de "$BUNDLE")"
+COPIA="$ESTADO/pacote.$$.bundle"   # tudo abaixo (soma, conferência, fetch) usa esta cópia, não o arquivo de ~/Downloads
+trap 'rm -f -- "$COPIA"' EXIT
+cp -- "$BUNDLE" "$COPIA" || { erro "não consegui copiar o bundle para $ESTADO"; exit 0; }
+SOMA="$(soma_de "$COPIA")"
 
-if ! motivo="$(examinar_bundle "$BUNDLE" "$VNOVA" 2>&1)"; then
+if ! motivo="$(examinar_bundle "$COPIA" "$VNOVA" 2>&1)"; then
     erro "bundle $(basename "$BUNDLE") reprovado na conferência do arquivo (não registrado): $motivo"
     exit 0
 fi
 
 recusar() {   # depois da conferência do arquivo: registra, avisa, devolve 1
     registrar_falha "$SOMA" "$VNOVA" "$1"
+    D tag -d "v$VNOVA" >/dev/null 2>&1 || true   # tag buscada e não instalada nunca sobe ao espelho
     erro "recusei a v$VNOVA: $1"
     avisar "Engine: v$VNOVA recusada" "$1 Continua na v$VERSAO_INSTALADA."
     return 1
@@ -285,7 +298,7 @@ if [ "$(D symbolic-ref --short -q HEAD || true)" != main ]; then
     recusar "a pasta instalada não está no branch main." || exit 1
 fi
 ANTERIOR="$(D rev-parse HEAD)"
-if ! D fetch --quiet "$BUNDLE" "+refs/tags/v$VNOVA:refs/tags/v$VNOVA" >/dev/null 2>&1; then
+if ! git -c transfer.fsckObjects=true -C "$ENGINE_DIR" fetch --quiet "$COPIA" "+refs/tags/v$VNOVA:refs/tags/v$VNOVA" >/dev/null 2>&1; then
     recusar "não consegui ler a tag v$VNOVA do bundle." || exit 1
 fi
 if ! D merge-base --is-ancestor "$ANTERIOR" "refs/tags/v$VNOVA"; then
@@ -309,7 +322,7 @@ instalar_passos() {
 if ! instalar_passos; then
     erro "falhou: $MOTIVO_FALHA Voltando para v$VERSAO_INSTALADA."
     desfazer_unidades_novas
-    D reset --keep -q "$ANTERIOR"
+    voltar_commit "$ANTERIOR"
     montar_publicar || erro "aviso: não consegui remontar publicar/ da versão anterior"
     sincronizar_unidades || erro "aviso: não consegui restaurar as unidades da versão anterior"
     recusar "$MOTIVO_FALHA" || exit 1

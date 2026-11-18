@@ -24,7 +24,7 @@ lista_versionados() {   # arquivos versionados (git) ou, sem git, todos fora de 
 # 1. VERSAO e CHANGELOG ------------------------------------------------------------------------------------------------
 if [ -f VERSAO ]; then
     v="$(head -n1 VERSAO | tr -d '[:space:]')"
-    if [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    if [[ "$v" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
         topo="$(sed -n 's/^## v\([0-9][0-9.]*\) .*/\1/p' CHANGELOG.md 2>/dev/null | head -n1)"
         if [ "$topo" = "$v" ]; then ok "VERSAO $v bate com o topo do CHANGELOG"; else falha "VERSAO ($v) diferente do topo do CHANGELOG ($topo)"; fi
     else
@@ -62,7 +62,7 @@ if [ -d interface ]; then
         if printf '%s' "$sem_ns" | grep -qiE 'https?://|(src|href|action|poster|data)[[:space:]]*=[[:space:]]*["'\'']?//|url\([[:space:]]*["'\'']?//|@import'; then
             falha "$nome: endereço externo (http, https, // ou @import)"
         fi
-        if printf '%s' "$sem_ns" | grep -qE 'fetch[[:space:]]*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon|importScripts'; then
+        if printf '%s' "$sem_ns" | grep -qE 'fetch[[:space:]]*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon|importScripts|import[[:space:]]*\(|new[[:space:]]+(Shared)?Worker|serviceWorker|RTCPeerConnection|WebTransport|window\.open|location(\.href)?[[:space:]]*='; then
             falha "$nome: chamada de rede (fetch, XMLHttpRequest...). O canal com a Sexta-Feira entra numa versão futura, com regra própria"
         fi
     done < <(find interface -mindepth 1 -maxdepth 1 -type f -print0)
@@ -70,7 +70,7 @@ if [ -d interface ]; then
 fi
 
 # 4. nenhum segredo nos arquivos versionados ---------------------------------------------------------------------------
-padrao='BEGIN [A-Z ]*PRIVATE KEY|api[_-]?key|passw(or)?d[[:space:]]*[=:]|secret[[:space:]]*[=:]|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|[0-9]{8,}:[A-Za-z0-9_-]{30,}'
+padrao='BEGIN [A-Z ]*PRIVATE KEY|api[_-]?key|passw(or)?d[[:space:]]*[=:]|secret[[:space:]]*[=:]|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|[0-9]{8,}:[A-Za-z0-9_-]{30,}|AKIA[0-9A-Z]{16}|xox[bpas]-[A-Za-z0-9-]{10,}|/home/[a-z][a-z0-9_-]*/'
 achou=0
 while IFS= read -r f; do
     [ -f "$f" ] || continue
@@ -109,8 +109,8 @@ for u in systemd/*; do
     [ -f "$u" ] || continue
     case "$u" in
         *.path)    secoes="Unit Path Install";    chaves="Description PathChanged Unit WantedBy" ;;
-        *.timer)   secoes="Unit Timer Install";   chaves="Description OnBootSec OnUnitActiveSec Persistent Unit WantedBy" ;;
-        *.service) secoes="Unit Service";         chaves="Description Type ExecStart TimeoutStartSec" ;;
+        *.timer)   secoes="Unit Timer Install";   chaves="Description OnBootSec OnUnitActiveSec Unit WantedBy" ;;
+        *.service) secoes="Unit Service";         chaves="Description StartLimitIntervalSec Type ExecStart TimeoutStartSec" ;;
         *) falha "$u: tipo de unidade não esperado"; continue ;;
     esac
     secao=""

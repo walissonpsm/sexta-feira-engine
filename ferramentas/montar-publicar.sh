@@ -24,6 +24,7 @@ while IFS= read -r -d '' f; do
     nome="$(basename "$f")"
     [[ "$nome" =~ ^[a-z0-9_-]+\.(html|js|css|woff2|svg|json)$ ]] || { echo "montar-publicar: nome não permitido: $nome" >&2; exit 1; }
     [ -f "$f" ] && [ ! -L "$f" ] || { echo "montar-publicar: não é arquivo comum: $nome" >&2; exit 1; }
+    [ ! -d "$DESTINO/$nome" ] || rm -rf -- "${DESTINO:?}/$nome"
     cp -- "$f" "$DESTINO/.novo.$nome"
     chmod 644 "$DESTINO/.novo.$nome"
     mv -f -- "$DESTINO/.novo.$nome" "$DESTINO/$nome"
@@ -37,7 +38,7 @@ while IFS= read -r -d '' velho; do
     nome="$(basename "$velho")"
     achou=0
     for c in "${copiados[@]}"; do [ "$c" = "$nome" ] && achou=1 && break; done
-    [ "$achou" -eq 1 ] || rm -f -- "$velho"
-done < <(find "$DESTINO" -mindepth 1 -maxdepth 1 -type f -print0)
+    [ "$achou" -eq 1 ] || rm -rf -- "$velho"
+done < <(find "$DESTINO" -mindepth 1 -maxdepth 1 -print0)
 
 echo "publicar/ montada com ${#copiados[@]} arquivo(s)."
