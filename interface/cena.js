@@ -1,3 +1,6 @@
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.3.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+// ---- fonte/cena/quadro/parte.js
+SF.parte({nome:'cena/quadro',porta:1,compativelDesde:1,requer:['neuronio/celula@1','comum/sorteio@1','comum/cores@1','comum/curvas@1'],guarda:true,dom:true},
 /* Sexta-Feira Engine v0.3.0: a cena. O Núcleo no centro, seis agentes ao redor (três de cada lado) e a Corretora parada ao lado do Robô.
  * Cada esfera é um Neuronio.criar próprio. Axônio só leva e dendrito só recebe, e a PAREDE de vidro é a sinapse: para cada agente há um par de
  * axônios de mão única, lado a lado, e os dois PARAM no vidro (por fora). Do lado de dentro, um dendrito encosta no mesmo ponto.
@@ -10,44 +13,15 @@
  *                                  pedidos: { idDoAgente: [idsDeModulo] }, leve });
  *   c.ajustar(largura, altura); c.quadro(dt); c.focar(id); c.sair(); c.esferas(); c.ligacoes(); c.pedir(idDoAgente, idxDoModulo);
  */
-(function () {
+function (usa) {
   'use strict';
+
+  var hash = usa.sorteio.hash, ehCor = usa.cores.ehCor, rgbDe = usa.cores.rgbDe, clar = usa.cores.clar, esc = usa.cores.esc, rgba = usa.cores.rgba;
+  var volta = usa.curvas.volta, curva = usa.curvas.curva, polar = usa.curvas.polar, suave = usa.curvas.suave;
 
   // ---- o desenho da cena em "unidades da cena" (UC): o Núcleo tem raio 500; tudo é escalado por s (px por UC) para caber no palco
   var UC = { nucleo: { x: 0, y: 0, r: 500 }, agente: 200, ax: 1080, ay: 520, sat: 72, centroY: 25, largura: 2640, altura: 1500 };
 
-  function hash(s) { var h = 2166136261 >>> 0; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; }
-  function ehCor(c) { return typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c); }
-  function volta(a) { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; }
-
-  // Catmull-Rom centrípeta (Barry-Goldman) por uma lista de pontos, depois reamostrada em passos iguais (px)
-  function curva(pts, passo) {
-    var n = pts.length, P = [{ x: 2 * pts[0].x - pts[1].x, y: 2 * pts[0].y - pts[1].y }].concat(pts, [{ x: 2 * pts[n - 1].x - pts[n - 2].x, y: 2 * pts[n - 1].y - pts[n - 2].y }]);
-    var denso = [], dist = function (a, b) { return Math.pow(Math.hypot(b.x - a.x, b.y - a.y) + 1e-6, 0.5); };
-    var mix = function (a, b, u) { return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u }; };
-    for (var i = 0; i < n - 1; i++) {
-      var p0 = P[i], p1 = P[i + 1], p2 = P[i + 2], p3 = P[i + 3];
-      var t0 = 0, t1 = t0 + dist(p0, p1), t2 = t1 + dist(p1, p2), t3 = t2 + dist(p2, p3);
-      var seg = Math.max(8, Math.ceil(Math.hypot(p2.x - p1.x, p2.y - p1.y) / 2));
-      for (var s = 0; s < seg; s++) {
-        var t = t1 + (t2 - t1) * s / seg;
-        var A1 = mix(p0, p1, (t - t0) / (t1 - t0)), A2 = mix(p1, p2, (t - t1) / (t2 - t1)), A3 = mix(p2, p3, (t - t2) / (t3 - t2));
-        var B1 = mix(A1, A2, (t - t0) / (t2 - t0)), B2 = mix(A2, A3, (t - t1) / (t3 - t1));
-        denso.push(mix(B1, B2, (t - t1) / (t2 - t1)));
-      }
-    }
-    denso.push({ x: pts[n - 1].x, y: pts[n - 1].y });
-    var acum = [0];
-    for (var j = 1; j < denso.length; j++) acum.push(acum[j - 1] + Math.hypot(denso[j].x - denso[j - 1].x, denso[j].y - denso[j - 1].y));
-    var total = acum[acum.length - 1], out = [], k = 0, m = Math.max(8, Math.round(total / passo));
-    for (var q = 0; q <= m; q++) {
-      var alvo = total * q / m;
-      while (k < acum.length - 2 && acum[k + 1] < alvo) k++;
-      var f = (alvo - acum[k]) / Math.max(1e-9, acum[k + 1] - acum[k]);
-      out.push({ x: denso[k].x + (denso[k + 1].x - denso[k].x) * f, y: denso[k].y + (denso[k + 1].y - denso[k].y) * f });
-    }
-    return out;
-  }
 
   function criar(raiz, cfg) {
     var leve = !!cfg.leve;
@@ -76,7 +50,7 @@
       cv.className = 'esfera';
       cv.setAttribute('data-id', id);
       raiz.appendChild(cv);
-      var n = window.Neuronio.criar(cv, Object.assign({ cor: cor, semente: semente, leve: leve, lupa: false, margem: MG }, extra));
+      var n = usa.celula.criar(cv, Object.assign({ cor: cor, semente: semente, leve: leve, lupa: false, margem: MG }, extra));
       var e = { id: id, nome: nome, cor: cor, canvas: cv, n: n, cx: 0, cy: 0, R: 10, lado: lado, giro: 0, botao: null, extra: extra };
       esf[id] = e;
       cv.style.pointerEvents = 'auto';
@@ -146,10 +120,6 @@
     // ---------------------------------------------------------------- a camada da parede: receptores, ventosas (os terminais) e os braços dos axônios
     var fixos = [], fixoAg = {}, fixoMod = [], ramos = [], ventosas = [], ventById = {}, sujo = true;
     var TF = { k: 1, tx: 0, ty: 0 }, T = { K: 1, TX: 0, TY: 0 };      // TF: a esfera em foco cabe no palco; T: a vista total (TF mais a lupa dela)
-    function rgbDe(h) { return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)]; }
-    function clar(c) { return [Math.min(255, c[0] + 95), Math.min(255, c[1] + 95), Math.min(255, c[2] + 95)]; }
-    function esc(c, k) { return [Math.round(c[0] * k), Math.round(c[1] * k), Math.round(c[2] * k)]; }
-    function rgba(c, a) { return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + Math.max(0, Math.min(1, a)).toFixed(3) + ')'; }
     function aplicaT(c) { c.setTransform(dprP * T.K, 0, 0, dprP * T.K, dprP * T.TX, dprP * T.TY); }
     function visivel(it) {                // no foco, só o que toca a esfera ampliada
       if (!foco) return true;
@@ -176,8 +146,6 @@
     function espVent() { return Math.max(2.2, 5.0 * s); }
     function raioVent(R) { return R + 0.4 + espVent() * 0.6; }
     function altVent() { return Math.max(9, 24 * s); }                 // a altura do sino: do pescoço do axônio até o disco
-    function polar(cx, cy, r, a) { return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }; }
-    function suave(u) { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); }
     // a ventosa, o terminal do axônio: um sino curto (o axônio afina no pescoço e alarga) que termina num disco achatado e côncavo, colado ao vidro e
     // seguindo a curva dele, com aro claro. sq (0..1) é o aperto quando o sinal chega: achata, alarga e o vidro embaixo acende. anel (0..1) é a onda
     // que corre pelo vidro quando ela pousa. O contorno escuro faz o que passa por baixo parecer passar por baixo.
@@ -489,7 +457,7 @@
     function disparar(lid, hex) { var ax = eixoById[lid]; if (!ax) return; ax.pulso = { u: 0, k: 0 }; ax.pulsoCor = rgbDe(hex); }
     function pedir(id, idxMod) {
       var a = esf[id], ax = eixoById['i-' + id]; if (!a || !ax || !ligMapa['i-' + id] || ocupado[id]) return false;
-      var lm = modulosDe(id); if (idxMod == null) idxMod = lm[Math.floor(Math.random() * lm.length)];
+      var lm = modulosDe(id); if (idxMod == null) idxMod = lm[Math.floor(usa.base.acaso() * lm.length)];
       if (!fixoMod[idxMod]) return false;
       ocupado[id] = true; pedidoDe[id] = idxMod;
       a.n.excitar(a.cor);
@@ -516,13 +484,13 @@
         if (fixoAg[id]) fixoAg[id].flash = 1;
         if (ventById[lid]) ventById[lid].flash = 1;
         ocupado[id] = false;
-        if (Math.random() < 0.55) agendar(2.0 + Math.random() * 3.0, function () { if (automatico) pedir(id); });     // e o ciclo recomeça
+        if (usa.base.acaso() < 0.55) agendar(2.0 + usa.base.acaso() * 3.0, function () { if (automatico) pedir(id); });     // e o ciclo recomeça
       }
     }
     function sortear() {
       var livres = cfg.agentes.filter(function (a) { return !ocupado[a.id] && ligMapa['i-' + a.id]; }), em = Object.keys(ocupado).filter(function (k) { return ocupado[k]; }).length;
       if (!livres.length || em >= 3) return;
-      pedir(livres[Math.floor(Math.random() * livres.length)].id);
+      pedir(livres[Math.floor(usa.base.acaso() * livres.length)].id);
     }
 
     // ---------------------------------------------------------------- o foco numa esfera (nome ou roda do mouse): ela ocupa o palco e ganha a lupa
@@ -601,7 +569,7 @@
       tempo += dt;
       for (var i = fila.length - 1; i >= 0; i--) if (fila[i].t <= tempo) { var it = fila.splice(i, 1)[0]; it.fn(); }
       proximo -= dt;
-      if (proximo <= 0) { if (automatico) sortear(); proximo = 1.0 + Math.random() * 1.6; }
+      if (proximo <= 0) { if (automatico) sortear(); proximo = 1.0 + usa.base.acaso() * 1.6; }
       ordem.forEach(function (id) { esf[id].n.passo(dt); });
       if (foco) {
         var e = esf[foco]; e.n.desenhar();
@@ -637,5 +605,7 @@
     };
   }
 
-  window.Cena = { criar: criar };
-}());
+  return { criar: criar };
+}
+
+);

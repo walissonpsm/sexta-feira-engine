@@ -36,7 +36,7 @@ window.__hashes = function () {
     var c = cs[i], x = c.getContext('2d'); if (!x || !c.width || !c.height) { out['canvas' + i] = 'vazio'; continue; }
     out['canvas' + i] = c.width + 'x' + c.height + ':' + fnv(new Uint8Array(x.getImageData(0, 0, c.width, c.height).data.buffer));
   }
-  var html = document.body.innerHTML.replace(/<script[\\s\\S]*?<\\/script>/g, ''), h = 2166136261 >>> 0;
+  var html = document.body.innerHTML.replace(/<script[\\s\\S]*?<\\/script>/g, '').replace(/\\s+/g, ' '), h = 2166136261 >>> 0;
   for (var j = 0; j < html.length; j++) { h ^= html.charCodeAt(j); h = Math.imul(h, 16777619) >>> 0; }
   out.html = h.toString(16);
   return out;

@@ -1,0 +1,6 @@
+nome: tela/inicio
+porta: 1
+compativel-desde: 1
+requer: dados/limpa@1 cena/quadro@1
+juntadora: nao
+dom: sim

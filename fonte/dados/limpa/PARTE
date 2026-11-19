@@ -1,0 +1,4 @@
+nome: dados/limpa
+porta: 1
+compativel-desde: 1
+saida: tela.js

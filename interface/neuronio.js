@@ -1,3 +1,6 @@
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.3.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+// ---- fonte/neuronio/celula/parte.js
+SF.parte({nome:'neuronio/celula',porta:1,compativelDesde:1,requer:['comum/sorteio@1','comum/cores@1'],guarda:true,dom:true},
 /* Sexta-Feira Engine: o motor do neurônio (v0.3.0).
  * Vem do neuronio.html do dono (desenho aprovado: soma, dendritos, axônio, terminais), transformado em fábrica: cada canvas tem o seu
  * neurônio, com estado próprio. Só desenha; não lê dado, não usa rede, não mexe em nada fora do canvas que recebe.
@@ -11,24 +14,10 @@
  * na ponta de um dendrito primário do principal; saida: true faz só o tronco do axônio do principal atravessar a parede da esfera
  * (rumo às outras esferas): a esfera fica à esquerda do canvas e o resto da largura é a passagem do tronco, que some aos poucos.
  */
-(function () {
+function (usa) {
   'use strict';
 
-        function createSeededRandom(seed) {
-          let s = seed >>> 0;
-          return function () {
-            s = (s * 1664525 + 1013904223) >>> 0;
-            return s / 4294967296;
-          };
-        }
-
-        function hexToRgb(hex) {
-          const clean = hex.replace('#', '');
-          const full = clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean;
-          const intVal = parseInt(full, 16);
-          return [(intVal >> 16) & 255, (intVal >> 8) & 255, intVal & 255];
-        }
-
+  var createSeededRandom = usa.sorteio.criar, hexToRgb = usa.cores.hexParaRgb;
 
   function criar(canvas, opcoes) {
     const opc = Object.assign({ cor: '#8B3DFF', semente: 94127, leve: false, rede: 0, saida: false, raioMax: Infinity, cores: null, anel: 0, lupa: false, axonios: 1, leque: 100, degrau: 0, abre: 200, miniEsc: 0.54, miniEixo: 0.25, giro: 0.9, sobra: 0.7, alcance: 0.8, semEixo: false, quieto: false, giro0: 0, dprMax: 3, margem: 3, dendritosExtra: null, arcos: null, corredor: 42, ligacoes: null, escLig: 1, aoChegar: null }, opcoes || {});
@@ -1019,7 +1008,7 @@
           if (!opc.giro0) return;
           c.translate(A.somaX, A.somaY); c.rotate(opc.giro0); c.translate(-A.somaX, -A.somaY);
         }
-        function agora() { return typeof performance !== 'undefined' ? performance.now() : Date.now(); }
+        function agora() { return usa.base.agora(); }
         function zcDe(z) { return Math.max(0, Math.min(1, (z - 1) / 3)); }      // o quanto a lupa já puxou o contraste (0 sem lupa, 1 a partir de 4x)
         // Degraus de detalhe, pelos pixels de tela por unidade do desenho da célula que está sendo pintada (0 = o desenho aprovado)
         function nivel() {
@@ -1477,7 +1466,7 @@
 
         function moverParalaxe() {
           if (opc.leve) { par.x = 0; par.y = 0; return; }
-          const t = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+          const t = usa.base.agora() / 1000;
           const ax = par.tx + Math.sin(t * 0.31) * 0.40, ay = par.ty + Math.cos(t * 0.23) * 0.30;   // o vidro respira mesmo parado
           par.x += (ax - par.x) * 0.07;
           par.y += (ay - par.y) * 0.07;
@@ -2046,12 +2035,12 @@
         // Dispara sinal receptivo ao longo de um dendrito até o soma
         function spawnDendriteSignal() {
           if (!anatomy.dendriteTips.length) return;
-          const idx = Math.floor(Math.random() * anatomy.dendriteTips.length);
+          const idx = Math.floor(usa.base.acaso() * anatomy.dendriteTips.length);
           const branch = anatomy.dendriteTips[idx];
           incomingSignals.push({
             pts: branch.pts,
             progress: 1.0,
-            speed: 0.56 + Math.random() * 0.34,
+            speed: 0.56 + usa.base.acaso() * 0.34,
             entrada: branch
           });
         }
@@ -2061,8 +2050,8 @@
           if (opc.semEixo || opc.modo === 'ligacoes') return;    // sem axônio próprio: quem manda sinal é a cena (dispararEixo)
           runtime.somaExcitation = 1.0;
           const eixos = [anatomy].concat(anatomy.extras || []);
-          const E = eixos[Math.floor(Math.random() * eixos.length)];       // cada pulso sai por um dos axônios
-          const chosenBoutons = E.terminalBoutons.filter((_, idx) => Math.random() < 0.65 || idx % 2 === 0);
+          const E = eixos[Math.floor(usa.base.acaso() * eixos.length)];       // cada pulso sai por um dos axônios
+          const chosenBoutons = E.terminalBoutons.filter((_, idx) => usa.base.acaso() < 0.65 || idx % 2 === 0);
           actionPotentials.push({
             t: 0,
             visitedNodes: new Set(),
@@ -2093,14 +2082,14 @@
           });
 
           if (config.enableMist) {
-            const dist = (8 + Math.random() * 5) * anatomy.scale;
+            const dist = (8 + usa.base.acaso() * 5) * anatomy.scale;
             mistClouds.push({
               x: bouton.x + Math.cos(bouton.tipAngle) * dist,
               y: bouton.y + Math.sin(bouton.tipAngle) * dist,
-              vx: Math.cos(bouton.tipAngle) * (2.8 + Math.random() * 3.0) * anatomy.scale,
-              vy: Math.sin(bouton.tipAngle) * (2.8 + Math.random() * 3.0) * anatomy.scale,
-              radius: (6.5 + Math.random() * 4.5) * anatomy.scale,
-              growRate: (6.5 + Math.random() * 4.0) * anatomy.scale,
+              vx: Math.cos(bouton.tipAngle) * (2.8 + usa.base.acaso() * 3.0) * anatomy.scale,
+              vy: Math.sin(bouton.tipAngle) * (2.8 + usa.base.acaso() * 3.0) * anatomy.scale,
+              radius: (6.5 + usa.base.acaso() * 4.5) * anatomy.scale,
+              growRate: (6.5 + usa.base.acaso() * 4.0) * anatomy.scale,
               life: 1.0,
               rgb: bouton.rgb
             });
@@ -2115,11 +2104,11 @@
 
           for (let k = 0; k < 10; k++) {
             const pIdx = k % 3;
-            const pocketY = pocketOffsets[pIdx] * bouton.bWidth + ((Math.random() - 0.5) * 2.0 * anatomy.scale);
+            const pocketY = pocketOffsets[pIdx] * bouton.bWidth + ((usa.base.acaso() - 0.5) * 2.0 * anatomy.scale);
             const startX = bouton.x + cosA * (bouton.bThick * 0.50) + perpX * pocketY;
             const startY = bouton.y + sinA * (bouton.bThick * 0.50) + perpY * pocketY;
-            const targetX = startX + cosA * cleftSpan + perpX * ((Math.random() - 0.5) * 4.2 * anatomy.scale);
-            const targetY = startY + sinA * cleftSpan + perpY * ((Math.random() - 0.5) * 4.2 * anatomy.scale);
+            const targetX = startX + cosA * cleftSpan + perpX * ((usa.base.acaso() - 0.5) * 4.2 * anatomy.scale);
+            const targetY = startY + sinA * cleftSpan + perpY * ((usa.base.acaso() - 0.5) * 4.2 * anatomy.scale);
 
             releasedNeurotransmitters.push({
               startX,
@@ -2128,10 +2117,10 @@
               targetY,
               x: startX,
               y: startY,
-              progress: -Math.random() * 0.22,
-              speed: 1.50 + Math.random() * 0.60,
+              progress: -usa.base.acaso() * 0.22,
+              speed: 1.50 + usa.base.acaso() * 0.60,
               jitter: 5.5 * anatomy.scale,
-              size: (1.25 + Math.random() * 0.55) * anatomy.scale,
+              size: (1.25 + usa.base.acaso() * 0.55) * anatomy.scale,
               isCentralBeam: k === 3 || k === 6,
               rgb: bouton.rgb
             });
@@ -2150,11 +2139,11 @@
             if (runtime.spawnAccumulator >= interval) {
               runtime.spawnAccumulator = 0;
               if (minis.length) {
-                dispararMini(minis[Math.floor(Math.random() * minis.length)]);
-                if (Math.random() < 0.22) triggerActionPotential();
+                dispararMini(minis[Math.floor(usa.base.acaso() * minis.length)]);
+                if (usa.base.acaso() < 0.22) triggerActionPotential();
               } else {
                 spawnDendriteSignal();
-                if (Math.random() < 0.45 + freqFactor * 0.45) {
+                if (usa.base.acaso() < 0.45 + freqFactor * 0.45) {
                   triggerActionPotential();
                 }
               }
@@ -2178,7 +2167,7 @@
               runtime.somaExcitation = Math.min(1.0, runtime.somaExcitation + 0.35);
               runtime.somaRgb = sig.rgb || null;                  // o Núcleo pisca na cor de quem acabou de falar com ele
               if (sig.cb) { try { sig.cb(); } catch (erro) { /* a cena não pode derrubar o desenho */ } }
-              if (Math.random() < 0.35) {
+              if (usa.base.acaso() < 0.35) {
                 triggerActionPotential();
               }
             }
@@ -2238,7 +2227,7 @@
             ap.t += speedFactor * dt * 1.3;
             if (ap.t >= 1.35) {
               ap.m.flash = 1;
-              incomingSignals.push({ pts: ap.m.alvo.pts, progress: 1.0, speed: 0.56 + Math.random() * 0.34, entrada: ap.m.alvo, rgb: ap.rgb || ap.m.rgb, cb: ap.cb || null });
+              incomingSignals.push({ pts: ap.m.alvo.pts, progress: 1.0, speed: 0.56 + usa.base.acaso() * 0.34, entrada: ap.m.alvo, rgb: ap.rgb || ap.m.rgb, cb: ap.cb || null });
               miniAPs.splice(i, 1);
             }
           }
@@ -2265,8 +2254,8 @@
             if (nt.progress < 0) continue;
 
             const clamped = Math.min(1, nt.progress);
-            const jx = (Math.random() - 0.5) * nt.jitter * dt;
-            const jy = (Math.random() - 0.5) * nt.jitter * dt;
+            const jx = (usa.base.acaso() - 0.5) * nt.jitter * dt;
+            const jy = (usa.base.acaso() - 0.5) * nt.jitter * dt;
             nt.x = nt.startX + (nt.targetX - nt.startX) * clamped + jx;
             nt.y = nt.startY + (nt.targetY - nt.startY) * clamped + jy;
 
@@ -2754,7 +2743,7 @@
           });
         });
         if (!melhor) { runtime.somaExcitation = 1.0; runtime.somaRgb = /^#[0-9a-fA-F]{6}$/.test(hex) ? hexToRgb(hex) : null; return; }
-        incomingSignals.push({ pts: melhor.e.pts, progress: melhor.j / Math.max(1, melhor.e.pts.length - 1), speed: 0.56 + Math.random() * 0.34, entrada: melhor.e,
+        incomingSignals.push({ pts: melhor.e.pts, progress: melhor.j / Math.max(1, melhor.e.pts.length - 1), speed: 0.56 + usa.base.acaso() * 0.34, entrada: melhor.e,
           rgb: /^#[0-9a-fA-F]{6}$/.test(hex) ? hexToRgb(hex) : null });
       },
       // a geometria da célula no canvas (px): o corpo, o raio da esfera e os pontos de cada ramo de dendrito (para as ligações tocarem um)
@@ -2849,5 +2838,7 @@
     };
   }
 
-  window.Neuronio = { criar: criar };
-})();
+  return { criar: criar };
+}
+
+);

@@ -1,0 +1,47 @@
+/* Sexta-Feira Engine v0.3.0: o layout da cena. As cores ficam em cores.css. Só leitura: nada aqui pede dado nem chama rede. */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--fundo); color: var(--texto); overflow: hidden;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-weight: 500; line-height: 1.2; }
+.sem-js { position: fixed; inset: 0; margin: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--texto-fraco); }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; text-align: inherit; }
+button:focus-visible { outline: 2px solid #c9b8ff; outline-offset: 2px; }
+button:disabled { cursor: default; }
+#palco { position: fixed; inset: 0; overflow: hidden; background: var(--fundo); }
+#cena { position: absolute; left: 0; top: 0; }
+#cena canvas { position: absolute; display: block; transition: opacity .28s ease; }
+#cena canvas.ligacoes { pointer-events: none; z-index: 5; }
+#cena canvas.parede { position: absolute; pointer-events: none; z-index: 5; }
+#cena canvas.esfera { z-index: 2; }
+#cena canvas.esmaece { opacity: 0; pointer-events: none; }
+#cena.em-foco canvas.esfera:not(.esmaece) { z-index: 4; }
+/* o nome sob cada esfera (botão: toque ou Enter ampliam a esfera) */
+.nome { position: absolute; z-index: 8; transform: translate(-50%, 0); padding: 4px 12px; border-radius: 999px; font-size: 15px; font-weight: 700; letter-spacing: .3px;
+  color: var(--c, #fff); text-shadow: 0 0 8px #000, 0 0 3px #000; white-space: nowrap; }
+.nome:hover { background: rgba(255, 255, 255, .08); }
+.nome-nucleo { font-size: 19px; }
+.nome-sat { font-size: 12px; padding: 2px 8px; }
+#cena.em-foco .nome { opacity: 0; pointer-events: none; }
+@media (max-height: 520px) {
+  .selos { top: 4px; }
+  .selo { font-size: 11px; padding: 2px 9px; letter-spacing: 1px; }
+  .lupa-ctl { bottom: 6px; padding: 4px; }
+  .lupa-ctl button { min-width: 38px; height: 38px; }
+  .lupa-dica { display: none; }
+}
+/* os selos, no alto e no centro */
+.selos { position: fixed; left: 50%; top: 8px; z-index: 50; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; pointer-events: none; }
+.selo { padding: 4px 12px; font-size: 13px; font-weight: 700; letter-spacing: 1.4px; color: #1a1200; background: var(--atencao); border: 1.5px solid #fff3c9; border-radius: 8px; box-shadow: 0 0 14px rgba(255, 195, 77, .5); }
+/* a lupa, embaixo e no centro (fora da cena, com tamanho de dedo em qualquer aparelho) */
+.lupa-ctl { position: fixed; left: 50%; bottom: 12px; z-index: 60; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 6px; border-radius: 12px;
+  background: rgba(20, 16, 40, .88); border: 1px solid rgba(157, 92, 255, .55); font: 600 15px system-ui, sans-serif; color: #e8e2ff; }
+.lupa-ctl button { min-width: 42px; height: 42px; padding: 0 8px; border-radius: 9px; border: 1px solid rgba(157, 92, 255, .6); background: rgba(40, 30, 80, .92); color: #f0eaff; font: inherit; font-size: 20px; }
+.lupa-ctl button:disabled { opacity: .38; }
+.lupa-ctl .lupa-volta { font-size: 14px; }
+.lupa-z { min-width: 74px; text-align: center; font-variant-numeric: tabular-nums; }
+.voltar-cena { position: fixed; left: 12px; top: 8px; z-index: 60; padding: 8px 14px; border-radius: 10px; font-size: 15px; font-weight: 700; background: rgba(20, 16, 40, .88); border: 1px solid rgba(157, 92, 255, .6); color: #e8e2ff; }
+.voltar-cena[hidden] { display: none; }
+.lupa-dica { position: fixed; left: 50%; bottom: 66px; z-index: 60; transform: translateX(-50%); font: 13px system-ui, sans-serif; color: rgba(220, 210, 255, .72); pointer-events: none; white-space: nowrap; }
+
+/* celular em pé: o botão de voltar desce para baixo dos selos, para não cobrir o "dados fictícios" */
+@media (max-width: 640px) { .voltar-cena { top: 44px; left: 8px; padding: 6px 12px; font-size: 14px; } }
+@media (max-height: 520px) and (min-width: 641px) { .voltar-cena { top: 36px; } }

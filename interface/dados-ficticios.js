@@ -1,3 +1,5 @@
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.3.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+// ---- fonte/dados/ficticios/parte.js
 /* Sexta-Feira Engine v0.3.0: DADOS FICTÍCIOS. Nada aqui é real: serve para ver e ajustar a tela.
  * O formato (formato: 1) é o contrato: quando a Sexta-Feira publicar dados reais, eles chegam neste mesmo formato, um bloco por vez.
  * A tela só aceita o que está na lista branca de tela.js (ids de agente fixos, estados fixos, textos curtos); o resto é ignorado.
@@ -36,3 +38,4 @@ window.SF_DADOS = {
     cripto: ['internet', 'internet', 'telegram', 'planilha'], seguranca: ['backup', 'salas', 'aprendido', 'mapa'], radar: ['internet', 'telegram', 'resumo']
   }
 };
+

@@ -1,10 +1,11 @@
-/* Sexta-Feira Engine v0.3.0: a tela da cena. Só mostra; não pede, não decide, não guarda dado. Nenhuma requisição de rede.
- * Os dados vêm de window.SF_DADOS (hoje o dados-ficticios.js) e passam por uma lista branca (limpa): ids de agente e de módulo fixos, estados
- * fixos, textos curtos sem caracteres de controle, números inteiros pequenos. Tudo que for texto entra na tela por textContent, nunca como HTML. */
-(function () {
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.3.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+var VERSAO_ENGINE = '0.3.0';
+// ---- fonte/dados/limpa/parte.js
+SF.parte({nome:'dados/limpa',porta:1,compativelDesde:1,requer:[],guarda:false,dom:false},
+/* A lista branca (limpa) e o catálogo fixo (agentes, módulos, cores padrão). TUDO que vem de fora (window.SF_DADOS) passa por `limpa` antes de a tela ver:
+ * ids de agente e de módulo fixos, estados fixos, textos curtos sem caracteres de controle, inteiros pequenos. Nunca valor, quantidade, preço ou segmento. */
+function (usa) {
   'use strict';
-
-  var VERSAO_ENGINE = '0.3.0';
 
   // esquerda, de cima para baixo: Cripto, Ações e ETFs, FIIs; direita, de cima para baixo: Robô, Segurança, Radar
   var AGENTES = [
@@ -70,6 +71,19 @@
     return o;
   }
 
+  return { limpa: limpa, AGENTES: AGENTES, NUCLEO: NUCLEO, CORRETORA: CORRETORA, MODULOS: MODULOS };
+}
+
+);
+// ---- fonte/tela/inicio/parte.js
+SF.parte({nome:'tela/inicio',porta:1,compativelDesde:1,requer:['dados/limpa@1','cena/quadro@1'],guarda:false,dom:true},
+/* Sexta-Feira Engine v0.3.0: a tela da cena. Só mostra; não pede, não decide, não guarda dado. Nenhuma requisição de rede.
+ * Os dados vêm de window.SF_DADOS (hoje o dados-ficticios.js) e passam por uma lista branca (limpa): ids de agente e de módulo fixos, estados
+ * fixos, textos curtos sem caracteres de controle, números inteiros pequenos. Tudo que for texto entra na tela por textContent, nunca como HTML. */
+function (usa) {
+  'use strict';
+
+  var AGENTES = usa.limpa.AGENTES, NUCLEO = usa.limpa.NUCLEO, CORRETORA = usa.limpa.CORRETORA, MODULOS = usa.limpa.MODULOS;
   function cor(def) {   // a cor vem do cores.css (o dono edita lá); se o valor não for #RRGGBB, vale a padrão
     var v = '';
     try { v = getComputedStyle(document.documentElement).getPropertyValue(def.cor).trim(); } catch (e) { v = ''; }
@@ -86,10 +100,9 @@
   var params = new URLSearchParams(location.search);
   var leve = params.get('leve') === '1' || (params.get('leve') !== '0' && !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches));
 
-  if (!window.Neuronio || !window.Cena) return;
-  var dados = limpa(window.SF_DADOS);
+  var dados = usa.limpa.limpa(window.SF_DADOS);
   var raiz = document.getElementById('cena');
-  var cena = window.Cena.criar(raiz, {
+  var cena = usa.quadro.criar(raiz, {
     leve: leve,
     nucleo: { nome: NUCLEO.nome, cor: cor(NUCLEO), modulos: MODULOS.map(cor), modulosIds: MODULOS.map(function (m) { return m.id; }) },
     pedidos: dados.pedidos,
@@ -126,7 +139,7 @@
   // ---------------------------------------------------------------- escala, laço de animação
   function ajusta() { cena.ajustar(window.innerWidth, window.innerHeight); }
   ajusta();
-  if (window.SF_TESTE) { window.SF_CENA = cena; window.SF_LIMPA = limpa; }          // gancho só dos testes automáticos (sem SF_TESTE nada é exposto)
+  if (window.SF_TESTE) { window.SF_CENA = cena; window.SF_LIMPA = usa.limpa.limpa; }          // gancho só dos testes automáticos (sem SF_TESTE nada é exposto)
   var espera = null;
   window.addEventListener('resize', function () { window.clearTimeout(espera); espera = window.setTimeout(ajusta, 150); });
 
@@ -141,4 +154,9 @@
     cena.quadro(dt);
   }
   window.requestAnimationFrame(quadro);
-}());
+
+  return {};
+}
+
+);
+SF.iniciar();
