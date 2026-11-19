@@ -93,6 +93,7 @@ class Tela(unittest.TestCase):
         pg.wait_for_selector("#cena canvas")
         pg.wait_for_timeout(600)
         self.assertEqual(pg.evaluate("typeof window.SF_CENA"), "undefined")
+        self.assertEqual(pg.evaluate("typeof window.SF_LIMPA"), "undefined")
         self.assertEqual(erros, [])
 
     def test_esferas_nao_se_sobrepoem_e_a_corretora_fica_ao_lado_do_robo(self):
@@ -187,8 +188,36 @@ class Tela(unittest.TestCase):
         pg = self.abre(rota="window.SF_DADOS = %s;" % json.dumps(dados), auto=False)
         self.assertEqual(pg.locator("img").count(), 0)
         self.assertIsNone(pg.evaluate("window.__x"))
+        limpo = pg.evaluate("(d) => window.SF_LIMPA(d)", dados)
+        self.assertEqual(limpo["pedidos"], {"fiis": ["internet"], "radar": ["telegram"] * 12})     # só ids fixos, no máximo 12; o resto foi descartado
+        self.assertEqual(pg.evaluate("() => Object.keys(window.SF_LIMPA({ pedidos: JSON.parse('{\"__proto__\": [\"internet\"]}') }).pedidos)"), [])
         self.assertTrue(pg.evaluate("() => window.SF_CENA.pedir('fiis')"))
-        self.assertTrue(pg.evaluate("() => window.SF_CENA.pedir('robo')"))      # sem pedidos válidos, vale qualquer módulo
+        self.assertTrue(pg.evaluate("() => window.SF_CENA.pedir('robo')"))
+        pg.wait_for_timeout(500)
+        pg.get_by_text("FIIs", exact=True).first.click()
+        pg.wait_for_timeout(1200)
+        pg.keyboard.press("Escape")
+        pg.wait_for_timeout(900)
+        self.assertTrue(pg.evaluate("() => window.SF_CENA.pedir('fiis')"))
+        pg.wait_for_timeout(1500)
+        self.espera_repouso(pg)
+        self.assertEqual(pg.erros, [])
+
+    # ---------------------------------------------------------------------------------------------------------------- dados
+    def test_dados_maliciosos_sao_ignorados(self):
+        mau = "<img src=x onerror=window.__x=1>"
+        dados = {"formato": 1, "ficticio": True, "estadoGeral": {"tom": "bom", "texto": mau},
+                 "agentes": [{"id": "fiis", "estado": mau, "resumo": mau}, {"id": "intruso", "estado": "ok"}],
+                 "pedidos": {"fiis": [mau, "internet", "modulo-que-nao-existe", {"x": 1}], "intruso": ["internet"], "__proto__": ["internet"],
+                             "robo": "internet", "radar": ["telegram"] * 50}}
+        pg = self.abre(rota="window.SF_DADOS = %s;" % json.dumps(dados), auto=False)
+        self.assertEqual(pg.locator("img").count(), 0)
+        self.assertIsNone(pg.evaluate("window.__x"))
+        # o único módulo válido de "fiis" é a internet (índice 1 na lista fixa): o agente repousa e pede só nele; o texto malicioso, o id
+        # desconhecido e o módulo inexistente foram descartados pela lista branca (se passassem, ele repousaria em outro módulo ou em nenhum)
+        self.assertEqual(pg.evaluate("() => window.SF_CENA.parede().eixos.filter(a => a.id === 'i-fiis')[0].dRep !== undefined"), True)
+        self.assertTrue(pg.evaluate("() => window.SF_CENA.pedir('fiis', 1)"))
+        self.assertTrue(pg.evaluate("() => window.SF_CENA.pedir('robo')"))      # sem pedidos válidos (texto em vez de lista), vale qualquer módulo
         pg.wait_for_timeout(1500)
         self.espera_repouso(pg)
         self.assertEqual(pg.erros, [])

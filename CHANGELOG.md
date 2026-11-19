@@ -7,7 +7,7 @@
 - Lupa e foco: tocar no nome de uma esfera a amplia; botões −, + e 1:1, "← cena" e a tecla Esc.
 - Novos arquivos: `interface/cena.js` (a cena e o ciclo) e `neuronio.js` ampliado (neurônios menores dentro da esfera, receptores, lupa). Sai da tela a moldura da v0.2.0 (estado geral, tarefas, avisos, registro, destaque, ficha do agente) e o botão do modo leve (o modo leve continua por `?leve=1` e pelo "movimento reduzido" do aparelho).
 - `dados-ficticios.js` ganha `pedidos` (que módulos cada agente costuma pedir) e `tela.js` o filtra na lista branca (`limpa`): só ids fixos de agente e de módulo, até 12 por agente. Sem `pedidos` válidos, cada agente pede qualquer módulo (a cena não quebra).
-- Gancho de teste: `window.SF_CENA` só existe se `window.SF_TESTE` estiver definida antes dos scripts (os testes de navegador definem; a tela real nunca expõe nada).
+- Gancho de teste: `window.SF_CENA` e `window.SF_LIMPA` só existem se `window.SF_TESTE` estiver definida antes dos scripts (os testes de navegador definem; a tela real nunca expõe nada).
 - `cores.css` ganha as nove cores dos módulos (`--cor-mod-*`). O `neuronio.html` do dono não mudou.
 - `testes/navegador.py` reescrito para a cena: sem erro e sem rede, selo de dados fictícios, foco por nome e lupa, ciclo completo (cada agente pede e recebe), esferas sem sobreposição, texto malicioso nos dados ignorado, modo leve mais leve, celular em retrato e paisagem.
 - Dados, privacidade e rede: sem alteração (só dados fictícios, tudo por `textContent`, nenhuma requisição).

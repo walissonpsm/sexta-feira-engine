@@ -74,7 +74,7 @@ O repositório é **PÚBLICO**. Nele só entram código e design: nunca dados, t
 - Dados: por enquanto só `dados-ficticios.js` (`window.SF_DADOS`, `formato: 1`, `ficticio: true`). Esse formato é o contrato dos dados reais, que entram um bloco por vez;
   a tela só aceita o que passa pela lista branca de `tela.js` (`limpa`): ids de agente e de módulo fixos, estados fixos, textos curtos, inteiros pequenos. Nunca valor, quantidade, preço ou segmento.
   A v0.3.0 usa só `pedidos` (que módulos cada agente costuma pedir; até 12 por agente); o resto do formato é o contrato dos blocos que vêm depois.
-- Gancho de teste: `window.SF_CENA` (a cena) só existe se `window.SF_TESTE` estiver definida antes dos scripts. Os testes de navegador definem; a tela real nunca expõe nada.
+- Gancho de teste: `window.SF_CENA` (a cena) e `window.SF_LIMPA` (a lista branca) só existem se `window.SF_TESTE` estiver definida antes dos scripts. Os testes de navegador definem; a tela real nunca expõe nada.
 - Mesma origem do mapa (decisão do dono em 18/11, aceita): antes de a engine ganhar o canal de pedidos (`POST /ajuste`), decidir se ela exige confirmação própria ou se o
   servidor da Sexta-Feira distingue a origem. Até lá o `conferir.sh` proíbe chamadas de rede na interface.
 
@@ -82,7 +82,7 @@ O repositório é **PÚBLICO**. Nele só entram código e design: nunca dados, t
 
 v0.2.0 e v0.3.0 (entregues): a tela do mapa com dados fictícios e, na v0.3.0, a cena viva (axônios com pulso e cone de crescimento, lupa e foco). Próximos, um de cada vez e cada um com os seus dois "sim":
 
-1. **v0.4.0, a fonte em pastas isoladas** (desenho aprovado em 19/11; o desenho completo está no 1º "sim" desta sessão e vai para a seção 7 quando for entregue): `fonte/<camada>/<parte>/` (`base`, `comum`, `neuronio`, `ligacoes`, `dados`, `cena`, `tela`), cada parte com `PARTE` (manifesto: porta e dependências), `parte.js`, `LEIA-ME.md` e as próprias fotos de referência. Um montador em bash (`ferramentas/montar-interface.sh`) gera os arquivos planos de `interface/`; atualizador, `publicar/` e servidor não mudam. A tela tem de sair **igual, pixel por pixel, à v0.3.0** (teste de imagem `testes/imagens.py`, na nuvem). Regras: partes do mesmo nível não se chamam (só a juntadora); porta com versão e mudança em duas etapas; guarda que salva e restaura o canvas e desliga só a parte que falhar; teste com camadas por parte, foto da porta, roteiro do ciclo e tempo por parte; `Pastas:` no topo do `CHANGELOG.md`, conferida pelo empacotador; `MAPA.md` gerado.
+1. **v0.4.0, a fonte em pastas isoladas** (desenho aprovado em 19/11; o resumo abaixo é o contrato, e os detalhes de cada passo vão para a seção 7 quando for entregue): `fonte/<camada>/<parte>/` (`base`, `comum`, `neuronio`, `ligacoes`, `dados`, `cena`, `tela`), cada parte com `PARTE` (manifesto: porta e dependências), `parte.js`, `LEIA-ME.md` e as próprias fotos de referência. Um montador em bash (`ferramentas/montar-interface.sh`) gera os arquivos planos de `interface/`; atualizador, `publicar/` e servidor não mudam. A tela tem de sair **igual, pixel por pixel, à v0.3.0** (teste de imagem `testes/imagens.py`, na nuvem). Regras: partes do mesmo nível não se chamam (só a juntadora); porta com versão e mudança em duas etapas; guarda que salva e restaura o canvas e desliga só a parte que falhar; teste com camadas por parte, foto da porta, roteiro do ciclo e tempo por parte; `Pastas:` no topo do `CHANGELOG.md`, conferida pelo empacotador; `MAPA.md` gerado.
 2. **v0.4.1, sorteio separado por parte** (muda uma única vez o arranjo dos galhos).
 3. Depois: dados reais um bloco por vez (exige a Sexta-Feira publicar o bloco e decidir o caminho dos dados: o `conferir.sh` hoje proíbe `fetch`); canal de pedidos (botões, lista fixa, com a decisão da seção 5); conversa (só sugere, nunca executa); CPU, GPU e RAM como neurônios menores (exige o backend publicar essas medidas); painéis de avisos pela lupa; axônios Robô–Corretora; botão do modo leve; layout próprio para celular em retrato.
 
@@ -91,6 +91,26 @@ Nada na Sexta-Feira muda antes de o desenho da engine estar pronto (decisão do 
 ## 7. Registro das últimas entregas (leia antes de mexer)
 
 Só as 2 últimas versões ficam aqui. Formato: o que mudou · arquivos · não mexer · como testar · armadilhas.
+
+### v0.3.0 — a cena viva: axônios com pulso e cone de crescimento (19/11)
+
+- O que mudou: a tela passa a ser a cena das prévias v01 a v11 aprovadas pelo dono. Núcleo no centro (com os módulos dentro), seis agentes ao redor, cada um com um par de axônios de mão
+  única (`o-<id>` violeta, Núcleo para o agente; `i-<id>` da cor do agente, agente para o Núcleo), a Corretora parada ao lado do Robô. Ciclo do pedido: o axônio `i-` repousa apontando para o módulo mais
+  pedido (o 1º da lista `pedidos` do agente); ao pedir, a ventosa se solta e vira um cone de crescimento (filopódios e véu) que leva a ponta até o módulo, assenta de frente no vidro, o pulso
+  corre pelo tronco (liso e parado), o módulo excita, o neurônio central dispara e o pulso violeta, com a cor do pedido, volta ao agente; depois a ponta volta ao repouso. Lupa e foco por nome, botões
+  −, + e 1:1, "← cena", `Esc`. Saíram a moldura da v0.2.0 e o botão do modo leve (`?leve=1` e "movimento reduzido" continuam).
+- Arquivos: `interface/{cena.js (novo), neuronio.js (ampliado), tela.js, tela.css, index.html, cores.css (+9 `--cor-mod-*`), dados-ficticios.js (+`pedidos`)}`, `testes/{navegador.py,conferir.sh}`,
+  `README.md`, `AGENTS.md`, `CHANGELOG.md`, `VERSAO`.
+- NÃO mexer: `interface/neuronio.html` é do dono (independente da tela desde esta versão: o `neuronio.js` não é mais "gerado" dele); `tela.js` só usa `textContent` e lista branca (`limpa`, que agora filtra
+  `pedidos` por ids fixos de agente e de módulo, até 12 por agente, com `hasOwnProperty`); `VERSAO_ENGINE` em `tela.js` = `VERSAO`; o selo "DADOS FICTÍCIOS" só sai com dados reais; `publicar/` nunca é recriada;
+  `window.SF_CENA` e `window.SF_LIMPA` só existem com `window.SF_TESTE` (os testes dependem deles); `cena.js` conta um `ciclo` que `reiniciaCiclo` incrementa: callbacks de um pedido velho não agem depois de uma troca de foco ou redimensionamento.
+- Como testar: `bash testes/conferir.sh`, `bash testes/atualizador.sh`, `bash testes/empacotar.sh` e, na nuvem, `python3 testes/navegador.py` (14 testes; o fps só é informado).
+- Auditoria independente (agente separado): sem defeito grave nem médio. Achados leves e o que foi feito: (a) a regra do `eval` do `conferir.sh` não pegava `eval(` no começo da linha (agora `(^|[^A-Za-z_.])eval`); (b) o retorno de um
+  pedido no ar podia agir depois de uma troca de foco ou redimensionamento (contador `ciclo` em `cena.js`); (c) o teste de dados maliciosos não provava o filtro de `pedidos` (agora confere `SF_LIMPA(...).pedidos` exato e `__proto__`);
+  (d) o texto do plano da v0.4.0 citava "esta sessão" (agora resumido aqui, seção 6). Não corrigido por decisão: não há teste de redimensionar com foco nem de aba escondida (conferido à mão pelo auditor, sem defeito); o modo leve é medido por
+  contagem de `drawImage`, que é só uma estimativa.
+- Armadilhas: (1) o ciclo automático pode deixar um pedido no ar: testes que contam pedidos devem chamar `automatico(false)` antes do primeiro pedido (o `abre(auto=False)` do `navegador.py` faz isso); (2) o modo leve agora reduz menos (cerca de 3 vezes menos
+  `drawImage`, não 3x folgado); (3) nada visto no PC real nem no systemd; (4) a v11 foi vista só em Chromium sem placa de vídeo (uns 58 fps em 1×, uns 29 em 2×).
 
 ### v0.2.0 — a tela do mapa, com dados fictícios (18/11)
 
@@ -108,20 +128,3 @@ Só as 2 últimas versões ficam aqui. Formato: o que mudou · arquivos · não 
 - Armadilhas: (1) os neurônios pequenos não animam no modo leve (só o brilho do pulso); (2) as telas cuja proporção não é 16:9 ganham faixas pretas (a tela é escalada inteira);
   (3) `mix-blend-mode: screen` nos canvases deixa os neurônios se sobreporem sem cobrir o vizinho; (4) o teste do modo leve conta chamadas de `drawImage`, não quadros por segundo reais;
   (5) o `testes/atualizador.sh` troca `VERSAO` e `VERSAO_ENGINE` juntos (`poe_versao`); quem criar versões de teste à mão faz o mesmo, senão o `conferir.sh` reprova; (6) o `conferir.sh` não é barreira completa contra código malicioso (só pega o óbvio); (7) nada visto no PC real nem no systemd.
-
-### v0.1.1 — a chave do espelho na pasta de segredos (18/11)
-
-- O que mudou: o padrão de `SEGREDOS_DIR` passou de `~/sexta-feira-engine-segredos` para `~/sexta-feira-segredos/sexta-feira-engine` (a chave
-  continua em `github/id_ed25519`). O instalador avisa (sem mudar nada) se a pasta `github` não estiver em 700 ou a chave em 600. Textos,
-  README e este arquivo atualizados. O teste do atualizador passou a usar versões `7.0.x` (não depende mais da versão do repositório) e
-  ganhou casos da chave (espelho liga sozinho, `core.sshCommand`, avisos de permissão).
-- Arquivos: `atualizar-engine.sh`, `instalar-engine.sh`, `testes/atualizador.sh`, `README.md`, `AGENTS.md`, `CHANGELOG.md`, `VERSAO`.
-- NÃO mexer: a pasta `sexta-feira-segredos/` é da Sexta-Feira (o atualizador dela só cria `binance/` e `bitget/` e o `docker-compose.yml` monta
-  `planilhas/`, `binance/` e `bitget/`): o engine só usa a subpasta `sexta-feira-engine/`. Quem mexer no `docker-compose.yml` da Sexta-Feira nunca
-  deve montar a pasta inteira.
-- Auditoria independente (agente separado): sem defeito grave. Corrigido: o teste agora usa de verdade o caminho padrão (SEGREDOS_DIR não é exportado),
-  o caso do instalador usa um espelho próprio, `ligar_espelho` recusa também pasta em link simbólico e o README não manda mudar a permissão da
-  pasta-mãe `~/sexta-feira-segredos` (é da Sexta-Feira).
-- Como testar: `bash testes/conferir.sh` e `bash testes/atualizador.sh`.
-- Armadilhas: (1) a v0.1.0 nunca foi instalada no PC, então não há migração do caminho antigo. (2) Se `~/sexta-feira-segredos` não existir, o
-  espelho só fica desligado (o instalador avisa).

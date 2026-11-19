@@ -484,7 +484,7 @@
     // ---------------------------------------------------------------- o ciclo de um pedido (a cor de quem pediu vale do começo ao fim)
     //   agente (axônio na cor dele) -> parede do Núcleo -> ramo do terminal -> dendrito do módulo -> módulo -> neurônio central
     //   -> axônio violeta (com o pulso na cor de quem pediu) -> parede do agente -> dendrito do agente: o agente recebe
-    var fila = [], tempo = 0, proximo = 1.2, ocupado = {}, pedidoDe = {}, automatico = true;
+    var ciclo = 0, fila = [], tempo = 0, proximo = 1.2, ocupado = {}, pedidoDe = {}, automatico = true;
     function agendar(seg, fn) { fila.push({ t: tempo + seg, fn: fn }); }
     function disparar(lid, hex) { var ax = eixoById[lid]; if (!ax) return; ax.pulso = { u: 0, k: 0 }; ax.pulsoCor = rgbDe(hex); }
     function pedir(id, idxMod) {
@@ -504,8 +504,10 @@
         var mod = pedidoDe[id], fx = fixoMod[mod];
         if (fx) fx.flash = 1;
         N.n.excitarMini(mod, a.cor);          // o módulo recebe, na cor de quem pediu
+        var g = ciclo;                        // se o foco mudar ou a tela for redimensionada no meio, o retorno de um pedido velho não faz nada
         agendar(0.30, function () {
           N.n.dispararMini(mod, a.cor, function () {      // o módulo levou o sinal até o neurônio central
+            if (g !== ciclo) return;
             agendar(0.10, function () { N.n.excitar(a.cor); disparar('o-' + id, a.cor); });
           });
         });
@@ -545,7 +547,7 @@
       if (ouvinte) ouvinte({ foco: foco, z: 1 });
     }
     function reiniciaCiclo() {            // a troca de vista refaz as ligações: o que estava no ar recomeça do zero
-      fila.length = 0; ocupado = {}; pedidoDe = {};
+      ciclo++; fila.length = 0; ocupado = {}; pedidoDe = {};
       ventosas.forEach(function (v) { v.flash = 0; v.anel = 0; });
       eixos.forEach(function (ax) { ax.pulso = null; ax.estado = 'repouso'; ax.mdur = 0; ax.nos.fill(0); if (ax.tipo === 'i') { ax.dC = ax.dPara = ax.dRep; ax.p = ax.pAlvo = 1; ax.sujoG = true; } });
       sujo = true;
@@ -583,7 +585,7 @@
       caixaPar.style.left = '0px'; caixaPar.style.top = '0px'; caixaPar.style.width = W + 'px'; caixaPar.style.height = H + 'px';
       caixaFix.width = caixaPar.width; caixaFix.height = caixaPar.height;
       caixaFix.style.left = '0px'; caixaFix.style.top = '0px'; caixaFix.style.width = W + 'px'; caixaFix.style.height = H + 'px'; bbAnt = null;
-      fila.length = 0; ocupado = {}; pedidoDe = {};
+      ciclo++; fila.length = 0; ocupado = {}; pedidoDe = {};
       montarLigacoes();
       var kf = Math.max(0.58, Math.min(1, s / 0.4));                         // os nomes encolhem junto com a cena (celular)
       ordem.forEach(function (id) {

@@ -126,7 +126,7 @@
   // ---------------------------------------------------------------- escala, laço de animação
   function ajusta() { cena.ajustar(window.innerWidth, window.innerHeight); }
   ajusta();
-  if (window.SF_TESTE) window.SF_CENA = cena;          // gancho só dos testes automáticos (sem SF_TESTE nada é exposto)
+  if (window.SF_TESTE) { window.SF_CENA = cena; window.SF_LIMPA = limpa; }          // gancho só dos testes automáticos (sem SF_TESTE nada é exposto)
   var espera = null;
   window.addEventListener('resize', function () { window.clearTimeout(espera); espera = window.setTimeout(ajusta, 150); });
 

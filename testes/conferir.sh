@@ -77,7 +77,7 @@ if [ -d interface ]; then
     while IFS= read -r -d '' f; do
         nome="$(basename "$f")"
         [ "$nome" = "neuronio.html" ] && continue
-        if grep -qE 'innerHTML|outerHTML|insertAdjacentHTML|document\.write|[^A-Za-z_.]eval[[:space:]]*\(|new[[:space:]]+Function|set(Timeout|Interval)[[:space:]]*\([[:space:]]*["'\'']' "$f"; then
+        if grep -qE 'innerHTML|outerHTML|insertAdjacentHTML|document\.write|(^|[^A-Za-z_.])eval[[:space:]]*\(|new[[:space:]]+Function|set(Timeout|Interval)[[:space:]]*\([[:space:]]*["'\'']' "$f"; then
             falha "$nome: HTML dinâmico ou código em texto (innerHTML, eval, setTimeout com texto...). Todo texto entra por textContent"
         fi
     done < <(find interface -mindepth 1 -maxdepth 1 -type f \( -name '*.js' -o -name '*.html' \) -print0)
