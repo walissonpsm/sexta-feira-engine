@@ -2,7 +2,7 @@
    Os neurônios também leem estas variáveis, então mudar uma cor muda a borda e o neurônio dela. */
 :root {
   /* cada agente (os valores do neuronio.html) */
-  --cor-sexta-feira: #8B3DFF;
+  --cor-sexta-feira: #9D5CFF;
   --cor-fiis: #00E676;
   --cor-acoes-etfs: #00D4FF;
   --cor-cripto: #FF7A00;
@@ -10,6 +10,18 @@
   --cor-robo: #FFD600;
   --cor-seguranca: #FF2E55;
   --cor-corretora: #FFD600;
+
+
+  /* os módulos do Núcleo: cada neurônio pequeno e os pulsos dele usam a sua cor */
+  --cor-mod-telegram: #38A8FF;
+  --cor-mod-internet: #19E3C3;
+  --cor-mod-planilha: #9BE22B;
+  --cor-mod-painel: #FF4FA8;
+  --cor-mod-mapa: #FFB224;
+  --cor-mod-resumo: #FF6A4D;
+  --cor-mod-backup: #D45CFF;
+  --cor-mod-salas: #E8E26A;
+  --cor-mod-aprendido: #7DFFB0;
 
   /* a moldura (as mesmas do mapa) */
   --fundo: #000000;

@@ -15,7 +15,7 @@ parte "inteligente" é o seu próprio atualizador (`atualizar-engine.sh`).
 É independente da Sexta-Feira: instalador e atualizador próprios, sem Docker, sem Núcleo, sem agentes. Nomes na tela: FIIs, Ações e ETFs,
 Cripto, Radar, Robô, Corretora, Segurança, Núcleo (os mesmos do repositório `sexta-feira`).
 
-Arquivos: `interface/` (o que vai para a tela: `index.html`, `tela.css`, `tela.js`, `cores.css`, `neuronio.js`, `dados-ficticios.js` e o `neuronio.html` do dono),
+Arquivos: `interface/` (o que vai para a tela: `index.html`, `tela.css`, `tela.js`, `cena.js`, `cores.css`, `neuronio.js`, `dados-ficticios.js` e o `neuronio.html` do dono),
 `instalar-engine.sh`, `atualizar-engine.sh`, `systemd/` (3 unidades do atualizador), `testes/conferir.sh` (a rodada de teste), `testes/atualizador.sh`,
 `testes/empacotar.sh`, `testes/navegador.py` (só na nuvem), `ferramentas/montar-publicar.sh` (monta `publicar/`) e `ferramentas/empacotar.sh` (só na nuvem).
 
@@ -72,16 +72,21 @@ O repositório é **PÚBLICO**. Nele só entram código e design: nunca dados, t
   e perderia o diretório se ele fosse substituído.
 - Nomes em `interface/`: `[a-z0-9_-]+.(html|js|css|woff2|svg|json)`, até 4 MB, sem subpasta e sem link. É o mesmo filtro do servidor.
 - Dados: por enquanto só `dados-ficticios.js` (`window.SF_DADOS`, `formato: 1`, `ficticio: true`). Esse formato é o contrato dos dados reais, que entram um bloco por vez;
-  a tela só aceita o que passa pela lista branca de `tela.js` (`limpa`): ids de agente fixos, estados fixos, textos curtos, inteiros pequenos. Nunca valor, quantidade, preço ou segmento.
+  a tela só aceita o que passa pela lista branca de `tela.js` (`limpa`): ids de agente e de módulo fixos, estados fixos, textos curtos, inteiros pequenos. Nunca valor, quantidade, preço ou segmento.
+  A v0.3.0 usa só `pedidos` (que módulos cada agente costuma pedir; até 12 por agente); o resto do formato é o contrato dos blocos que vêm depois.
+- Gancho de teste: `window.SF_CENA` (a cena) só existe se `window.SF_TESTE` estiver definida antes dos scripts. Os testes de navegador definem; a tela real nunca expõe nada.
 - Mesma origem do mapa (decisão do dono em 18/11, aceita): antes de a engine ganhar o canal de pedidos (`POST /ajuste`), decidir se ela exige confirmação própria ou se o
   servidor da Sexta-Feira distingue a origem. Até lá o `conferir.sh` proíbe chamadas de rede na interface.
 
 ## 6. Planos
 
-v0.2.0 (entregue): a tela do mapa com dados fictícios. Próximos, um de cada vez e cada um com os seus dois "sim": dados reais um bloco por vez (exige a
-Sexta-Feira publicar o bloco e decidir o caminho dos dados: o `conferir.sh` hoje proíbe `fetch`); canal de pedidos (botões, lista fixa, com a decisão da seção 5);
-conversa (só sugere, nunca executa); CPU, GPU e RAM como neurônios menores (exige o backend publicar essas medidas). Nada na Sexta-Feira muda antes de o desenho
-da engine estar pronto (decisão do dono, 18/11).
+v0.2.0 e v0.3.0 (entregues): a tela do mapa com dados fictícios e, na v0.3.0, a cena viva (axônios com pulso e cone de crescimento, lupa e foco). Próximos, um de cada vez e cada um com os seus dois "sim":
+
+1. **v0.4.0, a fonte em pastas isoladas** (desenho aprovado em 19/11; o desenho completo está no 1º "sim" desta sessão e vai para a seção 7 quando for entregue): `fonte/<camada>/<parte>/` (`base`, `comum`, `neuronio`, `ligacoes`, `dados`, `cena`, `tela`), cada parte com `PARTE` (manifesto: porta e dependências), `parte.js`, `LEIA-ME.md` e as próprias fotos de referência. Um montador em bash (`ferramentas/montar-interface.sh`) gera os arquivos planos de `interface/`; atualizador, `publicar/` e servidor não mudam. A tela tem de sair **igual, pixel por pixel, à v0.3.0** (teste de imagem `testes/imagens.py`, na nuvem). Regras: partes do mesmo nível não se chamam (só a juntadora); porta com versão e mudança em duas etapas; guarda que salva e restaura o canvas e desliga só a parte que falhar; teste com camadas por parte, foto da porta, roteiro do ciclo e tempo por parte; `Pastas:` no topo do `CHANGELOG.md`, conferida pelo empacotador; `MAPA.md` gerado.
+2. **v0.4.1, sorteio separado por parte** (muda uma única vez o arranjo dos galhos).
+3. Depois: dados reais um bloco por vez (exige a Sexta-Feira publicar o bloco e decidir o caminho dos dados: o `conferir.sh` hoje proíbe `fetch`); canal de pedidos (botões, lista fixa, com a decisão da seção 5); conversa (só sugere, nunca executa); CPU, GPU e RAM como neurônios menores (exige o backend publicar essas medidas); painéis de avisos pela lupa; axônios Robô–Corretora; botão do modo leve; layout próprio para celular em retrato.
+
+Nada na Sexta-Feira muda antes de o desenho da engine estar pronto (decisão do dono, 18/11).
 
 ## 7. Registro das últimas entregas (leia antes de mexer)
 

@@ -1,4 +1,4 @@
-/* Sexta-Feira Engine v0.2.0: DADOS FICTÍCIOS. Nada aqui é real: serve para ver e ajustar a tela.
+/* Sexta-Feira Engine v0.3.0: DADOS FICTÍCIOS. Nada aqui é real: serve para ver e ajustar a tela.
  * O formato (formato: 1) é o contrato: quando a Sexta-Feira publicar dados reais, eles chegam neste mesmo formato, um bloco por vez.
  * A tela só aceita o que está na lista branca de tela.js (ids de agente fixos, estados fixos, textos curtos); o resto é ignorado.
  * Regra de privacidade: só contagens e estados; nunca quantidade, preço, valor, segmento, link, fonte nem texto de IA. */
@@ -29,5 +29,10 @@ window.SF_DADOS = {
     { hora: '11:47', agente: 'cripto', texto: 'fonte demorou a responder' }
   ],
   destaque: { agente: 'fiis', titulo: 'Relatório gerencial novo', linhas: ['Fundo 3 de 12', 'Nível: atenção', 'Aviso enviado'] },
-  sistema: { cpu: null, gpu: null, ram: null }
+  sistema: { cpu: null, gpu: null, ram: null },
+  // que módulos cada agente costuma pedir (a lista repete o módulo para ele aparecer mais; o Robô pede mais a internet). Só ids fixos; nunca valor nem dado.
+  pedidos: {
+    robo: ['internet', 'internet', 'internet', 'telegram', 'planilha'], fiis: ['planilha', 'internet', 'telegram', 'planilha'], 'acoes-etfs': ['planilha', 'internet', 'painel'],
+    cripto: ['internet', 'internet', 'telegram', 'planilha'], seguranca: ['backup', 'salas', 'aprendido', 'mapa'], radar: ['internet', 'telegram', 'resumo']
+  }
 };

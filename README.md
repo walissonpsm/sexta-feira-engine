@@ -4,17 +4,17 @@ A parte visual da **Sexta-Feira** e o meio de comunicação entre o dono e ela. 
 
 ## A tela (`interface/index.html`)
 
-Abra `http://127.0.0.1:8765/engine/` (servida pelo mapa da Sexta-Feira). No centro, o neurônio da Sexta-Feira (o Núcleo); em volta, os seis agentes como neurônios menores (clique para ver o detalhe, `Esc` volta); a Corretora fica parada ao lado do Robô; a moldura em volta mostra agentes, tarefas, avisos do dia, logs, destaque e (em breve) CPU, GPU e RAM.
+Abra `http://127.0.0.1:8765/engine/` (servida pelo mapa da Sexta-Feira). No centro, o neurônio da Sexta-Feira (o Núcleo) com os módulos dentro; em volta, os seis agentes como neurônios menores, cada um com um par de axônios de mão única ligado ao Núcleo; a Corretora fica parada ao lado do Robô. De tempos em tempos um agente faz um pedido de mentira: a ponta do axônio dele se solta do vidro, vira um cone de crescimento que vai até o módulo, assenta, o pulso corre e o Núcleo responde de volta. Toque no nome de uma esfera (ou gire a roda do mouse sobre ela) para ampliar; os botões −, + e 1:1, "← cena" e `Esc` ajustam e voltam.
 
 **Nesta versão tudo é fictício** (selo "DADOS FICTÍCIOS"): a tela só mostra `dados-ficticios.js`. Os dados reais entram depois, um bloco por vez, no mesmo formato.
 
-- **Suas cores**: edite só `interface/cores.css` (variáveis `--cor-...`); a borda e o neurônio de cada agente seguem a variável dele.
-- **Modo leve** para poupar a GPU: botão no rodapé, `?leve=1` no endereço, ou automático se o sistema pede movimento reduzido.
-- Arquivos: `index.html` (estrutura), `tela.css` (layout), `tela.js` (monta a tela, só com `textContent`), `neuronio.js` (o motor de desenho do neurônio), `dados-ficticios.js`.
+- **Suas cores**: edite só `interface/cores.css` (variáveis `--cor-...`); a borda e o neurônio de cada agente e cada módulo seguem a variável dele.
+- **Modo leve** para poupar a GPU: `?leve=1` no endereço, ou automático se o sistema pede movimento reduzido.
+- Arquivos: `index.html` (estrutura), `tela.css` (layout), `tela.js` (monta a tela, lista branca dos dados, só com `textContent`), `cena.js` (a cena, as ligações e o ciclo do pedido), `neuronio.js` (o motor de desenho do neurônio), `dados-ficticios.js`.
 
 ## O laboratório do neurônio (`interface/neuronio.html`)
 
-Visualização interativa em HTML5 Canvas, sobre fundo preto, que representa a arquitetura do agente **Sexta-Feira** como um neurônio completo. É o laboratório de cores do dono e não muda; o motor dele alimenta a tela (`neuronio.js`).
+Visualização interativa em HTML5 Canvas, sobre fundo preto, que representa a arquitetura do agente **Sexta-Feira** como um neurônio completo. É o laboratório de cores do dono e não muda; ele é independente da tela (o motor da tela, `neuronio.js`, nasceu dele, mas hoje é mantido à parte).
 
 - **Dendritos afilados** com espinhas sinápticas e propagação de sinais de entrada.
 - **Soma multipolar** com textura citoplasmática e núcleo pulsante.
