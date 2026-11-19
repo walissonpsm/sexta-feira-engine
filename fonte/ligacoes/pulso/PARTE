@@ -1,0 +1,5 @@
+nome: ligacoes/pulso
+porta: 1
+compativel-desde: 1
+requer: comum/cores@1
+guarda: sim
