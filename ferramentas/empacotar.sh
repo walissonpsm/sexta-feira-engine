@@ -23,7 +23,10 @@ bash testes/conferir.sh >/dev/null || { echo "empacotar: testes/conferir.sh repr
 # o escopo: a linha "Pastas:" do CHANGELOG tem de bater com as partes de fonte/ que mudaram desde a tag anterior (ferramentas/escopo.sh)
 bash ferramentas/escopo.sh >/dev/null || { bash ferramentas/escopo.sh >&2 || true; echo "empacotar: o escopo (Pastas:) não bate com o que mudou" >&2; exit 1; }
 # a tela tem de sair igual às referências (pixel a pixel): só na nuvem, onde há playwright; o teste de empacotamento (ENGINE_TESTE=1) pula, pois já roda à parte
-if [ "${ENGINE_TESTE:-}" != "1" ] && python3 -c 'import playwright' 2>/dev/null; then
+if [ "${ENGINE_TESTE:-}" != "1" ] && ! python3 -c 'import playwright' 2>/dev/null; then
+    echo "empacotar: sem o playwright do Python não dá para rodar testes/imagens.py (a trava 'tela idêntica'); instale-o ou, de propósito, use ENGINE_TESTE=1" >&2; exit 1
+fi
+if [ "${ENGINE_TESTE:-}" != "1" ]; then
     python3 testes/imagens.py >/dev/null || { python3 testes/imagens.py >&2 || true; echo "empacotar: a tela não bate com as referências (testes/imagens.py)" >&2; exit 1; }
 fi
 

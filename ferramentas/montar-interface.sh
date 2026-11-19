@@ -5,7 +5,7 @@
 #   ferramentas/montar-interface.sh --em PASTA   gera os mesmos arquivos (e o MAPA.md) numa PASTA (o conferir.sh usa isto para comparar)
 #
 # Cada parte é uma pasta fonte/<camada>/<parte>/ com o manifesto PARTE (nome, tipo, porta, requer...), o parte.js (ou o arquivo dela), o LEIA-ME.md
-# e a pasta teste/ (referências só dos testes; nunca vai para a tela). Veja o AGENTS.md, seção "Como mexer numa parte".
+# e a pasta teste/ (referências só dos testes; nunca vai para a tela). Veja o README.md e o AGENTS.md (seção 7, v0.4.0).
 #
 # Camadas (só se usa o que está embaixo): base < comum < neuronio, ligacoes, dados < cena < tela. Dentro de uma camada só a parte marcada
 # "juntadora: sim" pode usar as irmãs. Versões de porta: "requer: x@N" vale se compativel-desde(x) <= N <= porta(x). Ciclo: o tsort recusa.
@@ -44,6 +44,7 @@ while IFS= read -r p; do
     [ -f "$d/$arq" ] || erro "$d: falta o arquivo $arq"
     TIPO[$nome]="$tipo"; PORTA[$nome]="$(campo "$p" porta)"; PORTA[$nome]="${PORTA[$nome]:-1}"
     COMPAT[$nome]="$(campo "$p" compativel-desde)"; COMPAT[$nome]="${COMPAT[$nome]:-1}"
+    [[ "${PORTA[$nome]}" =~ ^[0-9]+$ && "${COMPAT[$nome]}" =~ ^[0-9]+$ ]] || erro "$nome: porta e compativel-desde têm de ser números inteiros"
     REQUER[$nome]="$(campo "$p" requer)"; GUARDA[$nome]="$(campo "$p" guarda)"; DOM[$nome]="$(campo "$p" dom)"; JUNTA[$nome]="$(campo "$p" juntadora)"
     CAMADA[$nome]="$ci"; ARQ[$nome]="$d/$arq"
     s="$(campo "$p" saida)"
@@ -84,8 +85,13 @@ done
 ORDEM=()
 if ! SAIDA_TSORT="$(printf '%s' "$ARESTAS" | sort -u | tsort 2>&1)"; then erro "ciclo entre partes: $SAIDA_TSORT"; fi
 while IFS= read -r n; do [ -n "$n" ] && ORDEM+=("$n"); done <<< "$SAIDA_TSORT"
+# o carregador vem sempre primeiro (as outras partes chamam SF.parte; não dependemos da ordem em que o tsort desempata)
+if [ -n "${TIPO[base/carregador]:-}" ]; then
+    NOVA=("base/carregador"); for n in "${ORDEM[@]}"; do [ "$n" = "base/carregador" ] || NOVA+=("$n"); done; ORDEM=("${NOVA[@]}")
+fi
 
 mkdir -p "$SAIDA"
+trap 'rm -f -- "$SAIDA"/.montando-* 2>/dev/null || true' EXIT   # falha no meio não deixa arquivo temporário para trás
 CAB="/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão $VERSAO). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */"
 
 js_manifesto() {   # $1 = nome da parte
