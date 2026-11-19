@@ -1,6 +1,6 @@
-/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.1). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
 // ---- fonte/cena/quadro/parte.js
-SF.parte({nome:'cena/quadro',porta:1,compativelDesde:1,requer:['neuronio/celula@1','comum/sorteio@1','comum/cores@1','comum/curvas@1','ligacoes/ponta@1','ligacoes/pulso@1'],guarda:true,dom:true},
+SF.parte({nome:'cena/quadro',porta:1,compativelDesde:1,requer:['neuronio/celula@1','comum/sorteio@1','comum/cores@1','comum/curvas@1','ligacoes/ponta@1','ligacoes/pulso@1','ligacoes/tronco@1','ligacoes/pistas@1'],guarda:true,dom:true},
 /* Sexta-Feira Engine v0.3.0: a cena. O Núcleo no centro, seis agentes ao redor (três de cada lado) e a Corretora parada ao lado do Robô.
  * Cada esfera é um Neuronio.criar próprio. Axônio só leva e dendrito só recebe, e a PAREDE de vidro é a sinapse: para cada agente há um par de
  * axônios de mão única, lado a lado, e os dois PARAM no vidro (por fora). Do lado de dentro, um dendrito encosta no mesmo ponto.
@@ -126,14 +126,10 @@ function (usa) {
       if (it.mod || it.noN) return foco === 'nucleo';
       return it.ag === foco;
     }
-    var ponta = usa.ponta, pulsoP = usa.pulso;
+    var ponta = usa.ponta, tronco = usa.tronco, pistas = usa.pistas;
     function luz(x, y, r, c, a) { ponta.luz(ctxP, x, y, r, c, a); }
     function espVent() { return ponta.espVent(s); }
     function raioVent(R) { return ponta.raioVent(s, R); }
-    function altVent() { return ponta.altVent(s); }
-    function pintaVentosa(cx, cy, rIn, ang, cor, sq, anel, wTronco) { ponta.ventosa(ctxP, s, cx, cy, rIn, ang, cor, sq, anel, wTronco); }
-    function pintaCone(ax) { ponta.cone(ctxP, s, relogio, ax); }
-    function pulsoV09(x, y, rad, c, a) { pulsoP.pulso(ctxP, x, y, rad, c, a); }
     function pintaFixo(f) {
       var c = f.cor, u = Math.max(1.2, 4.2 * s);
       ctxP.lineCap = 'round';
@@ -149,98 +145,10 @@ function (usa) {
     // Cada um tem uma linha central (base) que o agente-para-Núcleo recalcula quando o alvo se move; por cima dela vai a ondulação parada. A bainha de mielina
     // são tubos de tamanho fixo contados a partir do começo (então crescem pela ponta quando o tronco se estica), com a cintura do nódulo entre eles.
     var eixos = [], eixoById = {}, sujoE = true, eixosAntes = false, relogio = 0;
-    function medeEixo(ax) {
-      var p = ax.base, n = p.length, i, c = ax.cum, nx = ax.nx, ny = ax.ny, x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-      c.length = n; nx.length = n; ny.length = n; c[0] = 0;
-      for (i = 1; i < n; i++) c[i] = c[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y);
-      for (i = 0; i < n; i++) {
-        var a = p[Math.max(0, i - 1)], b = p[Math.min(n - 1, i + 1)], tx = b.x - a.x, ty = b.y - a.y, l = Math.hypot(tx, ty) || 1;
-        nx[i] = -ty / l; ny[i] = tx / l;
-        if (p[i].x < x0) x0 = p[i].x; if (p[i].x > x1) x1 = p[i].x; if (p[i].y < y0) y0 = p[i].y; if (p[i].y > y1) y1 = p[i].y;
-      }
-      ax.len = c[n - 1];
-      var mg = ax.larg * 1.6 + 8 * s + 8; ax.bb = { x0: x0 - mg, y0: y0 - mg, x1: x1 + mg, y1: y1 + mg };
-      while (ax.pts.length < n) ax.pts.push({ x: 0, y: 0 });
-      ax.pts.length = n;
-      for (i = 0; i < n; i++) { ax.pts[i].x = p[i].x; ax.pts[i].y = p[i].y; }      // o tronco é liso e parado; quem se mexe é a ponta
-    }
-    // o caminho do axônio do agente até o vidro do Núcleo para o ângulo dC (relativo à pista dele): sai pelo canal, junta-se a um arco por fora do vidro (cada
-    // agente num raio, para dois nunca correrem juntos) e termina de frente para o vidro, no ponto do módulo
-    function caminhoI(ax) {
-      var N = esf.nucleo, rv = raioVent(N.R), rA = ax.rA, thL = ax.thL, dth = ax.dC, adth = Math.abs(dth), sg = dth >= 0 ? 1 : -1, drop = ax.drop;
-      var pts = ax.head.slice(), thT = thL + dth, i, v, m, p = ax.p, rEnd = rA - (rA - rv) * p;
-      if (adth < 0.012) {
-        pts.push(polar(N.cx, N.cy, rEnd, thT));
-      } else {
-        var dm = Math.min(0.30, adth * 0.40), hook = Math.min((rA - rv) * 1.3 / N.R, adth * 0.55) * p;
-        m = 10;
-        for (i = 1; i <= m; i++) { v = i / m; pts.push(polar(N.cx, N.cy, rA + drop * Math.pow(1 - v, 1.6), thL + sg * dm * v * v)); }
-        var a0 = thL + sg * dm, a1 = thT - sg * hook, n1 = Math.floor(Math.abs(a1 - a0) * N.R / 7);
-        for (i = 1; i <= n1; i++) pts.push(polar(N.cx, N.cy, rA, a0 + (a1 - a0) * i / (n1 + 1)));
-        if (p < 0.03) pts.push(polar(N.cx, N.cy, rA, thT));
-        else { m = 14; for (i = 0; i <= m; i++) { v = i / m; pts.push(polar(N.cx, N.cy, rEnd + (rA - rEnd) * Math.pow(1 - v, 1.6), thT - sg * hook * (1 - v) * (1 - v))); } }
-      }
-      return curva(pts, ax.passo);
-    }
+    function medeEixo(ax) { tronco.medir(s, ax); }
+    function caminhoI(ax) { var N = esf.nucleo; return pistas.caminho(N, raioVent(N.R), ax); }
+    function pintaEixo(ax) { tronco.pintar(ctxP, s, relogio, ax); }
     function refazEixo(ax) { ax.base = ax.tipo === 'i' ? caminhoI(ax) : ax.base; medeEixo(ax); ax.sujoG = false; }
-    function ponto(ax, u) {               // o ponto da linha (com a ondulação) na distância u do começo
-      var c = ax.cum, p = ax.pts, n = p.length, lo = 0, hi = n - 1;
-      if (u <= 0) return p[0]; if (u >= ax.len) return p[n - 1];
-      while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (c[mid] <= u) lo = mid; else hi = mid; }
-      var f = (u - c[lo]) / Math.max(1e-9, c[hi] - c[lo]);
-      return { x: p[lo].x + (p[hi].x - p[lo].x) * f, y: p[lo].y + (p[hi].y - p[lo].y) * f };
-    }
-    function caminhoSub(ax, a0, a1, cam) {       // acrescenta a um caminho o trecho da linha entre as distâncias a0 e a1
-      if (a1 <= a0) return;
-      var c = ax.cum, p = ax.pts, n = p.length, lo = 0, hi = n - 1, q = ponto(ax, a0);
-      while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (c[mid] <= a0) lo = mid; else hi = mid; }
-      cam.moveTo(q.x, q.y);
-      for (var j = lo + 1; j < n - 1 && c[j] < a1; j += ax.pulo) cam.lineTo(p[j].x, p[j].y);
-      q = ponto(ax, a1); cam.lineTo(q.x, q.y);
-    }
-    function trechos(ax) {                  // as bainhas: [começo, fim, grupo de espessura] contadas desde o começo do axônio
-      var w = ax.larg, Ls = 5.0 * w, gap = 0.5 * w, pitch = Ls + gap, Lm = ax.len - altVent() - 6 * s, out = [], tail = Math.max(1, Lm - 4 * pitch);
-      for (var k = 0, a = ax.a0; a < Lm - 0.3 * Ls; k++, a = ax.a0 + k * pitch) {
-        var b = Math.min(a + Ls, Lm), f = 0.70 + 0.30 * (1 - suave((a - tail) / (4 * pitch)));
-        out.push([a, b, f > 0.93 ? 0 : f > 0.80 ? 1 : 2, k]);
-      }
-      ax.pitch = pitch; ax.nNos = out.length; return out;
-    }
-    var QG = [1, 0.86, 0.72];
-    function pintaEixo(ax) {
-      var w = ax.larg, ou = Math.max(0.9, 1.3 * s), cor = ax.corRgb, fim = ax.len - altVent() * 0.5, tr = trechos(ax), g, i;
-      ctxP.lineCap = 'butt'; ctxP.lineJoin = 'bevel'; ctxP.miterLimit = 2; ctxP.globalCompositeOperation = 'source-over';
-      var fio = new Path2D();                                    // só onde não há bainha: o começo, a cintura de cada nódulo e o fim
-      if (!tr.length) caminhoSub(ax, 0, fim, fio);
-      else { caminhoSub(ax, 0, tr[0][0] + 0.5, fio); for (i = 0; i + 1 < tr.length; i++) caminhoSub(ax, tr[i][1] - 0.5, tr[i + 1][0] + 0.5, fio); caminhoSub(ax, tr[tr.length - 1][1] - 0.5, fim, fio); }       // o fio nu, de ponta a ponta (aparece na cintura dos nódulos e perto da ponta)
-      ctxP.strokeStyle = 'rgb(6,4,14)'; ctxP.lineWidth = 0.40 * w + 2 * ou; ctxP.stroke(fio);
-      ctxP.strokeStyle = rgba(clar(cor), 0.85); ctxP.lineWidth = 0.40 * w; ctxP.stroke(fio);
-      var mains = [new Path2D(), new Path2D()], tem = [false, false];
-      tr.forEach(function (t) { var g2 = t[2] ? 1 : 0; tem[g2] = true; caminhoSub(ax, t[0], t[1], mains[g2]); });
-      var dk = 'rgb(6,4,14)', c42 = rgba(esc(cor, 0.42), 1), c80 = rgba(esc(cor, 0.80), 1), cl = null;
-      for (g = 0; g < 2; g++) { if (tem[g]) { ctxP.strokeStyle = dk; ctxP.lineWidth = w * QG[g * 2] + 2 * ou; ctxP.stroke(mains[g]); } }
-      for (g = 0; g < 2; g++) {
-        if (!tem[g]) continue; var q = w * QG[g * 2];
-        ctxP.strokeStyle = c42; ctxP.lineWidth = q; ctxP.stroke(mains[g]);
-        ctxP.strokeStyle = c80; ctxP.lineWidth = 0.60 * q; ctxP.stroke(mains[g]);
-      }
-      ctxP.globalCompositeOperation = 'lighter';
-      for (i = 0; i < ax.nos.length; i++) {       // o nódulo por onde o pulso acabou de saltar (o mesmo brilho da v09)
-        if (ax.nos[i] <= 0.02) continue;
-        var pp = ponto(ax, ax.a0 + i * ax.pitch - 0.25 * w), fl = ax.nos[i];
-        pulsoV09(pp.x, pp.y, 0.9 * w * (0.7 + fl * 0.45), ax.pulsoCor, fl * 0.85);
-      }
-      if (ax.pulso) {                              // o pulso da v09: cabeça e rastro de 11 pontos, branco no centro, cor clara e a cor sumindo nas bordas
-        for (var k = 10; k >= 0; k--) {
-          var u = ax.pulso.u - k * Math.max(3.5, 5.5 * s); if (u < 0) continue;
-          var qp = ponto(ax, u), ratio = 1 - k / 11; pulsoV09(qp.x, qp.y, w * (0.42 + ratio * 0.55), ax.pulsoCor, ratio * 0.85);
-        }
-      }
-      ctxP.globalCompositeOperation = 'source-over';
-      var v = ax.vent;
-      if (ax.tipo === 'i' && ax.p < 0.999) pintaCone(ax);
-      if (ax.p > 0.5) { var ga = ctxP.globalAlpha; ctxP.globalAlpha = ax.p >= 0.999 ? 1 : (ax.p - 0.5) * 2; pintaVentosa(v.cx, v.cy, v.R + 0.4, v.ang, v.cor, v.flash, v.anel, w); ctxP.globalAlpha = ga; }
-    }
     function visEixo(ax) { return !foco || foco === 'nucleo' || ax.ag === foco; }
     function passoEixo(ax, dt) {
       var v = ax.vent, i;

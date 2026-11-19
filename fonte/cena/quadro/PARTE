@@ -1,7 +1,7 @@
 nome: cena/quadro
 porta: 1
 compativel-desde: 1
-requer: neuronio/celula@1 comum/sorteio@1 comum/cores@1 comum/curvas@1 ligacoes/ponta@1 ligacoes/pulso@1
+requer: neuronio/celula@1 comum/sorteio@1 comum/cores@1 comum/curvas@1 ligacoes/ponta@1 ligacoes/pulso@1 ligacoes/tronco@1 ligacoes/pistas@1
 juntadora: sim
 guarda: sim
 dom: sim

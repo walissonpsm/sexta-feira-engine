@@ -1,0 +1,6 @@
+nome: ligacoes/tronco
+porta: 1
+compativel-desde: 1
+requer: comum/cores@1 comum/curvas@1 ligacoes/ponta@1 ligacoes/pulso@1
+juntadora: sim
+guarda: sim

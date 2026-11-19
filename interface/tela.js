@@ -1,5 +1,5 @@
-/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
-var VERSAO_ENGINE = '0.4.0';
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.1). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+var VERSAO_ENGINE = '0.4.1';
 // ---- fonte/dados/limpa/parte.js
 SF.parte({nome:'dados/limpa',porta:1,compativelDesde:1,requer:[],guarda:false,dom:false},
 /* A lista branca (limpa) e o catálogo fixo (agentes, módulos, cores padrão). TUDO que vem de fora (window.SF_DADOS) passa por `limpa` antes de a tela ver:

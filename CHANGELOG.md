@@ -1,5 +1,14 @@
 # Changelog — Sexta-Feira Engine
 
+## v0.4.1 — o tronco, as pistas e os dendritos em pastas próprias (19/11)
+
+Pastas: cena/quadro, ligacoes/pistas, ligacoes/tronco, neuronio/celula, neuronio/dendritos
+
+- Só fatiamento: **a tela sai idêntica à da v0.4.0** (101 pontos do `testes/imagens.py`, pixel a pixel). Nenhum comportamento muda.
+- `ligacoes/tronco` (juntadora da camada): medir a linha do axônio, achar pontos e trechos nela e desenhar fio, bainhas, nódulos, pulso e ponta. `ligacoes/pistas`: o caminho do axônio do agente até o vidro do Núcleo. Os dois saem de `cena/quadro`, que fica com o estado e o ciclo (pontes de uma linha no lugar das funções).
+- `neuronio/dendritos`: polígonos afilados, bordas, linha por dentro do ramo, trilha suave e mitocôndrias, que saíram de `neuronio/celula`. **Sem guarda de propósito**: o "assado" da lupa tem orçamento de tempo real e a guarda muda quanto fica pronto por quadro (explicado no `LEIA-ME.md` da parte).
+- Fica para as próximas: o resto de `neuronio/celula` (anatomia, pintura, sinais, minis, lupa) e de `cena/quadro` (ciclo, foco, posições); testes por parte; congelar portas; o sorteio separado por parte passa a ser a v0.4.2.
+
 ## v0.4.0 — a fonte em pastas isoladas (19/11)
 
 Pastas: todas
