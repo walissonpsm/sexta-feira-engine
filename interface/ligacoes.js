@@ -1,4 +1,4 @@
-/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.3.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
 // ---- fonte/ligacoes/pulso/parte.js
 SF.parte({nome:'ligacoes/pulso',porta:1,compativelDesde:1,requer:['comum/cores@1'],guarda:true,dom:false},
 /* O pulso que corre pelo tronco (o desenho da v09): centro branco, cor clara e a cor sumindo nas bordas. Só desenha. */

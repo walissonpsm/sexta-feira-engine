@@ -15,9 +15,9 @@ parte "inteligente" é o seu próprio atualizador (`atualizar-engine.sh`).
 É independente da Sexta-Feira: instalador e atualizador próprios, sem Docker, sem Núcleo, sem agentes. Nomes na tela: FIIs, Ações e ETFs,
 Cripto, Radar, Robô, Corretora, Segurança, Núcleo (os mesmos do repositório `sexta-feira`).
 
-Arquivos: `interface/` (o que vai para a tela: `index.html`, `tela.css`, `tela.js`, `cena.js`, `cores.css`, `neuronio.js`, `dados-ficticios.js` e o `neuronio.html` do dono),
+Arquivos: `fonte/<camada>/<parte>/` (a FONTE da tela, em pastas isoladas; cada parte tem `PARTE`, o código e o `LEIA-ME.md`; `fonte/MAPA.md` é gerado), `interface/` (o que vai para a tela: GERADA de `fonte/` por `ferramentas/montar-interface.sh`, nunca editada à mão: `index.html`, `tela.css`, `tela.js`, `cena.js`, `ligacoes.js`, `sf.js`, `cores.css`, `neuronio.js`, `dados-ficticios.js` e o `neuronio.html` do dono),
 `instalar-engine.sh`, `atualizar-engine.sh`, `systemd/` (3 unidades do atualizador), `testes/conferir.sh` (a rodada de teste), `testes/atualizador.sh`,
-`testes/empacotar.sh`, `testes/navegador.py` (só na nuvem), `ferramentas/montar-publicar.sh` (monta `publicar/`) e `ferramentas/empacotar.sh` (só na nuvem).
+`testes/empacotar.sh`, `testes/navegador.py` e `testes/imagens.py` (só na nuvem; este confere que a tela sai igual às `testes/referencias/cena.json`), `ferramentas/montar-interface.sh` (gera `interface/` e `fonte/MAPA.md`), `ferramentas/escopo.sh` (a linha `Pastas:` do CHANGELOG tem de bater com as partes que mudaram), `ferramentas/montar-publicar.sh` (monta `publicar/`) e `ferramentas/empacotar.sh` (só na nuvem).
 
 ## 2. Regra desta pasta: não editar
 
@@ -34,7 +34,7 @@ Arquivos: `interface/` (o que vai para a tela: `index.html`, `tela.css`, `tela.j
 Igual ao da Sexta-Feira (seção 3 do `AGENTS.md` de lá), em resumo:
 
 1. **Nuvem** (sessão do Claude): pedido resumido; desenho no Opus e 1º "sim"; código no Sonnet e 2º "sim"; branch `claude/...` (nunca a pasta
-   instalada); `testes/conferir.sh`, os testes do atualizador e do empacotador e, se mudou a tela, `python3 testes/navegador.py`; **auditoria independente** (obrigatória quando muda código); documentos da
+   instalada); mexe-se só em `fonte/` (nunca em `interface/`: rode `bash ferramentas/montar-interface.sh`); `testes/conferir.sh`, os testes do atualizador e do empacotador e, se mudou a tela, `python3 testes/navegador.py` e `python3 testes/imagens.py` (a tela tem de bater com as referências, ou a versão grava referências novas e diz por quê); a linha `Pastas:` no topo do CHANGELOG (`ferramentas/escopo.sh`); **auditoria independente** (obrigatória quando muda código); documentos da
    versão (`VERSAO`, topo do `CHANGELOG.md`, seção 7 daqui); `ferramentas/empacotar.sh` cria a tag leve `vX.Y.Z` e o bundle (o clone da nuvem NÃO pode ser raso: `git rev-parse --is-shallow-repository` tem de dar `false`, senão o bundle sai sem os objetos antigos, o `verify` passa e o PC recusa na hora de buscar as tags; o empacotador recusa clone raso e refaz a conferência do atualizador, apagando o bundle se falhar). A sessão só
    empurra o branch `claude/...`, nunca `main` nem tags.
 2. **PC** (atualizador, sozinho): `engine-atualizador.path` (muda `~/Downloads`) e `.timer` (1 h) chamam `atualizar-engine.sh --auto`. Uma
@@ -80,10 +80,10 @@ O repositório é **PÚBLICO**. Nele só entram código e design: nunca dados, t
 
 ## 6. Planos
 
-v0.2.0 e v0.3.0 (entregues): a tela do mapa com dados fictícios e, na v0.3.0, a cena viva (axônios com pulso e cone de crescimento, lupa e foco). Próximos, um de cada vez e cada um com os seus dois "sim":
+v0.2.0, v0.3.0 e v0.4.0 (entregues): a tela do mapa com dados fictícios; a cena viva (axônios com pulso e cone de crescimento, lupa e foco); e a fonte em pastas isoladas (a tela sai idêntica à da v0.3.0). Próximos, um de cada vez e cada um com os seus dois "sim":
 
-1. **v0.4.0, a fonte em pastas isoladas** (desenho aprovado em 19/11; o resumo abaixo é o contrato, e os detalhes de cada passo vão para a seção 7 quando for entregue): `fonte/<camada>/<parte>/` (`base`, `comum`, `neuronio`, `ligacoes`, `dados`, `cena`, `tela`), cada parte com `PARTE` (manifesto: porta e dependências), `parte.js`, `LEIA-ME.md` e as próprias fotos de referência. Um montador em bash (`ferramentas/montar-interface.sh`) gera os arquivos planos de `interface/`; atualizador, `publicar/` e servidor não mudam. A tela tem de sair **igual, pixel por pixel, à v0.3.0** (teste de imagem `testes/imagens.py`, na nuvem). Regras: partes do mesmo nível não se chamam (só a juntadora); porta com versão e mudança em duas etapas; guarda que salva e restaura o canvas e desliga só a parte que falhar; teste com camadas por parte, foto da porta, roteiro do ciclo e tempo por parte; `Pastas:` no topo do `CHANGELOG.md`, conferida pelo empacotador; `MAPA.md` gerado.
-2. **v0.4.1, sorteio separado por parte** (muda uma única vez o arranjo dos galhos).
+1. **v0.4.x, terminar o isolamento** (declarado na v0.4.0 e não feito): fatiar `neuronio/celula` (dendritos, anatomia, pintura, sinais, minis, lupa) e `cena/quadro` (ciclo, foco, posições) em partes com porta, uma pasta por vez, com `python3 testes/imagens.py` verde a cada passo; teste com as camadas ligadas parte por parte, foto da porta, roteiro do ciclo e tempo por parte (aviso); congelar as portas (`Proxy`); achar a causa da instabilidade das cenas de celular do `imagens.py` (ver seção 7).
+2. **v0.4.1, sorteio separado por parte** (muda uma única vez o arranjo dos galhos; exige regravar as referências do `imagens.py` e dizer isso na versão).
 3. Depois: dados reais um bloco por vez (exige a Sexta-Feira publicar o bloco e decidir o caminho dos dados: o `conferir.sh` hoje proíbe `fetch`); canal de pedidos (botões, lista fixa, com a decisão da seção 5); conversa (só sugere, nunca executa); CPU, GPU e RAM como neurônios menores (exige o backend publicar essas medidas); painéis de avisos pela lupa; axônios Robô–Corretora; botão do modo leve; layout próprio para celular em retrato.
 
 Nada na Sexta-Feira muda antes de o desenho da engine estar pronto (decisão do dono, 18/11).
@@ -91,6 +91,18 @@ Nada na Sexta-Feira muda antes de o desenho da engine estar pronto (decisão do 
 ## 7. Registro das últimas entregas (leia antes de mexer)
 
 Só as 2 últimas versões ficam aqui. Formato: o que mudou · arquivos · não mexer · como testar · armadilhas.
+
+### v0.4.0 — a fonte em pastas isoladas (19/11)
+
+- O que mudou: a tela é GERADA de `fonte/<camada>/<parte>/` por `ferramentas/montar-interface.sh` (só bash). `interface/` passa a ser saída (o `conferir.sh` reprova se ela diferir da montagem). Camadas: `base` < `comum` < `neuronio`, `ligacoes`, `dados` < `cena` < `tela` (mais `cores`, `laboratorio`); parte só usa camada abaixo (a juntadora é a única que usa irmãs); `PARTE` = manifesto (`nome`, `tipo`, `arquivo`, `saida`, `porta`, `compativel-desde`, `requer x@N`, `guarda`, `dom`, `juntadora`).
+  O carregador `SF` (`fonte/base/carregador`, `interface/sf.js`) entrega a cada parte só o que ela pediu (`usa`), congela as portas e, nas partes `guarda: sim`, salva/restaura o canvas e desliga só a parte que falhar (nos testes o erro é relançado). Sorteio/relógio/canvas vêm de `usa.base` (`acaso`, `agora`, `canvas`).
+  Partes: `base/carregador`, `comum/{sorteio,cores,curvas}`, `dados/{limpa,ficticios}`, `ligacoes/{ponta,pulso}`, `neuronio/celula` e `cena/quadro` (juntadoras, ainda inteiras), `tela/{inicio,pagina,estilo}`, `cores/cores`, `laboratorio/neuronio`.
+  `testes/imagens.py` (nuvem): 9 cenas, 101 pontos, hash de cada canvas + captura; referências da v0.3.0 em `testes/referencias/cena.json`; a tela saiu idêntica. `ferramentas/escopo.sh` + linha `Pastas:` do CHANGELOG; o empacotador roda os dois.
+- Arquivos: `fonte/**`, `ferramentas/{montar-interface.sh,escopo.sh,empacotar.sh}`, `testes/{imagens.py,referencias/cena.json,conferir.sh,atualizador.sh}`, `interface/*` (gerados; `sf.js` e `ligacoes.js` novos), `README.md`, `AGENTS.md`, `CHANGELOG.md`, `VERSAO`.
+- NÃO mexer: `interface/` à mão; `fonte/MAPA.md` (gerado); `neuronio.html` (do dono; vive em `fonte/laboratorio/neuronio`); a ordem das chamadas de `usa.base.acaso()` (define o desenho: só a v0.4.1 muda); `ciclo` em `cena/quadro`; `VERSAO_ENGINE` sai do `VERSAO` pelo montador; `publicar/` nunca é recriada; `window.SF_CENA`/`SF_LIMPA` só com `SF_TESTE` (`tela/inicio`). Mudar `base`, `comum` ou `cores` AFETA TODAS: `Pastas: todas` e teste de imagem inteiro.
+- Como testar: `bash testes/conferir.sh`, `bash testes/atualizador.sh`, `bash testes/empacotar.sh` e, na nuvem, `python3 testes/navegador.py` e `python3 testes/imagens.py` (`--cena X` para uma só).
+- Declarado e NÃO feito (fica para a v0.4.x): fatiar `neuronio/celula` e `cena/quadro`; teste com camadas ligadas por parte, foto da porta, roteiro do ciclo e tempo por parte; congelar portas com `Proxy`; sorteio separado por parte (v0.4.1).
+- Armadilhas: (1) as cenas de celular (retrato, paisagem; dpr 3) do `imagens.py` são instáveis até na v0.3.0 (cerca de 1 rodada em 3 muda o hash do canvas do Núcleo; aparece a ~200 ms simulados, perto do refino da lupa com orçamento em tempo real; causa não confirmada), então têm até 6 tentativas; (2) o `performance.now` do navegador de teste não é preso pelo relógio falso; (3) `poe_versao` do `testes/atualizador.sh` remonta a `interface/`: versão de teste muda `fonte/tela/pagina/index.html`, não `interface/`; (4) as regras do `conferir.sh` sobre partes são `grep` (podem ser burladas); (5) nada visto no PC real nem no systemd; o `imagens.py` vale para o Chromium da nuvem.
 
 ### v0.3.0 — a cena viva: axônios com pulso e cone de crescimento (19/11)
 
@@ -111,20 +123,3 @@ Só as 2 últimas versões ficam aqui. Formato: o que mudou · arquivos · não 
   contagem de `drawImage`, que é só uma estimativa.
 - Armadilhas: (1) o ciclo automático pode deixar um pedido no ar: testes que contam pedidos devem chamar `automatico(false)` antes do primeiro pedido (o `abre(auto=False)` do `navegador.py` faz isso); (2) o modo leve agora reduz menos (cerca de 3 vezes menos
   `drawImage`, não 3x folgado); (3) nada visto no PC real nem no systemd; (4) a v11 foi vista só em Chromium sem placa de vídeo (uns 58 fps em 1×, uns 29 em 2×).
-
-### v0.2.0 — a tela do mapa, com dados fictícios (18/11)
-
-- O que mudou: `interface/index.html` virou a tela (neurônio da Sexta-Feira no centro, seis agentes como neurônios menores, Corretora como satélite parado ao lado do Robô,
-  moldura em volta com as medidas do mapa, 1672×941 escalado inteiro). Tudo fictício, com selo "DADOS FICTÍCIOS". `neuronio.js` é o motor do `neuronio.html` em forma de
-  fábrica (`Neuronio.criar(canvas, opções)`); `cores.css` guarda só as cores (o dono edita; os neurônios leem as mesmas variáveis); modo leve (`?leve=1`, botão, movimento reduzido).
-  `ferramentas/empacotar.sh` recusa clone raso e refaz a conferência do atualizador (o bundle da Sexta-Feira v0.55.0 saiu incompleto por isso).
-- Arquivos: `interface/{index.html,tela.css,tela.js,cores.css,neuronio.js,dados-ficticios.js}`, `testes/{conferir.sh,empacotar.sh,navegador.py}`, `ferramentas/empacotar.sh`,
-  `README.md`, `AGENTS.md`, `CHANGELOG.md`, `VERSAO`.
-- NÃO mexer: `interface/neuronio.html` é do dono (laboratório de cores); `tela.js` só usa `textContent` e lista branca (`limpa`); o `conferir.sh` proíbe rede, `innerHTML` e
-  `eval` na tela (só o `neuronio.html` fica fora da regra do HTML dinâmico); o selo "DADOS FICTÍCIOS" mora no `index.html` e só sai quando houver dados reais (aí a regra do
-  `conferir.sh` muda junto); `VERSAO_ENGINE` em `tela.js` = `VERSAO`; `publicar/` nunca é recriada; o desenho do neurônio (`neuronio.js`, gerado do `neuronio.html`) não se edita à mão sem o dono.
-- Como testar: `bash testes/conferir.sh`, `bash testes/atualizador.sh`, `bash testes/empacotar.sh` (sobre o último commit) e, na nuvem, `python3 testes/navegador.py`.
-- Auditoria independente (agente separado): sem defeito grave. Achou e foi corrigido: (a) o canvas do Núcleo cobria os nomes e roubava o clique de Ações e ETFs e Cripto (o `mix-blend-mode` passou para a caixa `.nr`, o centro ficou com `pointer-events: none`, e há teste que clica no nome de cada agente); (b) `empacotar.sh` não apagava o bundle se o clone ou a `VERSAO` da tag falhasse (agora usa `recusa`); (c) a tag anterior era "a maior diferente" e agora é a logo abaixo (`sort -V`); (d) `location[[:space:]]*=` reprovava `===` (agora `=([^=]|$)`); (e) o foco do teclado se perdia ao abrir o detalhe (volta para o botão "voltar" e depois para o agente) e o `role="application"` virou `region`; (f) o satélite da Corretora saiu de dentro da caixa do Núcleo. Não corrigido por decisão: as regras 3 e 3b do `conferir.sh` são `grep` e podem ser burladas (`'inner'+'HTML'`); a barreira real é a CSP `connect-src 'self'` do servidor da Sexta-Feira.
-- Armadilhas: (1) os neurônios pequenos não animam no modo leve (só o brilho do pulso); (2) as telas cuja proporção não é 16:9 ganham faixas pretas (a tela é escalada inteira);
-  (3) `mix-blend-mode: screen` nos canvases deixa os neurônios se sobreporem sem cobrir o vizinho; (4) o teste do modo leve conta chamadas de `drawImage`, não quadros por segundo reais;
-  (5) o `testes/atualizador.sh` troca `VERSAO` e `VERSAO_ENGINE` juntos (`poe_versao`); quem criar versões de teste à mão faz o mesmo, senão o `conferir.sh` reprova; (6) o `conferir.sh` não é barreira completa contra código malicioso (só pega o óbvio); (7) nada visto no PC real nem no systemd.

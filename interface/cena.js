@@ -1,4 +1,4 @@
-/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.3.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
 // ---- fonte/cena/quadro/parte.js
 SF.parte({nome:'cena/quadro',porta:1,compativelDesde:1,requer:['neuronio/celula@1','comum/sorteio@1','comum/cores@1','comum/curvas@1','ligacoes/ponta@1','ligacoes/pulso@1'],guarda:true,dom:true},
 /* Sexta-Feira Engine v0.3.0: a cena. O Núcleo no centro, seis agentes ao redor (três de cada lado) e a Corretora parada ao lado do Robô.

@@ -35,15 +35,18 @@ BASE="$(tr -d '[:space:]' < VERSAO)"   # a versão que está sendo testada; as d
 
 poe_versao() {   # $1 = X.Y.Z; grava VERSAO e acompanha o VERSAO_ENGINE da tela (o conferir.sh exige que os dois batam)
     printf '%s\n' "$1" > VERSAO
-    [ -f interface/tela.js ] && sed -i "s/^\([[:space:]]*var VERSAO_ENGINE = '\)[0-9.]*';/\1$1';/" interface/tela.js
+    # a tela é gerada de fonte/ (o VERSAO_ENGINE vem do VERSAO): depois de trocar a VERSAO, remonta interface/ com o montador
+    if [ -f ferramentas/montar-interface.sh ]; then bash ferramentas/montar-interface.sh >/dev/null || return 1
+    elif [ -f interface/tela.js ]; then sed -i "s/^\([[:space:]]*var VERSAO_ENGINE = '\)[0-9.]*';/\1$1';/" interface/tela.js; fi
     return 0
 }
 
 nova_versao() {   # $1 = X.Y.Z; faz commit com VERSAO e CHANGELOG novos e empacota
     local v="$1"
+    if [ -f fonte/tela/pagina/index.html ]; then echo "<!-- $v -->" >> fonte/tela/pagina/index.html; fi   # uma mudança de verdade (na fonte; interface/ é gerada)
     poe_versao "$v"
     printf '# Changelog — Sexta-Feira Engine\n\n## v%s — teste (18/11)\n\n- mudança de teste %s.\n\n' "$v" "$v" > .novo && sed -n "/^## v$BASE /,\$p" CHANGELOG.md >> .novo && mv .novo CHANGELOG.md
-    echo "<!-- $v -->" >> interface/index.html
+    [ -f fonte/tela/pagina/index.html ] || echo "<!-- $v -->" >> interface/index.html
     git add -A && git commit -q -m "v$v" && git tag "v$v"
     git bundle create "$T/sexta-feira-engine-v$v.bundle" --branches --tags >/dev/null 2>&1
 }

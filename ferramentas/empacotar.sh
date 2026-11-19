@@ -3,7 +3,7 @@
 #
 #   ferramentas/empacotar.sh [PASTA_DE_SAIDA]      (padrão: a pasta atual)
 #
-# Confere antes: árvore limpa, VERSAO igual ao topo do CHANGELOG, testes/conferir.sh aprovado. Depois confere o bundle como o
+# Confere antes: árvore limpa, VERSAO igual ao topo do CHANGELOG, testes/conferir.sh aprovado, escopo (Pastas:) e, na nuvem, o teste de imagem. Depois confere o bundle como o
 # atualizador confere (verify, tag, VERSAO de dentro). Não empurra nada para o GitHub: o main e as tags só andam pelo espelho do PC.
 
 set -euo pipefail
@@ -20,6 +20,12 @@ V="$(tr -d '[:space:]' < VERSAO)"
 TOPO="$(sed -n 's/^## v\([0-9][0-9.]*\) .*/\1/p' CHANGELOG.md | head -n1)"
 [ "$TOPO" = "$V" ] || { echo "empacotar: o topo do CHANGELOG ($TOPO) não é a VERSAO ($V)" >&2; exit 1; }
 bash testes/conferir.sh >/dev/null || { echo "empacotar: testes/conferir.sh reprovou" >&2; exit 1; }
+# o escopo: a linha "Pastas:" do CHANGELOG tem de bater com as partes de fonte/ que mudaram desde a tag anterior (ferramentas/escopo.sh)
+bash ferramentas/escopo.sh >/dev/null || { bash ferramentas/escopo.sh >&2 || true; echo "empacotar: o escopo (Pastas:) não bate com o que mudou" >&2; exit 1; }
+# a tela tem de sair igual às referências (pixel a pixel): só na nuvem, onde há playwright; o teste de empacotamento (ENGINE_TESTE=1) pula, pois já roda à parte
+if [ "${ENGINE_TESTE:-}" != "1" ] && python3 -c 'import playwright' 2>/dev/null; then
+    python3 testes/imagens.py >/dev/null || { python3 testes/imagens.py >&2 || true; echo "empacotar: a tela não bate com as referências (testes/imagens.py)" >&2; exit 1; }
+fi
 
 if git rev-parse -q --verify "refs/tags/v$V" >/dev/null; then
     [ "$(git rev-parse "refs/tags/v$V^{commit}")" = "$(git rev-parse HEAD)" ] || { echo "empacotar: a tag v$V já existe em outro commit" >&2; exit 1; }

@@ -54,6 +54,53 @@ else
     falha "falta a pasta interface/ (ou é link)"
 fi
 
+# 2b. a fonte em pastas (v0.4.0): estrutura, regras das partes e interface/ igual à montagem ----------------------------------------
+# A tela é GERADA de fonte/<camada>/<parte>/ por ferramentas/montar-interface.sh (só bash). O montador já recusa manifesto errado, parte sem LEIA-ME,
+# arquivo fora da lista, ciclo e porta incompatível; aqui conferimos o resto: nenhuma parte "pura" toca em janela, relógio ou sorteio direto
+# (só pelo carregador: usa.base) e interface/ + fonte/MAPA.md são exatamente o que o montador gera.
+if [ -d fonte ]; then
+    f0=$FALHAS
+    if [ ! -f ferramentas/montar-interface.sh ]; then
+        falha "falta ferramentas/montar-interface.sh"
+    else
+        tmp="$(mktemp -d 2>/dev/null || echo "")"
+        if [ -z "$tmp" ]; then
+            falha "não consegui criar pasta temporária para conferir a montagem"
+        else
+            if ! bash ferramentas/montar-interface.sh --em "$tmp" >"$tmp/.saida" 2>&1; then
+                falha "o montador reprovou a fonte: $(tail -n3 "$tmp/.saida" | tr '\n' ' ')"
+            else
+                while IFS= read -r -d '' g; do
+                    nome="$(basename "$g")"
+                    [ "$nome" = "MAPA.md" ] && continue
+                    cmp -s "$g" "interface/$nome" || falha "interface/$nome difere do que o montador gera de fonte/ (rode ferramentas/montar-interface.sh; não edite interface/ à mão)"
+                done < <(find "$tmp" -mindepth 1 -maxdepth 1 -type f ! -name '.saida' -print0)
+                while IFS= read -r -d '' g; do
+                    nome="$(basename "$g")"
+                    [ -f "$tmp/$nome" ] || falha "interface/$nome não vem de nenhuma parte em fonte/"
+                done < <(find interface -mindepth 1 -maxdepth 1 -type f -print0)
+                cmp -s "$tmp/MAPA.md" fonte/MAPA.md || falha "fonte/MAPA.md difere do gerado (rode ferramentas/montar-interface.sh)"
+            fi
+            rm -rf "$tmp"
+        fi
+    fi
+    # as partes de lógica não tocam em janela, documento, relógio nem sorteio direto (dom: sim e as camadas base e tela são a exceção)
+    proibido='(^|[^A-Za-z0-9_.])(window|document|globalThis|self|localStorage|sessionStorage|requestAnimationFrame|setTimeout|setInterval|performance)([^A-Za-z0-9_]|$)|Math\.random|Date\.now|new[[:space:]]+Date|(^|[^A-Za-z0-9_.])(SF|Neuronio|Cena)\.'
+    np=0
+    while IFS= read -r m; do
+        np=$((np + 1)); d="$(dirname "$m")"
+        tipo="$(sed -n 's/^tipo:[[:space:]]*//p' "$m" | head -n1)"; dom="$(sed -n 's/^dom:[[:space:]]*//p' "$m" | head -n1)"
+        arq="$(sed -n 's/^arquivo:[[:space:]]*//p' "$m" | head -n1)"; arq="${arq:-parte.js}"
+        [ "${tipo:-js}" = "js" ] || continue
+        [ "$dom" = "sim" ] && continue
+        case "$d" in fonte/base/*|fonte/tela/*) continue ;; esac
+        if grep -vE '^[[:space:]]*(//|\*|/\*)' "$d/$arq" | grep -qE "$proibido"; then
+            falha "$d/$arq: parte sem 'dom: sim' usa janela, documento, relógio ou sorteio direto (use usa.base: acaso, agora, canvas)"
+        fi
+    done < <(find fonte -mindepth 3 -maxdepth 3 -name PARTE | sort)
+    [ "$FALHAS" -eq "$f0" ] && ok "fonte: $np parte(s), interface/ e MAPA.md iguais à montagem, sem acesso direto a janela, relógio ou sorteio"
+fi
+
 # 3. nada de rede na interface -----------------------------------------------------------------------------------------
 if [ -d interface ]; then
     while IFS= read -r -d '' f; do

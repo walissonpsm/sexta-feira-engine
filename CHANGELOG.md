@@ -1,5 +1,19 @@
 # Changelog — Sexta-Feira Engine
 
+## v0.4.0 — a fonte em pastas isoladas (19/11)
+
+Pastas: todas
+
+- **A tela agora nasce de `fonte/<camada>/<parte>/`** (camadas: `base`, `comum`, `neuronio`, `ligacoes`, `dados`, `cena`, `tela`, mais `cores` e `laboratorio`). Cada parte tem `PARTE` (manifesto: porta, versão e o que usa), `parte.js` (ou o arquivo dela), `LEIA-ME.md` e, quando houver, a pasta `teste/`. Quem mexe numa parte não precisa abrir as outras: só a porta dela (o que ela devolve) e o `LEIA-ME.md`.
+- **`ferramentas/montar-interface.sh`** (só bash) gera os arquivos planos de `interface/` (`sf.js`, `neuronio.js`, `ligacoes.js`, `cena.js`, `tela.js`, `dados-ficticios.js`, `tela.css`, `index.html`, `cores.css`, `neuronio.html`) e o `fonte/MAPA.md` (quem usa quem, porta e versão de cada parte). Atualizador, `publicar/` e servidor não mudam. **`interface/` é gerada: não se edita à mão** (o `testes/conferir.sh` reprova se ela diferir da montagem).
+- **O carregador `SF`** (`fonte/base/carregador`): cada parte é uma função que recebe só o que declarou (`usa`); as portas saem congeladas; parte "com guarda" salva e restaura o canvas a cada chamada e, se falhar, é desligada sozinha (a tela segue sem ela, com aviso no console); nos testes o erro é relançado. Sorteio, relógio e canvas vêm de `usa.base` (nenhuma parte de lógica toca em `window`, `Math.random` ou `performance`: o `conferir.sh` confere).
+- Regras do montador: parte só usa camadas abaixo da dela (a juntadora da camada é a única que usa as irmãs); porta com versão (`compativel-desde` ≤ versão pedida ≤ `porta`); ciclo de dependência é recusado.
+- **Partes já separadas**: `base/carregador`, `comum/{sorteio,cores,curvas}`, `dados/{limpa,ficticios}`, `ligacoes/{ponta,pulso}`, `tela/{inicio,pagina,estilo}`, `cores/cores`, `laboratorio/neuronio`. O motor do neurônio (`neuronio/celula`) e a cena (`cena/quadro`) entram inteiros como juntadoras, a serem fatiados nas próximas versões (o estado deles é compartilhado: ver o `LEIA-ME.md` de cada um).
+- **Teste de identidade** `testes/imagens.py` (só na nuvem): 9 cenas, 101 pontos, hash de cada canvas e da captura inteira, relógio e sorteio presos; as referências (`testes/referencias/cena.json`) foram tiradas da v0.3.0. **A tela sai igual, pixel a pixel, à v0.3.0.** As cenas de celular (dpr 3) são instáveis até na v0.3.0 original (cerca de uma rodada em três muda o hash do canvas do Núcleo; causa ainda não achada), então só reprovam se nenhuma de 6 tentativas bater.
+- **`ferramentas/escopo.sh`**: a linha `Pastas:` acima tem de bater com as partes de `fonte/` que mudaram desde a tag anterior (mudar `base`, `comum` ou `cores` exige "todas"); o `ferramentas/empacotar.sh` roda o escopo e o teste de imagem antes de criar o bundle.
+- `testes/conferir.sh` ganhou a conferência da fonte (montagem igual, partes sem acesso direto a janela, relógio ou sorteio, LEIA-ME em cada parte); `testes/atualizador.sh` passou a remontar a `interface/` ao trocar de versão.
+- Fica para as próximas (declarado, não feito): sorteio separado por parte (v0.4.1, muda uma vez o arranjo dos galhos); teste com as camadas ligadas parte por parte, foto da porta e tempo por parte; congelar as portas com `Proxy`; fatiar `neuronio/celula` e `cena/quadro`.
+
 ## v0.3.0 — a cena viva: axônios que se mexem, com pulso e cone de crescimento (19/11)
 
 - A tela passa a ser a **cena** das prévias v01 a v11 aprovadas pelo dono: o Núcleo no centro e os seis agentes ao redor, cada um com um par de axônios de mão única (violeta do Núcleo para o agente; da cor do agente para o Núcleo) que terminam em ventosas na parede de vidro (a sinapse). A Corretora fica parada ao lado do Robô. Axônio só leva e dendrito só recebe.

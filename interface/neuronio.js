@@ -1,4 +1,4 @@
-/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.3.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
 // ---- fonte/neuronio/celula/parte.js
 SF.parte({nome:'neuronio/celula',porta:1,compativelDesde:1,requer:['comum/sorteio@1','comum/cores@1'],guarda:true,dom:true},
 /* Sexta-Feira Engine: o motor do neurônio (v0.3.0).
