@@ -222,12 +222,21 @@ function (usa) {
 
 
         // Desenha uma célula (halo, dendritos, soma, núcleo, axônio, telodendros) no espaço do neurônio: o desenho aprovado
+        // falha contida por órgão (v0.4.3): cada órgão do desenho roda em usa.base.seguro; se der erro, só ele para (nesta esfera) e o contexto volta à transformação, ao modo de composição
+        // e à opacidade de antes dele (um clip ou um save aberto pelo órgão não dá para desfazer: fica até o restore do quadro). Sem erro, nada muda no desenho.
+        const idE = String(opc.id || 'esfera');
+        function orgao(c, nome, fn) {
+          const t = c.getTransform(), op = c.globalCompositeOperation, al = c.globalAlpha;
+          let ok = false;
+          usa.base.seguro(idE + ':' + nome, function () { fn(); ok = true; });
+          if (!ok) { c.setTransform(t); c.globalCompositeOperation = op; c.globalAlpha = al; }
+        }
         function pintarCelula(octx, A, rgb) {
           const T = tintaFixa(rgb);
-          pintarHalo(octx, A, T);                // 1
-          pintarDendritos(octx, A, T);           // 2
-          pintarSoma(octx, A, T);                // 3
-          pintarNucleo(octx, A, T);              // 4
+          orgao(octx, 'halo', function () { pintarHalo(octx, A, T); });                // 1
+          orgao(octx, 'dendritos', function () { pintarDendritos(octx, A, T); });           // 2
+          orgao(octx, 'soma', function () { pintarSoma(octx, A, T); });                // 3
+          orgao(octx, 'nucleo', function () { pintarNucleo(octx, A, T); });              // 4
           // (com mais de um axônio, o laço desenha cada um com as mesmas peças: axônio, bainhas, nódulos e terminais)
           [A].concat(A.extras || []).forEach(function (E) {
           if (E.rgb) {                                                        // ligações: cada axônio na sua cor
@@ -235,8 +244,8 @@ function (usa) {
             T.lightR = Math.min(255, T.r + 90); T.lightG = Math.min(255, T.g + 90); T.lightB = Math.min(255, T.b + 90);
             T.deepR = Math.round(T.r * 0.26); T.deepG = Math.round(T.g * 0.26); T.deepB = Math.round(T.b * 0.26);
           }
-          pintarAxonio(octx, A, E, T);           // 5
-          pintarTerminais(octx, A, E, T);        // 6
+          orgao(octx, 'axonio', function () { pintarAxonio(octx, A, E, T); });           // 5
+          orgao(octx, 'terminais', function () { pintarTerminais(octx, A, E, T); });        // 6
           });
         }
 
@@ -282,24 +291,24 @@ function (usa) {
           giroCelula(ctx, Est.anatomy);
 
           const T = tintaViva(zcL);
-          pintarNevoa(T);                        // 1
+          orgao(ctx, 'nevoa', function () { pintarNevoa(T); });                        // 1
 
           ctx.globalCompositeOperation = 'lighter';
 
-          pintarMinisVivo(T);                    // 1b
+          orgao(ctx, 'minis', function () { pintarMinisVivo(T); });                    // 1b
           T.usaCor();
-          pintarExcitacaoSoma(T);                // 2
-          pintarPulsosEntrada(T);                // 3
-          pintarNodulos(T);                      // 4
-          pintarPotenciais(T);                   // 5
+          orgao(ctx, 'excitacao', function () { pintarExcitacaoSoma(T); });                // 2
+          orgao(ctx, 'pulsos', function () { pintarPulsosEntrada(T); });                // 3
+          orgao(ctx, 'nodulos', function () { pintarNodulos(T); });                      // 4
+          orgao(ctx, 'potenciais', function () { pintarPotenciais(T); });                   // 5
 
           ctx.globalCompositeOperation = 'source-over';
 
-          pintarBulbos(T);                       // 6
+          orgao(ctx, 'bulbos', function () { pintarBulbos(T); });                       // 6
 
           ctx.globalCompositeOperation = 'lighter';
 
-          pintarNeurotransmissores(T);           // 7
+          orgao(ctx, 'neurotransmissores', function () { pintarNeurotransmissores(T); });           // 7
 
           ctx.globalCompositeOperation = 'source-over';
 

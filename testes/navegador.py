@@ -271,6 +271,23 @@ class Tela(unittest.TestCase):
         self.assertGreater(pg.evaluate("window.__d"), 0)
         self.assertEqual(pg.evaluate("() => window.SF.desligadas()"), ["esfera:fiis"], "só a esfera com defeito saiu")
 
+    def test_falha_num_orgao_desliga_so_o_orgao_daquela_esfera(self):
+        pg = self.abre(auto=False, estrito=False)
+        pg.evaluate("""() => { const c = window.SF_CENA.esferas().fiis.canvas.getContext('2d'); c.fill = function () { throw new Error('falha de teste'); }; }""")
+        pg.evaluate("() => window.SF_CENA.pedir('fiis')")                 # os órgãos vivos só desenham quando há sinal: o pedido faz a excitação do corpo aparecer
+        pg.wait_for_timeout(2500)
+        caiu = pg.evaluate("() => window.SF.desligadas()")
+        self.assertGreater(len(caiu), 0)
+        self.assertTrue(all(n.startswith("fiis:") for n in caiu), caiu)      # só órgãos da esfera dos FIIs (não a esfera inteira, nem outra esfera)
+        self.assertEqual(pg.locator("#aviso-falha").count(), 1)
+        pg.evaluate("window.__d = 0")
+        self.espera_repouso(pg)
+        self.assertTrue(pg.evaluate("() => window.SF_CENA.pedir('cripto')"))
+        pg.wait_for_timeout(1500)
+        self.espera_repouso(pg)
+        self.assertGreater(pg.evaluate("window.__d"), 0)
+        self.assertEqual(pg.evaluate("() => window.SF.desligadas().filter(n => !n.startsWith('fiis:')).length"), 0, "nenhuma outra esfera caiu")
+
     def test_falha_ao_montar_a_cena_ainda_mostra_o_aviso(self):
         ctx = self.nav.new_context(viewport={"width": 1280, "height": 720})
         self.addCleanup(ctx.close)

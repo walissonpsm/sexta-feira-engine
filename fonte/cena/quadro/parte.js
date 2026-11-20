@@ -36,7 +36,7 @@ function (usa) {
       cv.className = 'esfera';
       cv.setAttribute('data-id', id);
       raiz.appendChild(cv);
-      var n = usa.celula.criar(cv, Object.assign({ cor: cor, semente: semente, leve: leve, lupa: false, margem: Est.MG }, extra));
+      var n = usa.celula.criar(cv, Object.assign({ cor: cor, semente: semente, leve: leve, lupa: false, margem: Est.MG, id: id }, extra));
       var e = { id: id, nome: nome, cor: cor, canvas: cv, n: n, cx: 0, cy: 0, R: 10, lado: lado, giro: 0, botao: null, extra: extra };
       esf[id] = e;
       cv.style.pointerEvents = 'auto';
