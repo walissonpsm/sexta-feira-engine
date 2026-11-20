@@ -1,5 +1,18 @@
 # Changelog — Sexta-Feira Engine
 
+## v0.4.2 — o isolamento terminado: celula e quadro em partes, falha contida e foto da porta (20/11)
+
+Pastas: todas
+
+- **A tela sai idêntica à da v0.4.1** (101 pontos do `testes/imagens.py`, pixel a pixel), com uma exceção explicada abaixo: a referência da cena `paisagem` foi regravada.
+- `neuronio/celula` (2.711 linhas) e `cena/quadro` viraram juntadoras finas (519 e ~240 linhas): o estado de cada uma fica num objeto só (`Est`) e as partes recebem `Est` e as funções irmãs. Partes novas: `comum/ramos`, `neuronio/{recorte,anatomia,sinais,minis,escala,tinta,dendritos,corpo,axonio,terminais,camada,vidro,lupa,pulso}` e `cena/{posicoes,ciclo,foco,eixos,ligar}` (37 partes no total). Código movido sem reescrever. Por isso `Pastas: todas` (nasceu `comum/ramos`).
+- **Falha contida**: cada esfera e cada axônio da cena roda em `usa.base.seguro`; se der erro, só ele é desligado e a tela mostra uma linha curta (`#aviso-falha`, `textContent`, nasce só na falha; mostra quantas e a última). No teste o erro continua subindo; `SF_TESTE = { estrito: false }` liga a contenção. Dois testes novos no `navegador.py` (esfera com defeito; falha ao montar a cena).
+- **Foto da porta**: `SF.portas()` comparada com `testes/referencias/portas.json`; mudar a aridade de `criar` ou as dependências sem subir `porta:` reprova (teste novo; regravar com `SF_GRAVAR_PORTAS=1`).
+- Correções de estabilidade do teste de imagem: o `ajusta()` de `tela/inicio` ignora "resize" sem mudança real (o resize espúrio mudava a imagem; por isso **a referência da cena `paisagem` foi regravada**, só ela); o `imagens.py` normaliza o `performance.now`; nova tentativa controlada de até 4 rodadas por cena, com aviso. **A instabilidade residual (cerca de 1% das rodadas em `ciclo-cripto-2x`, e as cenas de celular) NÃO teve a causa achada.**
+- Desvios do desenho aprovado: `lustreSoma` aparece em `neuronio/camada`, `neuronio/escala` e `neuronio/pulso`; `cena/quadro` deixou de pedir `ligacoes/pulso` (não usava); `irPara`, `modulosDe`, `alvoRel` e `raioVent` ficam na juntadora da cena para cortar um ciclo entre partes.
+- Auditoria independente (agente separado): nenhum achado grave; corrigidos o aviso que não cobria falha ao montar a cena (agora é registrado antes), o aviso que mostrava só a última falha e o `requer` sobrando; anotado no LEIA-ME do carregador que `seguro` não restaura o canvas. Não feito: `compativelDesde` fora da foto da porta; resumo final do `imagens.py` com as tentativas repetidas.
+- Fica para as próximas (declarado, não feito): provas por parte, roteiro do ciclo e tempo por parte (v0.4.3); sorteio separado por parte (v0.4.4); congelar portas com `Proxy` (tirado do plano: as portas já saem congeladas). Nada visto no PC real nem no systemd.
+
 ## v0.4.1 — o tronco, as pistas e os dendritos em pastas próprias (19/11)
 
 Pastas: cena/quadro, ligacoes/pistas, ligacoes/tronco, neuronio/celula, neuronio/dendritos

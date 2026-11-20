@@ -17,3 +17,5 @@ não vaza); se der erro, só aquela parte é desligada (`console.error` com a pi
 (3) `SF.portas()` e `SF.desligadas()` só existem com `SF_TESTE`.
 
 **Como testar**: `bash testes/conferir.sh` (estrutura, dependências, globais proibidos) e `python3 testes/imagens.py` (a tela tem de sair idêntica).
+
+**Limites da falha contida**: `seguro` NÃO salva/restaura o canvas (só a guarda das portas faz isso); quem usar `seguro` num desenho que mude `ctxP` deve fazer o próprio save/restore. O aviso na tela (`tela/inicio`) cobre esfera, eixo e parte que cai ao ser montada; se uma dependência de `tela/inicio` não subir, ela nem é construída e não há aviso (só o `console.error`).

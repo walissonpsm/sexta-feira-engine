@@ -1,4 +1,4 @@
-/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.1). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.2). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
 // ---- fonte/base/carregador/parte.js
 /* O carregador (SF): registra as partes, resolve as portas na ordem das dependências e dá a cada parte SÓ as portas que ela declarou (usa.<parte>).
  * É a única parte que lê o relógio, o sorteio e o ambiente de teste. Ele contém as falhas: uma parte que dá erro é desligada e a tela segue
@@ -33,7 +33,7 @@
   }
 
   var base = Object.freeze({
-    versao: '0.4.1',
+    versao: '0.4.2',
     teste: T,
     acaso: function () { return Math.random(); },
     agora: function () { return typeof performance !== 'undefined' ? performance.now() : Date.now(); },

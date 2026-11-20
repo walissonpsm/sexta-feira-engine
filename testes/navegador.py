@@ -271,6 +271,16 @@ class Tela(unittest.TestCase):
         self.assertGreater(pg.evaluate("window.__d"), 0)
         self.assertEqual(pg.evaluate("() => window.SF.desligadas()"), ["esfera:fiis"], "só a esfera com defeito saiu")
 
+    def test_falha_ao_montar_a_cena_ainda_mostra_o_aviso(self):
+        ctx = self.nav.new_context(viewport={"width": 1280, "height": 720})
+        self.addCleanup(ctx.close)
+        pg = ctx.new_page()
+        pg.add_init_script(PREPARA.replace("window.SF_TESTE = true;", "window.SF_TESTE = { estrito: false };")
+                           + " (() => { const g = HTMLCanvasElement.prototype.getContext; let n = 0; HTMLCanvasElement.prototype.getContext = function () { if (++n === 3) throw new Error('falha de teste'); return g.apply(this, arguments); }; })();")
+        pg.goto(self.url)
+        pg.wait_for_selector("#aviso-falha", timeout=10000)
+        self.assertIn("desligada", pg.locator("#aviso-falha").inner_text())
+
     def test_foto_da_porta_so_muda_com_a_versao_da_porta(self):
         pg = self.abre(auto=False)
         foto = pg.evaluate("() => window.SF.portas()")

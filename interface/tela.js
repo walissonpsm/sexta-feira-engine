@@ -1,5 +1,5 @@
-/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.1). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
-var VERSAO_ENGINE = '0.4.1';
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.2). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+var VERSAO_ENGINE = '0.4.2';
 // ---- fonte/dados/limpa/parte.js
 SF.parte({nome:'dados/limpa',porta:1,compativelDesde:1,requer:[],guarda:false,dom:false},
 /* A lista branca (limpa) e o catálogo fixo (agentes, módulos, cores padrão). TUDO que vem de fora (window.SF_DADOS) passa por `limpa` antes de a tela ver:
@@ -102,6 +102,17 @@ function (usa) {
 
   var dados = usa.limpa.limpa(window.SF_DADOS);
   var raiz = document.getElementById('cena');
+  // o aviso de falha contida (v0.4.2): registrado ANTES de criar a cena, para cobrir também uma falha ao montá-la. Se uma esfera, um axônio ou uma parte
+  // for desligada, uma linha curta diz quantas e qual foi a última (o elemento só nasce na falha; texto por textContent, só nomes internos)
+  var aviso = null;
+  usa.base.aoDesligar(function (nome, todas) {
+    if (!aviso) {
+      aviso = document.createElement('div');
+      aviso.id = 'aviso-falha'; aviso.setAttribute('role', 'status');
+      document.body.appendChild(aviso);
+    }
+    aviso.textContent = (todas && todas.length > 1 ? todas.length + ' partes desligadas (última: ' + nome + ')' : 'Parte desligada: ' + nome) + '. O resto da tela segue.';
+  });
   var cena = usa.quadro.criar(raiz, {
     leve: leve,
     nucleo: { nome: NUCLEO.nome, cor: cor(NUCLEO), modulos: MODULOS.map(cor), modulosIds: MODULOS.map(function (m) { return m.id; }) },
@@ -145,16 +156,6 @@ function (usa) {
     cena.ajustar(w, h);
   }
   ajusta();
-  // o aviso de falha contida (v0.4.2): se uma esfera, um axônio ou uma parte for desligada, uma linha curta diz qual (o elemento só nasce na falha; texto por textContent)
-  var aviso = null;
-  usa.base.aoDesligar(function (nome) {
-    if (!aviso) {
-      aviso = document.createElement('div');
-      aviso.id = 'aviso-falha'; aviso.setAttribute('role', 'status');
-      document.body.appendChild(aviso);
-    }
-    aviso.textContent = 'Parte desligada: ' + nome + '. O resto da tela segue.';
-  });
   if (window.SF_TESTE) { window.SF_CENA = cena; window.SF_LIMPA = usa.limpa.limpa; }          // gancho só dos testes automáticos (sem SF_TESTE nada é exposto)
   var espera = null;
   window.addEventListener('resize', function () { window.clearTimeout(espera); espera = window.setTimeout(ajusta, 150); });

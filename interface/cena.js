@@ -1,4 +1,4 @@
-/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.1). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.2). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
 // ---- fonte/cena/foco/parte.js
 SF.parte({nome:'cena/foco',porta:1,compativelDesde:1,requer:[],guarda:false,dom:true},
 /* Sexta-Feira Engine v0.4.2: cena/foco. o foco numa esfera: ela ocupa o palco e ganha a lupa; a vista das camadas da parede e a volta à vista geral.
@@ -368,7 +368,7 @@ function passoEixo(ax, dt) {
 
 );
 // ---- fonte/cena/quadro/parte.js
-SF.parte({nome:'cena/quadro',porta:1,compativelDesde:1,requer:['neuronio/celula@1','comum/sorteio@1','comum/cores@1','comum/curvas@1','ligacoes/ponta@1','ligacoes/pulso@1','ligacoes/tronco@1','ligacoes/pistas@1','cena/posicoes@1','cena/ciclo@1','cena/foco@1','cena/eixos@1','cena/ligar@1'],guarda:true,dom:true},
+SF.parte({nome:'cena/quadro',porta:1,compativelDesde:1,requer:['neuronio/celula@1','comum/sorteio@1','comum/cores@1','comum/curvas@1','ligacoes/ponta@1','ligacoes/tronco@1','ligacoes/pistas@1','cena/posicoes@1','cena/ciclo@1','cena/foco@1','cena/eixos@1','cena/ligar@1'],guarda:true,dom:true},
 /* Sexta-Feira Engine v0.3.0: a cena. O Núcleo no centro, seis agentes ao redor (três de cada lado) e a Corretora parada ao lado do Robô.
  * Cada esfera é um Neuronio.criar próprio. Axônio só leva e dendrito só recebe, e a PAREDE de vidro é a sinapse: para cada agente há um par de
  * axônios de mão única, lado a lado, e os dois PARAM no vidro (por fora). Do lado de dentro, um dendrito encosta no mesmo ponto.
