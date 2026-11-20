@@ -291,8 +291,8 @@ class Tela(unittest.TestCase):
         self.assertEqual(sorted(foto), sorted(ref), "partes novas ou removidas: grave a foto com SF_GRAVAR_PORTAS=1 e diga na versão")
         for nome, atual in foto.items():
             antes = ref[nome]
-            if atual["membros"] != antes["membros"] or atual["requer"] != antes["requer"]:
-                self.assertGreater(atual["porta"], antes["porta"], "%s: a porta mudou (membros ou dependências) sem subir `porta:` no PARTE; mude e grave a foto com SF_GRAVAR_PORTAS=1" % nome)
+            if atual["membros"] != antes["membros"] or atual["requer"] != antes["requer"] or atual["compativelDesde"] != antes["compativelDesde"]:
+                self.assertGreater(atual["porta"], antes["porta"], "%s: a porta mudou (membros, dependências ou compativel-desde) sem subir `porta:` no PARTE; mude e grave a foto com SF_GRAVAR_PORTAS=1" % nome)
             self.assertGreaterEqual(atual["porta"], antes["porta"], nome)
 
     def test_fps_so_informa(self):

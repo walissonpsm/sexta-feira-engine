@@ -340,6 +340,12 @@
    "comum/sorteio@1"
   ]
  },
+ "tela/aviso": {
+  "compativelDesde": 1,
+  "membros": {},
+  "porta": 1,
+  "requer": []
+ },
  "tela/inicio": {
   "compativelDesde": 1,
   "membros": {},

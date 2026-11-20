@@ -30,6 +30,20 @@
     };
   }
 
+  // o tempo por parte (só no teste, com SF_TESTE = { medir: true }): soma o tempo gasto em cada função da porta; só informa, nunca reprova
+  var tempos = Object.create(null);
+  function medida(nome, fn) {
+    return function () {
+      var t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now()), r;
+      try { r = fn.apply(this, arguments); } finally { var d = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0; var t = tempos[nome] || (tempos[nome] = { chamadas: 0, ms: 0 }); t.chamadas++; t.ms += d; }
+      if (r && typeof r === 'object' && !Object.isFrozen(r) && !r.__medido) {        // um nível abaixo: os métodos do objeto devolvido (passo, desenhar, quadro...)
+        Object.keys(r).forEach(function (m) { if (typeof r[m] === 'function') r[m] = medida(nome + '.' + m, r[m]); });
+        try { Object.defineProperty(r, '__medido', { value: true }); } catch (e) { /* objeto fechado: segue sem a marca */ }
+      }
+      return r;
+    };
+  }
+
   var base = Object.freeze({
     versao: '@VERSAO@',
     teste: T,
@@ -68,10 +82,11 @@
       usa[curto(dep)] = d.porta;
     }
     var porta;
-    try { porta = p.f(Object.freeze(usa)); } catch (e) { if (estrito) throw e; desliga(nome, e); p.estado = 2; return false; }
+    try { if (T && T.quebrar === nome) throw new Error('quebrada de propósito (teste): ' + nome); porta = p.f(Object.freeze(usa)); } catch (e) { if (estrito) throw e; desliga(nome, e); p.estado = 2; return false; }
     var final = {}, k;
     for (k in porta) {
       if (Object.prototype.hasOwnProperty.call(porta, k)) final[k] = (p.m.guarda && typeof porta[k] === 'function') ? guardar(nome, porta[k]) : porta[k];
+      if (T && T.medir && typeof final[k] === 'function') final[k] = medida(nome, final[k]);
     }
     p.porta = Object.freeze(final); p.estado = 2;
     return true;
@@ -94,5 +109,5 @@
     return o;
   }
 
-  global.SF = Object.freeze({ parte: parte, iniciar: iniciar, versao: base.versao, portas: T ? portas : undefined, desligadas: T ? function () { return falhas.slice(); } : undefined });
+  global.SF = Object.freeze({ parte: parte, iniciar: iniciar, versao: base.versao, portas: T ? portas : undefined, desligadas: T ? function () { return falhas.slice(); } : undefined, tempos: T ? function () { return JSON.parse(JSON.stringify(tempos)); } : undefined });
 }(window));

@@ -20,6 +20,7 @@ Camadas (só se usa o que está embaixo): base < comum < neuronio, ligacoes, dad
 | neuronio/recorte | js | 1 | 1 | - | neuronio/celula  | neuronio.js |
 | neuronio/sinais | js | 1 | 1 | - | neuronio/celula  | neuronio.js |
 | neuronio/tinta | js | 1 | 1 | - | neuronio/celula  | neuronio.js |
+| tela/aviso | js | 1 | 1 | - | - | tela.js |
 | tela/estilo | css | 1 | 1 | - | - | tela.css |
 | tela/pagina | html | 1 | 1 | - | - | index.html |
 | ligacoes/pulso | js | 1 | 1 | comum/cores@1 | ligacoes/tronco  | ligacoes.js |
