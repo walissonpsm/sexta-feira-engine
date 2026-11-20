@@ -634,8 +634,8 @@ function (usa) {
           par.y += (ay - par.y) * 0.07;
         }
 
-        // Desenha uma célula (halo, dendritos, soma, núcleo, axônio, telodendros) no espaço do neurônio: o desenho aprovado
-        function pintarCelula(octx, A, rgb) {
+        // A tinta de uma célula: as cores e os brilhos derivados (o topo do desenho aprovado). Quem pinta recebe T e lê daqui.
+        function tintaFixa(rgb) {
           let [r, g, b] = rgb || config.rgb;
           let lightR = Math.min(255, r + 90);
           let lightG = Math.min(255, g + 90);
@@ -650,8 +650,12 @@ function (usa) {
           const nucFactor = config.brilhoNucleo / 100;
           const nv = nivel(), q = zcDe(Est.detZ), u = un();                     // com a lupa: degrau de detalhe, contraste e 1 px em unidades
           const corOrg = { dr: deepR, dg: deepG, db: deepB, lr: lightR, lg: lightG, lb: lightB };
+          return { r: r, g: g, b: b, lightR: lightR, lightG: lightG, lightB: lightB, deepR: deepR, deepG: deepG, deepB: deepB, bodyAlpha: bodyAlpha, dendriteAlpha: dendriteAlpha, glowFactor: glowFactor, nucFactor: nucFactor, nv: nv, q: q, u: u, corOrg: corOrg };
+        }
 
-          // 1. Halo atmosférico suave ao redor do Soma
+        // 1. Halo atmosférico suave ao redor do Soma
+        function pintarHalo(octx, A, T) {
+          var r = T.r, g = T.g, b = T.b, bodyAlpha = T.bodyAlpha, glowFactor = T.glowFactor, q = T.q;
           if (glowFactor > 0.02 && !A.semCorpo) {
             const halo = octx.createRadialGradient(
               A.somaX, A.somaY, A.somaRadius * 0.35,
@@ -665,8 +669,11 @@ function (usa) {
             octx.arc(A.somaX, A.somaY, A.somaRadius * 3.35, 0, Math.PI * 2);
             octx.fill();
           }
+        }
 
-          // 2. DENDRITOS AFILADOS E ESPINHAS SINÁPTICAS
+        // 2. DENDRITOS AFILADOS E ESPINHAS SINÁPTICAS
+        function pintarDendritos(octx, A, T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB, dendriteAlpha = T.dendriteAlpha, glowFactor = T.glowFactor, nv = T.nv, q = T.q, u = T.u, corOrg = T.corOrg;
           octx.save();
           A.dendriteBranches.forEach((branch) => {
             const levelMult = branch.level === 1 ? 1.0 : branch.level === 2 ? 0.85 : 0.72;
@@ -749,8 +756,11 @@ function (usa) {
             });
           }
           octx.restore();
+        }
 
-          // 3. SOMA COM PAREDE CELULAR 3D
+        // 3. SOMA COM PAREDE CELULAR 3D
+        function pintarSoma(octx, A, T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB, bodyAlpha = T.bodyAlpha, nv = T.nv, u = T.u;
           octx.save();
           octx.beginPath();
           A.somaOutline.forEach((pt, idx) => {
@@ -840,8 +850,11 @@ function (usa) {
             octx.restore();
           });
           octx.restore();
+        }
 
-          // 4. NÚCLEO ESFÉRICO TEXTURIZADO (Calibrado em brilhoNucleo = 21%)
+        // 4. NÚCLEO ESFÉRICO TEXTURIZADO (Calibrado em brilhoNucleo = 21%)
+        function pintarNucleo(octx, A, T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB, bodyAlpha = T.bodyAlpha, nucFactor = T.nucFactor, nv = T.nv, u = T.u;
           octx.save();
           const nucR = A.somaRadius * 0.34;
           if (nucFactor > 0.01 && !A.semCorpo) {
@@ -930,15 +943,11 @@ function (usa) {
             }
           }
           octx.restore();
+        }
 
-          // (com mais de um axônio, o laço desenha cada um com as mesmas peças: axônio, bainhas, nódulos e terminais)
-          [A].concat(A.extras || []).forEach(function (E) {
-          if (E.rgb) {                                                        // ligações: cada axônio na sua cor
-            r = E.rgb[0]; g = E.rgb[1]; b = E.rgb[2];
-            lightR = Math.min(255, r + 90); lightG = Math.min(255, g + 90); lightB = Math.min(255, b + 90);
-            deepR = Math.round(r * 0.26); deepG = Math.round(g * 0.26); deepB = Math.round(b * 0.26);
-          }
-          // 5. AXÔNIO ENCORPADO & 6 SEGMENTOS ESTRIADOS DE BAINHA DE MIELINA
+        // 5. AXÔNIO ENCORPADO & 6 SEGMENTOS ESTRIADOS DE BAINHA DE MIELINA (um por axônio)
+        function pintarAxonio(octx, A, E, T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB, bodyAlpha = T.bodyAlpha, dendriteAlpha = T.dendriteAlpha, nv = T.nv, u = T.u;
           octx.save();
           octx.fillStyle = `rgba(${r}, ${g}, ${b}, ${dendriteAlpha * 0.92})`;
           drawTaperedBranch(octx, E.axonPath);
@@ -1031,8 +1040,11 @@ function (usa) {
             });
           }
           octx.restore();
+        }
 
-          // 6. RAMOS DOS TELODENDROS UNIFORMES (Padrão aprovado)
+        // 6. RAMOS DOS TELODENDROS UNIFORMES (Padrão aprovado) (um por axônio)
+        function pintarTerminais(octx, A, E, T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, dendriteAlpha = T.dendriteAlpha, nv = T.nv, u = T.u;
           octx.save();
           E.terminalBranches.forEach((br) => {
             const mult = br.depth === 1 ? 1.0 : 0.84;
@@ -1056,7 +1068,24 @@ function (usa) {
             }
           });
           octx.restore();
+        }
 
+        // Desenha uma célula (halo, dendritos, soma, núcleo, axônio, telodendros) no espaço do neurônio: o desenho aprovado
+        function pintarCelula(octx, A, rgb) {
+          const T = tintaFixa(rgb);
+          pintarHalo(octx, A, T);                // 1
+          pintarDendritos(octx, A, T);           // 2
+          pintarSoma(octx, A, T);                // 3
+          pintarNucleo(octx, A, T);              // 4
+          // (com mais de um axônio, o laço desenha cada um com as mesmas peças: axônio, bainhas, nódulos e terminais)
+          [A].concat(A.extras || []).forEach(function (E) {
+          if (E.rgb) {                                                        // ligações: cada axônio na sua cor
+            T.r = E.rgb[0]; T.g = E.rgb[1]; T.b = E.rgb[2];
+            T.lightR = Math.min(255, T.r + 90); T.lightG = Math.min(255, T.g + 90); T.lightB = Math.min(255, T.b + 90);
+            T.deepR = Math.round(T.r * 0.26); T.deepG = Math.round(T.g * 0.26); T.deepB = Math.round(T.b * 0.26);
+          }
+          pintarAxonio(octx, A, E, T);           // 5
+          pintarTerminais(octx, A, E, T);        // 6
           });
         }
 
