@@ -29,6 +29,7 @@ function (usa) {
       ax.len = c[n - 1];
       ax.sobre = ax.grade ? cruzamentos(ax) : [];
       ax.cT = null;                      // a linha mudou: o que o desenho guardou dela (caminhos do fio e das bainhas) já não vale
+      trechos(s, ax);                    // as cinturas entre as bainhas (`nosU`, `nNos`, `pitch`) são da linha: ficam prontas para o passo do pulso (cena/eixos) mesmo antes do 1º desenho
     }
     // onde um dendrito cruza o axônio, metade das vezes ele passa POR CIMA (é repintado por cima do axônio, na cor dele); na outra metade passa por baixo.
     // A escolha é fixa para cada cruzamento (`d.cima`, sorteada em cena/ligar).

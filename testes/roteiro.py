@@ -55,7 +55,8 @@ class Roteiro(unittest.TestCase):
         cls.pw.stop()
         cls.srv.shutdown()
 
-    def roda(self, agente, meio=None, total_ms=14000):
+    def abre(self):
+        """A página com o relógio preso e o ciclo automático desligado, 2 s depois de aberta. Devolve (página, instante absoluto do relógio, lista de erros)."""
         ctx = self.nav.new_context(viewport={"width": 1672, "height": 941})
         self.addCleanup(ctx.close)
         pg = ctx.new_page()
@@ -72,6 +73,10 @@ class Roteiro(unittest.TestCase):
         pg.evaluate("() => window.SF_CENA.automatico(false)")
         alvo = 2 + 2000                                   # os passos andam até instantes ABSOLUTOS do relógio (ver a causa em imagens.py)
         pg.clock.run_for(max(0, int(round(alvo - pg.evaluate("() => window.__raw()")))))
+        return pg, alvo, erros
+
+    def roda(self, agente, meio=None, total_ms=14000):
+        pg, alvo, erros = self.abre()
         self.assertTrue(pg.evaluate(PEDIR, agente))
         passos, ultimo, t = [], None, 0
         while t <= total_ms:
@@ -108,6 +113,33 @@ class Roteiro(unittest.TestCase):
         self.assertEqual(passos[-1][1][3], 0, "no fim tudo em repouso")
         self.assertEqual(passos[-1][1][2], "-", "e nada brilhando: o retorno do pedido velho não faz nada")
         self.compara("foco-no-meio", passos)
+
+    # o pulso de cada axônio (o de entrada do módulo e o violeta de volta), olhado a cada quadro do relógio preso (16 ms): o nódulo é a cintura entre duas bainhas (`nosU[k]`) e acende no
+    # quadro em que o pulso passa por ela (`ax.pulso.u` chega a `nosU[k]`); todos os nódulos do axônio acendem. Medida de v0.5.0: antes do ajuste os nódulos acendiam pela conta uniforme
+    # (`a0 + k * pitch`), até ~54 px longe da cintura desenhada, e em alguns axônios o último nódulo nunca acendia.
+    AMOSTRA = """(ag) => window.SF_CENA.parede().eixos.filter(x => x.ag === ag && x.pulso).map(x => ({ id: x.id, u: x.pulso.u, nos: x.nos.slice(0, x.nNos), nosU: x.nosU.slice(0, x.nNos), vel: x.vel, larg: x.larg }))"""
+
+    def test_os_nodulos_acendem_onde_o_pulso_passa(self):
+        pg, alvo, erros = self.abre()
+        self.assertTrue(pg.evaluate(PEDIR, "cripto"))
+        acendeu, nNos, t = {}, {}, 0                       # id -> {k: (quanto o pulso já passou da cintura k, quando acendeu)}
+        while t <= 9000:
+            for a in pg.evaluate(self.AMOSTRA, "cripto"):
+                nNos[a["id"]] = len(a["nosU"])
+                vistos = acendeu.setdefault(a["id"], {})
+                for k, brilho in enumerate(a["nos"]):
+                    if brilho > 0.9 and k not in vistos:
+                        vistos[k] = (a["u"] - a["nosU"][k], a["vel"] * 0.040)   # a folga: pouco mais de 2 quadros de caminho do pulso
+            alvo += 16
+            pg.clock.run_for(max(0, int(round(alvo - pg.evaluate("() => window.__raw()")))))
+            t += 16
+        self.assertEqual(erros, [])
+        self.assertEqual(len(acendeu), 2, "o pulso correu no axônio do módulo e no violeta de volta: %s" % sorted(acendeu))
+        for id_, vistos in acendeu.items():
+            self.assertEqual(sorted(vistos), list(range(nNos[id_])), "%s: todos os %d nódulos têm de acender, acenderam %s" % (id_, nNos[id_], sorted(vistos)))
+            for k, (depois, folga) in sorted(vistos.items()):
+                self.assertGreaterEqual(depois, 0, "%s: o nódulo %d acendeu %.1f px ANTES de o pulso chegar nele" % (id_, k, -depois))
+                self.assertLessEqual(depois, folga, "%s: o nódulo %d acendeu %.1f px DEPOIS de o pulso passar por ele (folga %.1f)" % (id_, k, depois, folga))
 
 
 if __name__ == "__main__":

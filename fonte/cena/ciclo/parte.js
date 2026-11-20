@@ -28,7 +28,7 @@ function pedir(id, idxMod) {
 function chegou(lid) {
       var m = Est.ligMapa[lid]; if (!m) return;
       var id = m.agente.id, a = m.agente, N = esf.nucleo;
-      if (lid.charAt(0) === 'i') {            // o pulso chegou à ventosa no vidro do Núcleo: a parede transmite ao dendrito do módulo pedido
+      if (lid.charAt(0) === 'i') {            // o pulso chegou ao terminal no vidro do Núcleo: a parede transmite ao dendrito do módulo pedido
         var mod = Est.pedidoDe[id], fx = Est.fixoMod[mod];
         if (fx) fx.flash = 1;
         N.n.excitarMini(mod, a.cor);          // o módulo recebe, na cor de quem pediu

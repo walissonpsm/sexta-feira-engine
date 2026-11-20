@@ -49,7 +49,7 @@ function montarLigacoes() {
 
         // ---- Núcleo -> agente (violeta): sai do corpo do neurônio central, pelo raio do canal, atravessa o vidro e PARA no vidro do agente
         var So = contornoMaisPerto(gN, th);
-        var rvA = raioVent(A.R), fora = 70 * Est.s;                                          // a ventosa pousa no vidro; o axônio chega de frente (de fora, no raio)
+        var rvA = raioVent(A.R), fora = 70 * Est.s;                                          // o terminal pousa no vidro; o axônio chega de frente (de fora, no raio)
         var rO = polar(Acx, Acy, rvA, omA), CfO = polar(Acx, Acy, rvA + fora, omA);
         var NxO = { x: N.cx + N.R * 1.10 * Math.cos(th) + oO.x, y: N.cy + N.R * 1.10 * Math.sin(th) + oO.y };
         var pO = [So, { x: N.cx + 0.5 * WN * Math.cos(th) + oO.x * 0.5, y: N.cy + 0.5 * WN * Math.sin(th) + oO.y * 0.5 }, NxO,

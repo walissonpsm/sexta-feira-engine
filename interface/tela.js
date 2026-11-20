@@ -60,11 +60,12 @@ function (usa) {
       o.destaque = { agente: d.destaque.agente, titulo: texto(d.destaque.titulo, 50),
         linhas: (Array.isArray(d.destaque.linhas) ? d.destaque.linhas : []).slice(0, 3).map(function (x) { return texto(x, 50); }) };
     }
-    // que módulos cada agente costuma pedir (a lista repete o módulo para ele aparecer mais): só ids fixos de agente e de módulo, no máximo 12 por agente
+    // que módulos cada agente costuma pedir, na ordem: só ids fixos de agente e de módulo, SEM repetir (a cena tem um axônio por módulo e fica com os 4 primeiros), no máximo 12 por agente.
+    // Lê no máximo as 100 primeiras entradas (contra lista gigante); repetir o mesmo módulo não gasta as vagas dos outros
     if (d.pedidos && typeof d.pedidos === 'object') {
       AGENTES.forEach(function (a) {
-        var l = Object.prototype.hasOwnProperty.call(d.pedidos, a.id) && Array.isArray(d.pedidos[a.id]) ? d.pedidos[a.id] : [];
-        var ok = l.slice(0, 12).map(idModulo).filter(function (m) { return m; });
+        var l = Object.prototype.hasOwnProperty.call(d.pedidos, a.id) && Array.isArray(d.pedidos[a.id]) ? d.pedidos[a.id] : [], ok = [];
+        l.slice(0, 100).forEach(function (x) { var m = idModulo(x); if (m && ok.indexOf(m) < 0 && ok.length < 12) ok.push(m); });
         if (ok.length) o.pedidos[a.id] = ok;
       });
     }

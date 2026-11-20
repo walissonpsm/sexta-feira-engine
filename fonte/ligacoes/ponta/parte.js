@@ -1,5 +1,6 @@
-/* A ponta do axônio: o cone de crescimento (ponta solta, com filopódios e véu), a ventosa (o terminal colado ao vidro) e a luz suave. Só desenha: recebe o contexto
- * (ctx), a escala (s) e o estado do axônio; não guarda nada e não conhece as outras partes. */
+/* A ponta do axônio: o terminal axonal (v0.5.0: telodendros finos, pés achatados no vidro e neurotransmissores; é o que o tronco desenha no fim de cada axônio) e a luz suave.
+ * O cone de crescimento (ponta solta, com filopódios e véu) e a ventosa (o terminal antigo, colado ao vidro) continuam aqui, mas SEM USO desde a v0.5.0: o axônio não pluga mais.
+ * Só desenha: recebe o contexto (ctx), a escala (s) e o estado do axônio; não guarda nada e não conhece as outras partes. */
 function (usa) {
   'use strict';
   var rgba = usa.cores.rgba, clar = usa.cores.clar, esc = usa.cores.esc;

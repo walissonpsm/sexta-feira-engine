@@ -17,8 +17,9 @@ function (usa) {
 );
 // ---- fonte/ligacoes/ponta/parte.js
 SF.parte({nome:'ligacoes/ponta',porta:2,compativelDesde:1,requer:['comum/cores@1'],guarda:true,dom:false},
-/* A ponta do axônio: o cone de crescimento (ponta solta, com filopódios e véu), a ventosa (o terminal colado ao vidro) e a luz suave. Só desenha: recebe o contexto
- * (ctx), a escala (s) e o estado do axônio; não guarda nada e não conhece as outras partes. */
+/* A ponta do axônio: o terminal axonal (v0.5.0: telodendros finos, pés achatados no vidro e neurotransmissores; é o que o tronco desenha no fim de cada axônio) e a luz suave.
+ * O cone de crescimento (ponta solta, com filopódios e véu) e a ventosa (o terminal antigo, colado ao vidro) continuam aqui, mas SEM USO desde a v0.5.0: o axônio não pluga mais.
+ * Só desenha: recebe o contexto (ctx), a escala (s) e o estado do axônio; não guarda nada e não conhece as outras partes. */
 function (usa) {
   'use strict';
   var rgba = usa.cores.rgba, clar = usa.cores.clar, esc = usa.cores.esc;
@@ -453,6 +454,7 @@ function (usa) {
       ax.len = c[n - 1];
       ax.sobre = ax.grade ? cruzamentos(ax) : [];
       ax.cT = null;                      // a linha mudou: o que o desenho guardou dela (caminhos do fio e das bainhas) já não vale
+      trechos(s, ax);                    // as cinturas entre as bainhas (`nosU`, `nNos`, `pitch`) são da linha: ficam prontas para o passo do pulso (cena/eixos) mesmo antes do 1º desenho
     }
     // onde um dendrito cruza o axônio, metade das vezes ele passa POR CIMA (é repintado por cima do axônio, na cor dele); na outra metade passa por baixo.
     // A escolha é fixa para cada cruzamento (`d.cima`, sorteada em cena/ligar).

@@ -68,7 +68,7 @@ function (usa) {
 
 
 
-    // ---------------------------------------------------------------- a camada da parede: receptores, ventosas (os terminais) e os braços dos axônios
+    // ---------------------------------------------------------------- a camada da parede: receptores, os terminais dos axônios (`Est.ventosas`, nome da v0.4.x) e os braços dos axônios
     Est.fixos = []; Est.fixoAg = {}; Est.fixoMod = []; Est.ramos = []; Est.ventosas = []; Est.ventById = {}; Est.sujo = true;
     Est.TF = { k: 1, tx: 0, ty: 0 }; Est.T = { K: 1, TX: 0, TY: 0 };      // TF: a esfera em foco cabe no palco; T: a vista total (TF mais a lupa dela)
     function aplicaT(c) { c.setTransform(Est.dprP * Est.T.K, 0, 0, Est.dprP * Est.T.K, Est.dprP * Est.T.TX, Est.dprP * Est.T.TY); }
@@ -92,8 +92,8 @@ function (usa) {
       luz(f.pw.x, f.pw.y, u * (1.5 + f.flash * 2.6), c, 0.50 + 0.50 * f.flash);
       Est.ctxP.fillStyle = rgba(clar(c), 0.95); Est.ctxP.beginPath(); Est.ctxP.arc(f.pw.x, f.pw.y, u * 0.72, 0, 6.2832); Est.ctxP.fill();
     }
-    // ---------------------------------------------------------------- os axônios vivos: um por agente para o Núcleo (na cor dele) e um do Núcleo para o agente (violeta)
-    // Cada um tem uma linha central (base) que o agente-para-Núcleo recalcula quando o alvo se move; por cima dela vai a ondulação parada. A bainha de mielina
+    // ---------------------------------------------------------------- os axônios vivos: um do Núcleo para cada agente (violeta) e um para cada módulo que o agente pede (na cor dele)
+    // Cada um tem uma linha central (base), parada (desde a v0.5.0 o alvo não se move: não há mais plugar); por cima dela vai a ondulação parada. A bainha de mielina
     // são tubos de tamanho fixo contados a partir do começo (então crescem pela ponta quando o tronco se estica), com a cintura do nódulo entre eles.
     Est.eixos = []; Est.eixoById = {}; Est.sujoE = true; Est.eixosAntes = false; Est.relogio = 0;
     function pintaEstatico() {
@@ -125,7 +125,7 @@ function (usa) {
       Est.eixos.forEach(function (ax) { if (visEixo(ax)) seguro('eixo:' + ax.id, function () { pintaEixo(ax); }); });
     }
 
-    // ---------------------------------------------------------------- as ligações (pares de axônios de mão única, que terminam em ventosa no vidro)
+    // ---------------------------------------------------------------- as ligações (o violeta de cada agente e um axônio de entrada por módulo que ele pede; terminam no terminal axonal, no vidro)
     Est.ligMapa = {}; Est.ligMapaTodo = {}; Est.nomeMod = {}; Est.idAg = cfg.agentes.map(function (a) { return a.id; });
     // v0.5.0: os módulos para os quais o agente tem axônio: os que ele pede, na ordem dos dados, sem repetir e no máximo 4; sem pedidos, um só, o módulo mais perto dele
     // (a distância do centro do agente até o ponto do módulo no vidro do Núcleo). Só vale depois de `montarLigacoes` (precisa de `Est.fixoMod`).
@@ -214,7 +214,7 @@ function (usa) {
     // cena/foco (v0.4.2): o foco numa esfera: ela ocupa o palco e ganha a lupa; a vista das camadas da parede e a volta à vista geral.
     const P_foco = usa.foco.criar(Est, { caixaDe: P_posicoes.caixaDe, pos: P_posicoes.pos, reiniciaCiclo: P_ciclo.reiniciaCiclo });
     const focar = P_foco.focar, sair = P_foco.sair, vistaTotal = P_foco.vistaTotal;
-    // cena/eixos (v0.4.2): a vida de cada axônio da cena: medir, pintar, refazer o caminho e o passo do tempo (cone de crescimento, pulso).
+    // cena/eixos (v0.4.2): a vida de cada axônio da cena: medir, pintar, refazer o caminho e o passo do tempo (o pulso, os nódulos e o terminal que acende).
     const P_eixos = usa.eixos.criar(Est, { raioVent: raioVent, chegou: P_ciclo.chegou });
     const medeEixo = P_eixos.medeEixo, pintaEixo = P_eixos.pintaEixo, refazEixo = P_eixos.refazEixo, visEixo = P_eixos.visEixo, passoEixo = P_eixos.passoEixo;
     // cena/rotas (v0.5.0): escolhe o lado, a pista, a ordem e o ponto de pouso de cada axônio de entrada.

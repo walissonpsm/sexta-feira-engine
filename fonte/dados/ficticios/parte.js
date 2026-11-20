@@ -30,7 +30,7 @@ window.SF_DADOS = {
   ],
   destaque: { agente: 'fiis', titulo: 'Relatório gerencial novo', linhas: ['Fundo 3 de 12', 'Nível: atenção', 'Aviso enviado'] },
   sistema: { cpu: null, gpu: null, ram: null },
-  // que módulos cada agente costuma pedir (a lista repete o módulo para ele aparecer mais; o Robô pede mais a internet). Só ids fixos; nunca valor nem dado.
+  // que módulos cada agente costuma pedir, na ordem (cada módulo vira UM axônio: repetir não conta e a cena fica com os 4 primeiros diferentes; as repetições do Robô e do Cripto ficam aqui de propósito, para a tela de teste conferir que repetido não vira axônio a mais). Só ids fixos; nunca valor nem dado.
   pedidos: {
     robo: ['internet', 'internet', 'internet', 'telegram', 'planilha'], fiis: ['planilha', 'internet', 'telegram', 'planilha'], 'acoes-etfs': ['planilha', 'internet', 'painel'],
     cripto: ['internet', 'internet', 'telegram', 'planilha'], seguranca: ['backup', 'salas', 'aprendido', 'mapa'], radar: ['internet', 'telegram', 'resumo']

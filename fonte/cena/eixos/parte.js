@@ -42,7 +42,7 @@ function passoEixo(ax, dt) {
       if (v.anel > 0) v.anel = Math.max(0, v.anel - dt * 1.6);
       if (ax.pulso) {
         var P = ax.pulso; P.u += ax.vel * dt;
-        while (P.k < ax.nNos && ax.a0 + P.k * ax.pitch - 0.25 * ax.larg <= P.u) { ax.nos[P.k] = 1; P.k++; }
+        while (P.k < ax.nNos && ax.nosU[P.k] <= P.u) { ax.nos[P.k] = 1; P.k++; }                    // o nódulo acende quando o pulso passa pela cintura desenhada (`nosU`: cada bainha tem o seu comprimento)
         if (P.u >= ax.len) {
           ax.pulso = null; if (ax.tipo === 'i') { ax.estado = 'preso'; ax.espera = 0.9; v.flash = 1; v.anel = 1; }
           chegou(ax.id);

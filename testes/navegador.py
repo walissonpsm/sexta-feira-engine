@@ -230,6 +230,18 @@ class Tela(unittest.TestCase):
         self.espera_repouso(pg)
         self.assertEqual(pg.erros, [])
 
+    def test_pedidos_repetidos_nao_gastam_as_vagas_da_lista(self):
+        # v0.5.0: cada módulo vira UM axônio e só os 4 primeiros pedidos DIFERENTES valem; repetir o mesmo módulo não pode empurrar os outros para fora da lista (antes a lista era cortada
+        # em 12 ANTES de tirar os repetidos: 12 "telegram" seguidos de "internet" davam um axônio só). A leitura continua limitada (as 100 primeiras entradas), contra lista gigante.
+        pg = self.abre(auto=False)
+        dados = {"pedidos": {"radar": ["telegram"] * 12 + ["internet", "planilha"], "fiis": ["internet", "telegram"] * 20 + ["planilha"],
+                             "robo": ["lixo"] * 500 + ["internet"], "cripto": ["internet", "internet", "telegram", "planilha", "painel", "backup", "salas"]}}
+        limpo = pg.evaluate("(d) => window.SF_LIMPA(d)", dados)["pedidos"]
+        self.assertEqual(limpo["radar"], ["telegram", "internet", "planilha"])
+        self.assertEqual(limpo["fiis"], ["internet", "telegram", "planilha"])
+        self.assertEqual(limpo["cripto"], ["internet", "telegram", "planilha", "painel", "backup", "salas"], "sem repetir; a cena é que fica com os 4 primeiros")
+        self.assertNotIn("robo", limpo, "só lixo nas 100 primeiras entradas: a lista é descartada")
+
     # ---------------------------------------------------------------------------------------------------------------- dados
     # (v0.5.0: havia aqui duas funções com este mesmo nome; a segunda valia e a primeira era código morto, que saiu.)
     def test_dados_maliciosos_sao_ignorados(self):
@@ -242,7 +254,7 @@ class Tela(unittest.TestCase):
         self.assertEqual(pg.locator("img").count(), 0)
         self.assertIsNone(pg.evaluate("window.__x"))
         limpo = pg.evaluate("(d) => window.SF_LIMPA(d)", dados)
-        self.assertEqual(limpo["pedidos"], {"fiis": ["internet"], "radar": ["telegram"] * 12})     # só ids fixos, no máximo 12; o resto foi descartado
+        self.assertEqual(limpo["pedidos"], {"fiis": ["internet"], "radar": ["telegram"]})     # só ids fixos e sem repetir; o resto foi descartado
         self.assertEqual(pg.evaluate("() => Object.keys(window.SF_LIMPA({ pedidos: JSON.parse('{\"__proto__\": [\"internet\"]}') }).pedidos)"), [])
         # o único módulo válido de "fiis" é a internet (índice 1 na lista fixa): ele ganha UM axônio, para ela; o texto malicioso, o id desconhecido e o módulo
         # inexistente foram descartados pela lista branca (se passassem, haveria axônio para outro módulo). Quem pede "radar" repete telegram 50 vezes: um só axônio.
@@ -470,6 +482,25 @@ class Tela(unittest.TestCase):
             self.assertGreater(m["n"], 12, "%dx%d: faltam axônios" % (l, a))
             self.assertLessEqual(m["cruzamentos"], 100, "%dx%d: %d cruzamentos (%s...)" % (l, a, m["cruzamentos"], m["pares"][:4]))
 
+    def test_com_o_maximo_de_pedidos_so_informa_e_confere_o_que_vale_sempre(self):
+        # O máximo é 4 módulos por agente: 6 agentes dão 24 axônios de entrada + 6 violetas = 30. Os tetos de cruzamentos (100) e de trechos juntos (15 larguras) valem para os dados
+        # de teste (19 entradas) e NÃO para este caso: aqui só se informa (v0.5.0, achado da auditoria: os números de 19 entradas não valem para 24). Vale sempre: sem erro, 30 axônios,
+        # chegada de frente ao vidro, sem quina na ponta e nenhum axônio dando mais de uma volta e meia em torno do Núcleo.
+        ped = {a: [MODULOS[(i * 2 + k) % len(MODULOS)] for k in range(4)] for i, a in enumerate(AGENTES)}
+        rota = "window.SF_DADOS = %s;" % json.dumps({"formato": 1, "ficticio": True, "pedidos": ped})
+        for l, a in ((1672, 941), (844, 390), (390, 844)):
+            abre = min(self.tempo_de_abertura(l, a, rota) for _ in range(3))                  # o mesmo jeito de medir do teste de abertura rápida
+            pg = self.abre(l, a, rota=rota, auto=False)
+            self.assertEqual(pg.erros, [])
+            m = pg.evaluate(MEDE)
+            self.assertEqual((m["n"], m["entrada"]), (30, 24), "%dx%d: com 4 módulos por agente são 24 entradas e 6 violetas" % (l, a))
+            for x in m["por"]:
+                self.assertLessEqual(x["chegada"], 5, "%s (%dx%d): chega torto, %.1f°" % (x["id"], l, a, x["chegada"]))
+                self.assertGreaterEqual(x["raioCurva"] or 1e9, 25 * m["s"], "%s (%dx%d): quina nos últimos 150 px" % (x["id"], l, a))
+                self.assertLessEqual(x["giro"], 205, "%s (%dx%d): deu %d° em volta do Núcleo" % (x["id"], l, a, x["giro"]))
+            print("\n  24 entradas %dx%d (só informação): abre em %.2f s (melhor de 3), %d cruzamentos, trechos juntos até %.1f larguras de linha, giro máximo %d°"
+                  % (l, a, abre, m["cruzamentos"], m["sobre"], max(x["giro"] for x in m["por"])))
+
     # ---------------------------------------------------------------------------------------------------------------- o pedido no axônio do módulo (v0.5.0)
     def test_o_pedido_corre_no_axonio_do_modulo_acende_o_modulo_e_volta_pelo_violeta(self):
         pg = self.abre(auto=False)
@@ -585,12 +616,13 @@ class Tela(unittest.TestCase):
         return t
 
     def test_a_cena_abre_rapido_com_dados_e_sem_dados(self):
-        # Um axônio por módulo não pode deixar a tela lenta. A primeira abertura esquenta o Chromium e fica de fora; vale a MELHOR de 3 (máquina ocupada não reprova à toa).
+        # Um axônio por módulo não pode deixar a tela lenta. A primeira abertura esquenta o Chromium e fica de fora; vale a MELHOR de 5 (a máquina da nuvem varia até ~40% de uma hora
+        # para outra: a mesma versão abriu em 1,1 s numa hora e em 1,3 s noutra; o melhor de 5 mede o código, não o momento da máquina).
         self.tempo_de_abertura(1672, 941)
         for l, a, lim in ((1672, 941, 1.5), (844, 390, 1.0)):
-            melhor = min(self.tempo_de_abertura(l, a) for _ in range(3))
+            melhor = min(self.tempo_de_abertura(l, a) for _ in range(5))
             self.assertLess(melhor, lim, "%dx%d: a cena levou %.2f s para abrir (limite %.1f s)" % (l, a, melhor, lim))
-        melhor = min(self.tempo_de_abertura(1672, 941, "window.SF_DADOS = null;") for _ in range(3))
+        melhor = min(self.tempo_de_abertura(1672, 941, "window.SF_DADOS = null;") for _ in range(5))
         self.assertLess(melhor, 1.5, "sem dados: a cena levou %.2f s para abrir (limite 1,5 s)" % melhor)
 
     def test_fps_so_informa(self):
