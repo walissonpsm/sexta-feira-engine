@@ -31,7 +31,6 @@ function (usa) {
     // ampliação (resolução e detalhes novos), em fatias por quadro, sem travar a animação.
     const lupa = { z: 1, ox: 0, oy: 0, mudou: false, ultimo: 0, anim: null, ouvinte: null };
     const VISTA_1 = { z: 1, ox: 0, oy: 0 };
-    let detalhe = null, refino = null, detZ = 1, detLocal = 1, pulsoZ = 1, tmpCamada = null;
 
         const config = {
           agente: 'Sexta-Feira',
@@ -63,26 +62,6 @@ function (usa) {
           somaRgb: null
         };
 
-        let anatomy = {
-          somaX: 0,
-          somaY: 0,
-          somaRadius: 48,
-          scale: 1,
-          somaOutline: [],
-          membraneSpicules: [],
-          cytoplasmRidges: [],
-          membraneGranules: [],
-          nucleusChromatin: [],
-          dendriteBranches: [],
-          dendriteTips: [],
-          synapticSpines: [],
-          axonPath: [],
-          myelinSheaths: [],
-          ranvierNodes: [],
-          terminalBranches: [],
-          terminalBoutons: [],
-          offscreenCanvas: null
-        };
 
         const incomingSignals = [];
         const actionPotentials = [];
@@ -91,9 +70,63 @@ function (usa) {
         const MINI_ESC = opc.miniEsc;      // tamanho do menor em relação ao principal
         const MINI_EIXO = opc.miniEixo;    // comprimento do axônio do menor em relação ao do principal
         function axonStartFim() { return DW * 0.25 + 48 * 1.44 + EIXO_BASE * MINI_EIXO; }
-        let minis = [];                     // os neurônios menores dentro da esfera (o mesmo desenho, em escala)
         const miniAPs = [];                 // sinais correndo pelo axônio de cada neurônio menor
         const EIXO_BASE = DW * 0.62 - (DW * 0.25 + 48 * 1.44);   // comprimento do axônio no desenho original
+
+        // O ESTADO do neurônio, num objeto só (v0.4.2): as partes recebem Est e leem/escrevem aqui. Cada campo está na tabela do LEIA-ME.md.
+        const Est = {
+          canvas: canvas,
+          opc: opc,
+          ctx: ctx,
+          DW: DW,
+          DH: DH,
+          vista: vista,
+          lupa: lupa,
+          VISTA_1: VISTA_1,
+          config: config,
+          runtime: runtime,
+          incomingSignals: incomingSignals,
+          actionPotentials: actionPotentials,
+          mistClouds: mistClouds,
+          releasedNeurotransmitters: releasedNeurotransmitters,
+          MINI_ESC: MINI_ESC,
+          MINI_EIXO: MINI_EIXO,
+          miniAPs: miniAPs,
+          EIXO_BASE: EIXO_BASE,
+          detalhe: null,
+          refino: null,
+          detZ: 1,
+          detLocal: 1,
+          pulsoZ: 1,
+          tmpCamada: null,
+          anatomy: {
+            somaX: 0,
+            somaY: 0,
+            somaRadius: 48,
+            scale: 1,
+            somaOutline: [],
+            membraneSpicules: [],
+            cytoplasmRidges: [],
+            membraneGranules: [],
+            nucleusChromatin: [],
+            dendriteBranches: [],
+            dendriteTips: [],
+            synapticSpines: [],
+            axonPath: [],
+            myelinSheaths: [],
+            ranvierNodes: [],
+            terminalBranches: [],
+            terminalBoutons: [],
+            offscreenCanvas: null
+          },
+          minis: [],  // os neurônios menores dentro da esfera (o mesmo desenho, em escala)
+          auxCv: null,
+          vidro: null,
+          par: { x: 0, y: 0, tx: 0, ty: 0 },
+          PAREDE: 0.955  // raio da parede interna do vidro (a mesma do traço da casca em construirVidro)
+        };
+        // FIM DOS BLOCOS DAS PARTES
+        const par = Est.par, PAREDE = Est.PAREDE;
 
 
         const dendritos = usa.dendritos;
@@ -514,15 +547,15 @@ function (usa) {
 
         // Constrói o que a esfera mostra: o neurônio principal (soma no centro) e, com a opção rede, os menores em volta
         function buildCompleteNeuron() {
-          anatomy = opc.modo === 'ligacoes' ? anatomiaLigacoes() : montarAnatomia(opc.semente, undefined, true);
-          if (opc.semEixo) { anatomy.axonPath = []; anatomy.myelinSheaths = []; anatomy.ranvierNodes = []; anatomy.terminalBranches = []; anatomy.terminalBoutons = []; }
+          Est.anatomy = opc.modo === 'ligacoes' ? anatomiaLigacoes() : montarAnatomia(opc.semente, undefined, true);
+          if (opc.semEixo) { Est.anatomy.axonPath = []; Est.anatomy.myelinSheaths = []; Est.anatomy.ranvierNodes = []; Est.anatomy.terminalBranches = []; Est.anatomy.terminalBoutons = []; }
           actionPotentials.length = 0; incomingSignals.length = 0; mistClouds.length = 0; releasedNeurotransmitters.length = 0;
           miniAPs.length = 0;
-          minis = opc.rede > 0 ? montarMinis() : [];
+          Est.minis = opc.rede > 0 ? montarMinis() : [];
           calcularVista();
           if (opc.saida) { if (opc.axonios > 1) montarFeixe(); else estenderTronco(); }
-          anatomy.nosTodos = [anatomy].concat(anatomy.extras || []).reduce(function (a, E) { return a.concat(E.ranvierNodes); }, []);
-          anatomy.boutonsTodos = [anatomy].concat(anatomy.extras || []).reduce(function (a, E) { return a.concat(E.terminalBoutons); }, []);
+          Est.anatomy.nosTodos = [Est.anatomy].concat(Est.anatomy.extras || []).reduce(function (a, E) { return a.concat(E.ranvierNodes); }, []);
+          Est.anatomy.boutonsTodos = [Est.anatomy].concat(Est.anatomy.extras || []).reduce(function (a, E) { return a.concat(E.terminalBoutons); }, []);
           construirVidro();
           bakeStaticLayer();
         }
@@ -542,7 +575,7 @@ function (usa) {
         // Os neurônios menores: o mesmo desenho do principal, em escala. Cada um aponta o axônio para dentro e os terminais param na
         // ponta mais distante de um dendrito primário do principal (um menor por dendrito primário).
         function montarMinis() {
-          const A = anatomy, C = { x: A.somaX, y: A.somaY };
+          const A = Est.anatomy, C = { x: A.somaX, y: A.somaY };
           // o ponto de contato de cada menor é a ponta de um ramo do dendrito primário, a uma fração (alcance) da ponta mais longe
           const grupos = new Map();
           A.dendriteTips.forEach(function (e) {
@@ -728,13 +761,13 @@ function (usa) {
         // Os terminais dele ficam nas outras esferas e por isso não são desenhados aqui.
         function estenderTronco() {
           const borda = (runtime.width - vista.tx) / vista.k - 6;
-          const ramos = anatomy.terminalBranches, boutons = anatomy.terminalBoutons;
-          const velho = anatomy.axonPath[anatomy.axonPath.length - 1];
+          const ramos = Est.anatomy.terminalBranches, boutons = Est.anatomy.terminalBoutons;
+          const velho = Est.anatomy.axonPath[Est.anatomy.axonPath.length - 1];
           // o quanto os terminais do Núcleo se espalham para a direita (com os bulbos), para que caibam no canvas
           let ext = 0;
           ramos.forEach(function (br) { br.pts.forEach(function (q) { ext = Math.max(ext, q.x - velho.x); }); });
           boutons.forEach(function (bt) { ext = Math.max(ext, bt.x - velho.x + (bt.bWidth || 0)); });
-          const eixo = montarAxonio(anatomy.somaX, anatomy.somaY, anatomy.somaRadius, anatomy.scale, Math.max(DW * 0.62, borda - ext - 6));
+          const eixo = montarAxonio(Est.anatomy.somaX, Est.anatomy.somaY, Est.anatomy.somaRadius, Est.anatomy.scale, Math.max(DW * 0.62, borda - ext - 6));
           const novo = eixo.axonPath[eixo.axonPath.length - 1], dx = novo.x - velho.x, dy = novo.y - velho.y;
           const feitos = new Set();
           ramos.forEach(function (br) { if (!feitos.has(br.pts)) { feitos.add(br.pts); br.pts.forEach(function (q) { q.x += dx; q.y += dy; }); } });
@@ -742,12 +775,12 @@ function (usa) {
             if (!feitos.has(bt.branchPts)) { feitos.add(bt.branchPts); bt.branchPts.forEach(function (q) { q.x += dx; q.y += dy; }); }
             bt.x += dx; bt.y += dy;
           });
-          anatomy.axonPath = eixo.axonPath;
-          anatomy.myelinSheaths = eixo.myelinSheaths;
-          anatomy.ranvierNodes = eixo.ranvierNodes;
-          anatomy.axonEscala = eixo.axonEscala;
-          anatomy.terminalBranches = ramos;        // os terminais do Núcleo ficam fora da esfera, no fim do tronco
-          anatomy.terminalBoutons = boutons;
+          Est.anatomy.axonPath = eixo.axonPath;
+          Est.anatomy.myelinSheaths = eixo.myelinSheaths;
+          Est.anatomy.ranvierNodes = eixo.ranvierNodes;
+          Est.anatomy.axonEscala = eixo.axonEscala;
+          Est.anatomy.terminalBranches = ramos;        // os terminais do Núcleo ficam fora da esfera, no fim do tronco
+          Est.anatomy.terminalBoutons = boutons;
         }
 
 
@@ -785,7 +818,7 @@ function (usa) {
         // abrem em leque rumo às esferas dos agentes (uma ponta para cada). O principal (o do desenho aprovado) é um deles; os outros
         // levam terminais próprios (outra semente). Cada um é um objeto com as mesmas peças do principal (anatomy.extras).
         function montarFeixe() {
-          const A = anatomy, n = opc.axonios, k = vista.k, esc = A.scale;
+          const A = Est.anatomy, n = opc.axonios, k = vista.k, esc = A.scale;
           const somaX = A.somaX, somaY = A.somaY;
           const meio = (n - 1) / 2, iMain = Math.floor(meio);
           const x0 = somaX + A.somaRadius * 1.44;                                   // de onde parte o axônio original (fase da onda)
@@ -852,16 +885,16 @@ function (usa) {
             vista.Rpx = Math.max(runtime.width, runtime.height); vista.Rd = vista.Rpx; vista.RdTodos = vista.Rd; vista.recorte2D = null; vista.terminais = 0; vista.toques = 0;
             return;
           }
-          const term = (opc.saida || opc.semEixo) ? [] : pontasTerminais(anatomy);
+          const term = (opc.saida || opc.semEixo) ? [] : pontasTerminais(Est.anatomy);
           const pts = term.slice();
-          anatomy.dendriteTips.forEach(function (d) { pts.push({ x: d.tipX, y: d.tipY }); });
-          anatomy.somaOutline.forEach(function (p) { pts.push({ x: p.x, y: p.y }); });
-          minis.forEach(function (m) { m.pontos.forEach(function (p) { pts.push(p); }); });
+          Est.anatomy.dendriteTips.forEach(function (d) { pts.push({ x: d.tipX, y: d.tipY }); });
+          Est.anatomy.somaOutline.forEach(function (p) { pts.push({ x: p.x, y: p.y }); });
+          Est.minis.forEach(function (m) { m.pontos.forEach(function (p) { pts.push(p); }); });
           // o centro da esfera é o corpo celular (soma); o raio vai até a ponta mais distante
-          const cx = anatomy.somaX, cy = anatomy.somaY;
+          const cx = Est.anatomy.somaX, cy = Est.anatomy.somaY;
           let Rd = 0;
           pts.forEach(function (p) { Rd = Math.max(Rd, Math.hypot(p.x - cx, p.y - cy)); });
-          Rd = minis.length ? Rd * 1.03 : Rd + 3;
+          Rd = Est.minis.length ? Rd * 1.03 : Rd + 3;
           const Rpx = Math.max(10, Math.min(runtime.width, runtime.height) / 2 - (opc.margem || 3));
           vista.RdTodos = Rd;
           Rd = Math.min(Rd, opc.raioMax);
@@ -881,16 +914,16 @@ function (usa) {
         function zcDe(z) { return Math.max(0, Math.min(1, (z - 1) / 3)); }      // o quanto a lupa já puxou o contraste (0 sem lupa, 1 a partir de 4x)
         // Degraus de detalhe, pelos pixels de tela por unidade do desenho da célula que está sendo pintada (0 = o desenho aprovado)
         function nivel() {
-          if (detZ <= 1.05) return 0;
-          const p = vista.k * detZ * runtime.dpr * detLocal;
+          if (Est.detZ <= 1.05) return 0;
+          const p = vista.k * Est.detZ * runtime.dpr * Est.detLocal;
           return p >= 3.6 ? 3 : p >= 2.1 ? 2 : p >= 1.25 ? 1 : 0;
         }
-        function un() { return 1 / Math.max(1e-6, vista.k * detZ * detLocal); }  // 1 px do canvas, em unidades do desenho da célula
+        function un() { return 1 / Math.max(1e-6, vista.k * Est.detZ * Est.detLocal); }  // 1 px do canvas, em unidades do desenho da célula
         function zMax() { return Math.max(4, Math.min(48, 16 / Math.max(0.05, vista.k))); }
 
         // As camadas, do fundo para a frente (o principal fica no meio)
         function camadasOrdenadas() {
-          const camadas = minis.map(function (m) { return { z: m.z, m: m }; });
+          const camadas = Est.minis.map(function (m) { return { z: m.z, m: m }; });
           camadas.push({ z: 0, m: null });
           camadas.sort(function (p, q) { return p.z - q.z; });
           return camadas;
@@ -916,24 +949,24 @@ function (usa) {
           tctx.setTransform(d * v.z, 0, 0, d * v.z, d * v.ox, d * v.oy);
           tctx.translate(vista.tx, vista.ty);
           tctx.scale(vista.k, vista.k);
-          detZ = v.z;
+          Est.detZ = v.z;
           if (c.m) {
-            detLocal = c.m.s;
+            Est.detLocal = c.m.s;
             tctx.transform(c.m.M[0], c.m.M[1], c.m.M[2], c.m.M[3], c.m.M[4], c.m.M[5]);
             pintarCelula(tctx, c.m.A, c.m.rgb);
             pintarBotoesFixos(tctx, c.m.A, c.m.rgb);
             lustreSoma(tctx, c.m.A);
           } else {
-            detLocal = 1;
-            tctx.save(); giroCelula(tctx, anatomy);
-            pintarCelula(tctx, anatomy);
+            Est.detLocal = 1;
+            tctx.save(); giroCelula(tctx, Est.anatomy);
+            pintarCelula(tctx, Est.anatomy);
             tctx.restore();
-            lustreSoma(tctx, anatomy);
+            lustreSoma(tctx, Est.anatomy);
           }
           tctx.restore();
           iluminarCamada(tctx, R, c.z, v);
           comporCamada(octx, tmp, c.z, c.m ? c.m.dA : 1, R, v);
-          detZ = 1; detLocal = 1;
+          Est.detZ = 1; Est.detLocal = 1;
         }
         function novoBitmap() {
           const c = document.createElement('canvas');
@@ -943,8 +976,8 @@ function (usa) {
         }
         function iniciarAssado(v) {
           const off = novoBitmap();
-          if (!tmpCamada || tmpCamada.width !== off.width || tmpCamada.height !== off.height) tmpCamada = novoBitmap();
-          return { v: { z: v.z, ox: v.ox, oy: v.oy }, off: off, octx: off.getContext('2d'), tmp: tmpCamada, tctx: tmpCamada.getContext('2d'),
+          if (!Est.tmpCamada || Est.tmpCamada.width !== off.width || Est.tmpCamada.height !== off.height) Est.tmpCamada = novoBitmap();
+          return { v: { z: v.z, ox: v.ox, oy: v.oy }, off: off, octx: off.getContext('2d'), tmp: Est.tmpCamada, tctx: Est.tmpCamada.getContext('2d'),
             camadas: camadasOrdenadas(), i: 0, feito: false };
         }
         // Pinta camadas até gastar 'ms' milissegundos (ao menos uma); devolve true quando o bitmap ficou pronto
@@ -971,8 +1004,8 @@ function (usa) {
         function bakeStaticLayer() {
           const job = iniciarAssado(VISTA_1);
           avancarAssado(job, Infinity);
-          anatomy.offscreenCanvas = job.off;
-          detalhe = null; refino = null;
+          Est.anatomy.offscreenCanvas = job.off;
+          Est.detalhe = null; Est.refino = null;
           lupa.z = 1; lupa.ox = 0; lupa.oy = 0; lupa.mudou = false; lupa.anim = null;
           if (lupa.ouvinte) lupa.ouvinte(1);
         }
@@ -981,9 +1014,9 @@ function (usa) {
 
         // Volume do corpo celular: sombra na borda, brilho especular (a mesma luz do vidro) e luz refletida embaixo
         function lustreSoma(octx, A) {
-          const r0 = A.somaRadius, x = A.somaX, y = A.somaY, lado = r0 * 2.7, q = zcDe(detZ);   // de perto, o brilho não lava o contraste
+          const r0 = A.somaRadius, x = A.somaX, y = A.somaY, lado = r0 * 2.7, q = zcDe(Est.detZ);   // de perto, o brilho não lava o contraste
           octx.save();
-          const gi = A === anatomy ? opc.giro0 : 0;           // o contorno do corpo gira com a célula; a luz não
+          const gi = A === Est.anatomy ? opc.giro0 : 0;           // o contorno do corpo gira com a célula; a luz não
           if (gi) { octx.translate(x, y); octx.rotate(gi); octx.translate(-x, -y); }
           octx.beginPath();
           A.somaOutline.forEach(function (pt, i) { if (i === 0) octx.moveTo(pt.x, pt.y); else octx.lineTo(pt.x, pt.y); });
@@ -1028,18 +1061,17 @@ function (usa) {
 
         // A camada (só o retângulo R) reduzida f vezes num canvas auxiliar: ampliada de volta, vira um desfoque barato
         // (o filtro blur() do canvas custa 70 a 100 ms por camada em alguns navegadores; este caminho custa poucos ms)
-        let auxCv = null;
         function reduzido(tmp, R, f) {
           const w = Math.max(1, Math.round(R.w / f)), h = Math.max(1, Math.round(R.h / f));
-          if (!auxCv) auxCv = document.createElement('canvas');
-          if (auxCv.width < w || auxCv.height < h) { auxCv.width = Math.max(auxCv.width, w); auxCv.height = Math.max(auxCv.height, h); }
-          const a = auxCv.getContext('2d');
+          if (!Est.auxCv) Est.auxCv = document.createElement('canvas');
+          if (Est.auxCv.width < w || Est.auxCv.height < h) { Est.auxCv.width = Math.max(Est.auxCv.width, w); Est.auxCv.height = Math.max(Est.auxCv.height, h); }
+          const a = Est.auxCv.getContext('2d');
           a.setTransform(1, 0, 0, 1, 0, 0);
           a.globalCompositeOperation = 'source-over';
           a.clearRect(0, 0, w, h);
           a.imageSmoothingEnabled = true; a.imageSmoothingQuality = 'high';
           a.drawImage(tmp, R.x, R.y, R.w, R.h, 0, 0, w, h);
-          return { cv: auxCv, w: w, h: h };
+          return { cv: Est.auxCv, w: w, h: h };
         }
 
         function comporCamada(octx, tmp, z, dA, R, v) {
@@ -1080,11 +1112,9 @@ function (usa) {
         // ---------------------------------------------------------------------------------- o vidro da esfera, com profundidade
         // Duas camadas pré-renderizadas: o fundo do vidro (a parede de trás, com névoa e poeira distante) e a frente (a casca, com reflexos e
         // borda de Fresnel). Elas se deslocam em sentidos opostos com o ponteiro, e o neurônio fica parado entre as duas.
-        let vidro = null;
-        const par = { x: 0, y: 0, tx: 0, ty: 0 };
 
         function construirVidro() {
-          if (opc.modo === 'ligacoes') { vidro = null; return; }
+          if (opc.modo === 'ligacoes') { Est.vidro = null; return; }
           const R = vista.Rpx, dpr = runtime.dpr, m = Math.ceil(R * 0.05) + 14, S = Math.round((R + m) * 2 * dpr);
           const rnd = createSeededRandom(77123);
           const novo = function () { const c = document.createElement('canvas'); c.width = S; c.height = S; const x = c.getContext('2d'); x.scale(dpr, dpr); x.translate(R + m, R + m); return { cv: c, c: x }; };
@@ -1166,44 +1196,44 @@ function (usa) {
           t.save(); t.beginPath(); t.arc(0, 0, R * 0.99, 0, Math.PI * 2); t.clip();
           poeira(t, 9, 7, 17, 0.025, 0.065, 0.85);                                                     // poeira perto de quem olha, fora de foco
           t.restore();
-          vidro = { fundo: F.cv, frente: T.cv, m: m };
+          Est.vidro = { fundo: F.cv, frente: T.cv, m: m };
         }
 
         function mesmaVista(a, b) { return a.z === b.z && a.ox === b.ox && a.oy === b.oy; }
         // O vidro já na vista de uma lupa (feito uma vez quando a lupa para; depois cada quadro só copia, sem reamostrar)
         function vidroDaVista(v) {
-          if (!vidro) return null;
-          const d = runtime.dpr, S = vidro.fundo.width;
-          const X = d * (v.z * (vista.cx - vista.Rpx - vidro.m) + v.ox), Y = d * (v.z * (vista.cy - vista.Rpx - vidro.m) + v.oy);
+          if (!Est.vidro) return null;
+          const d = runtime.dpr, S = Est.vidro.fundo.width;
+          const X = d * (v.z * (vista.cx - vista.Rpx - Est.vidro.m) + v.ox), Y = d * (v.z * (vista.cy - vista.Rpx - Est.vidro.m) + v.oy);
           const faz = function (fonte) {
             const c = novoBitmap(), x = c.getContext('2d');
             x.imageSmoothingQuality = 'high';
             x.drawImage(fonte, X, Y, S * v.z, S * v.z);
             return c;
           };
-          return { fundo: faz(vidro.fundo), frente: faz(vidro.frente) };
+          return { fundo: faz(Est.vidro.fundo), frente: faz(Est.vidro.frente) };
         }
         // De perto, o vidro fica mais discreto (o reflexo e a névoa tiram contraste)
         function vidroNaVista(qual) {
-          if (!vidro) return;
+          if (!Est.vidro) return;
           const d = runtime.dpr, q = zcDe(lupa.z), desloc = qual === 'fundo' ? -0.9 : 1.0, amp = Math.min(8, Math.max(2.4, vista.Rpx * 0.045));      // o vidro desliza menos nas esferas pequenas
-          const px = desloc * amp * par.x, py = desloc * amp * par.y, B = vista.cx - vista.Rpx - vidro.m, C = vista.cy - vista.Rpx - vidro.m;
+          const px = desloc * amp * par.x, py = desloc * amp * par.y, B = vista.cx - vista.Rpx - Est.vidro.m, C = vista.cy - vista.Rpx - Est.vidro.m;
           ctx.save();
           ctx.setTransform(1, 0, 0, 1, 0, 0);
           ctx.globalAlpha = qual === 'fundo' ? 1 - 0.45 * q : 1 - 0.6 * q;
           if (lupa.z === 1) {
-            ctx.drawImage(vidro[qual], Math.round((B + px) * d), Math.round((C + py) * d));
-          } else if (detalhe && detalhe.vidro && mesmaVista(detalhe.v, lupa)) {
-            ctx.drawImage(detalhe.vidro[qual], Math.round(px * d), Math.round(py * d));
+            ctx.drawImage(Est.vidro[qual], Math.round((B + px) * d), Math.round((C + py) * d));
+          } else if (Est.detalhe && Est.detalhe.vidro && mesmaVista(Est.detalhe.v, lupa)) {
+            ctx.drawImage(Est.detalhe.vidro[qual], Math.round(px * d), Math.round(py * d));
           } else {
-            const S = vidro[qual].width * lupa.z;
-            ctx.drawImage(vidro[qual], d * (lupa.z * B + lupa.ox + px), d * (lupa.z * C + lupa.oy + py), S, S);
+            const S = Est.vidro[qual].width * lupa.z;
+            ctx.drawImage(Est.vidro[qual], d * (lupa.z * B + lupa.ox + px), d * (lupa.z * C + lupa.oy + py), S, S);
           }
           ctx.restore();
         }
         // A parte fixa na vista atual: o bitmap refeito para a lupa onde ele cobre, e a vista normal ampliada no resto (até o refino chegar)
         function estaticoNaVista() {
-          const base = anatomy.offscreenCanvas;
+          const base = Est.anatomy.offscreenCanvas;
           if (!base) return;
           const d = runtime.dpr;
           const desenha = function (fonte, v0) {
@@ -1214,9 +1244,9 @@ function (usa) {
             ctx.drawImage(fonte, 0, 0);
             ctx.restore();
           };
-          if (lupa.z <= 1.0001 || !detalhe) { desenha(base, VISTA_1); return; }
-          const v0 = detalhe.v, s = lupa.z / v0.z, rx = d * (lupa.ox - s * v0.ox), ry = d * (lupa.oy - s * v0.oy);
-          const rw = detalhe.cv.width * s, rh = detalhe.cv.height * s, W = canvas.width, H = canvas.height;
+          if (lupa.z <= 1.0001 || !Est.detalhe) { desenha(base, VISTA_1); return; }
+          const v0 = Est.detalhe.v, s = lupa.z / v0.z, rx = d * (lupa.ox - s * v0.ox), ry = d * (lupa.oy - s * v0.oy);
+          const rw = Est.detalhe.cv.width * s, rh = Est.detalhe.cv.height * s, W = canvas.width, H = canvas.height;
           if (!(rx <= 0.5 && ry <= 0.5 && rx + rw >= W - 0.5 && ry + rh >= H - 0.5)) {
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1224,7 +1254,7 @@ function (usa) {
             desenha(base, VISTA_1);
             ctx.restore();
           }
-          desenha(detalhe.cv, v0);
+          desenha(Est.detalhe.cv, v0);
         }
 
         // ---------------------------------------------------------------------------------- a lupa: ampliar, mover, animar e refinar
@@ -1234,7 +1264,7 @@ function (usa) {
           lupa.oy = Math.min(0, Math.max(H - H * z, lupa.oy));
         }
         function marcarLupa() {
-          lupa.mudou = true; lupa.ultimo = agora(); refino = null;
+          lupa.mudou = true; lupa.ultimo = agora(); Est.refino = null;
           if (lupa.ouvinte) lupa.ouvinte(lupa.z);
         }
         function ampliarEm(f, fx, fy) {             // amplia por f mantendo parado o ponto (fx, fy) do canvas
@@ -1266,11 +1296,11 @@ function (usa) {
         function cuidarRefino() {
           if (lupa.mudou && !lupa.anim && agora() - lupa.ultimo > 170) {
             lupa.mudou = false;
-            if (lupa.z > 1.001) refino = iniciarAssado(lupa); else { refino = null; detalhe = null; }
+            if (lupa.z > 1.001) Est.refino = iniciarAssado(lupa); else { Est.refino = null; Est.detalhe = null; }
           }
-          if (refino && avancarAssado(refino, 10)) {
-            detalhe = { cv: refino.off, v: refino.v, vidro: vidroDaVista(refino.v) };
-            refino = null;
+          if (Est.refino && avancarAssado(Est.refino, 10)) {
+            Est.detalhe = { cv: Est.refino.off, v: Est.refino.v, vidro: vidroDaVista(Est.refino.v) };
+            Est.refino = null;
           }
         }
         // Os gestos: pinça (dois dedos), roda do mouse, arrastar quando ampliado e dois toques (ou clique duplo) para ir e voltar
@@ -1355,7 +1385,7 @@ function (usa) {
           const dendriteAlpha = Math.max(0.08, config.opacidadeDendritos / 100);
           const glowFactor = config.brilhoGeral / 100;
           const nucFactor = config.brilhoNucleo / 100;
-          const nv = nivel(), q = zcDe(detZ), u = un();                     // com a lupa: degrau de detalhe, contraste e 1 px em unidades
+          const nv = nivel(), q = zcDe(Est.detZ), u = un();                     // com a lupa: degrau de detalhe, contraste e 1 px em unidades
           const corOrg = { dr: deepR, dg: deepG, db: deepB, lr: lightR, lg: lightG, lb: lightB };
 
           // 1. Halo atmosférico suave ao redor do Soma
@@ -1807,7 +1837,6 @@ function (usa) {
           });
         }
 
-        const PAREDE = 0.955;                                        // raio da parede interna do vidro (a mesma do traço da casca em construirVidro)
         // Fora da esfera: a passagem do tronco vai da parede até a borda do canvas e some aos poucos
         function alcanceFora() { return Math.max(24, runtime.width - (vista.cx + vista.Rpx) - 6); }
         function recortaNaEsfera() { return opc.modo !== 'ligacoes' && (opc.saida || opc.raioMax !== Infinity); }
@@ -1816,25 +1845,25 @@ function (usa) {
           if (!opc.saida) return null;
           const xi = vista.cx + vista.Rpx * 0.8;
           let y0 = Infinity, y1 = -Infinity;
-          anatomy.axonPath.forEach(function (p) {
+          Est.anatomy.axonPath.forEach(function (p) {
             const X = vista.tx + p.x * vista.k, Y = vista.ty + p.y * vista.k;
             if (X >= xi) { y0 = Math.min(y0, Y); y1 = Math.max(y1, Y); }
           });
-          anatomy.terminalBranches.forEach(function (br) {
+          Est.anatomy.terminalBranches.forEach(function (br) {
             br.pts.forEach(function (q) {
               const X = vista.tx + q.x * vista.k, Y = vista.ty + q.y * vista.k;
-              if (X >= xi) { y0 = Math.min(y0, Y - 8 * vista.k * anatomy.scale); y1 = Math.max(y1, Y + 8 * vista.k * anatomy.scale); }
+              if (X >= xi) { y0 = Math.min(y0, Y - 8 * vista.k * Est.anatomy.scale); y1 = Math.max(y1, Y + 8 * vista.k * Est.anatomy.scale); }
             });
           });
           if (!isFinite(y0)) return null;
-          const pad = 14 * anatomy.scale * vista.k + 6;
+          const pad = 14 * Est.anatomy.scale * vista.k + 6;
           return { x: xi, y: y0 - pad, w: Math.max(1, runtime.width - xi), h: (y1 - y0) + 2 * pad };
         }
         // Com vários axônios o corredor segue cada um (uma faixa em volta do traço, mais a caixa dos terminais), em vez de um retângulo
         // alto: o resto de fora da parede continua cortado
         function corredorPolis() {
-          const xi = vista.cx + vista.Rpx * 0.8, k = vista.k, pad = 14 * anatomy.scale * k + 6, polis = [];
-          [anatomy].concat(anatomy.extras || []).forEach(function (E) {
+          const xi = vista.cx + vista.Rpx * 0.8, k = vista.k, pad = 14 * Est.anatomy.scale * k + 6, polis = [];
+          [Est.anatomy].concat(Est.anatomy.extras || []).forEach(function (E) {
             const P = [];
             E.axonPath.forEach(function (p, j) { const X = vista.tx + p.x * k, Y = vista.ty + p.y * k; if (X >= xi && (j % 3 === 0 || j === E.axonPath.length - 1)) P.push({ x: X, y: Y }); });
             if (P.length < 2) return;
@@ -1903,9 +1932,9 @@ function (usa) {
 
         // Dispara sinal receptivo ao longo de um dendrito até o soma
         function spawnDendriteSignal() {
-          if (!anatomy.dendriteTips.length) return;
-          const idx = Math.floor(usa.base.acaso() * anatomy.dendriteTips.length);
-          const branch = anatomy.dendriteTips[idx];
+          if (!Est.anatomy.dendriteTips.length) return;
+          const idx = Math.floor(usa.base.acaso() * Est.anatomy.dendriteTips.length);
+          const branch = Est.anatomy.dendriteTips[idx];
           incomingSignals.push({
             pts: branch.pts,
             progress: 1.0,
@@ -1918,7 +1947,7 @@ function (usa) {
         function triggerActionPotential() {
           if (opc.semEixo || opc.modo === 'ligacoes') return;    // sem axônio próprio: quem manda sinal é a cena (dispararEixo)
           runtime.somaExcitation = 1.0;
-          const eixos = [anatomy].concat(anatomy.extras || []);
+          const eixos = [Est.anatomy].concat(Est.anatomy.extras || []);
           const E = eixos[Math.floor(usa.base.acaso() * eixos.length)];       // cada pulso sai por um dos axônios
           const chosenBoutons = E.terminalBoutons.filter((_, idx) => usa.base.acaso() < 0.65 || idx % 2 === 0);
           actionPotentials.push({
@@ -1951,14 +1980,14 @@ function (usa) {
           });
 
           if (config.enableMist) {
-            const dist = (8 + usa.base.acaso() * 5) * anatomy.scale;
+            const dist = (8 + usa.base.acaso() * 5) * Est.anatomy.scale;
             mistClouds.push({
               x: bouton.x + Math.cos(bouton.tipAngle) * dist,
               y: bouton.y + Math.sin(bouton.tipAngle) * dist,
-              vx: Math.cos(bouton.tipAngle) * (2.8 + usa.base.acaso() * 3.0) * anatomy.scale,
-              vy: Math.sin(bouton.tipAngle) * (2.8 + usa.base.acaso() * 3.0) * anatomy.scale,
-              radius: (6.5 + usa.base.acaso() * 4.5) * anatomy.scale,
-              growRate: (6.5 + usa.base.acaso() * 4.0) * anatomy.scale,
+              vx: Math.cos(bouton.tipAngle) * (2.8 + usa.base.acaso() * 3.0) * Est.anatomy.scale,
+              vy: Math.sin(bouton.tipAngle) * (2.8 + usa.base.acaso() * 3.0) * Est.anatomy.scale,
+              radius: (6.5 + usa.base.acaso() * 4.5) * Est.anatomy.scale,
+              growRate: (6.5 + usa.base.acaso() * 4.0) * Est.anatomy.scale,
               life: 1.0,
               rgb: bouton.rgb
             });
@@ -1973,11 +2002,11 @@ function (usa) {
 
           for (let k = 0; k < 10; k++) {
             const pIdx = k % 3;
-            const pocketY = pocketOffsets[pIdx] * bouton.bWidth + ((usa.base.acaso() - 0.5) * 2.0 * anatomy.scale);
+            const pocketY = pocketOffsets[pIdx] * bouton.bWidth + ((usa.base.acaso() - 0.5) * 2.0 * Est.anatomy.scale);
             const startX = bouton.x + cosA * (bouton.bThick * 0.50) + perpX * pocketY;
             const startY = bouton.y + sinA * (bouton.bThick * 0.50) + perpY * pocketY;
-            const targetX = startX + cosA * cleftSpan + perpX * ((usa.base.acaso() - 0.5) * 4.2 * anatomy.scale);
-            const targetY = startY + sinA * cleftSpan + perpY * ((usa.base.acaso() - 0.5) * 4.2 * anatomy.scale);
+            const targetX = startX + cosA * cleftSpan + perpX * ((usa.base.acaso() - 0.5) * 4.2 * Est.anatomy.scale);
+            const targetY = startY + sinA * cleftSpan + perpY * ((usa.base.acaso() - 0.5) * 4.2 * Est.anatomy.scale);
 
             releasedNeurotransmitters.push({
               startX,
@@ -1988,8 +2017,8 @@ function (usa) {
               y: startY,
               progress: -usa.base.acaso() * 0.22,
               speed: 1.50 + usa.base.acaso() * 0.60,
-              jitter: 5.5 * anatomy.scale,
-              size: (1.25 + usa.base.acaso() * 0.55) * anatomy.scale,
+              jitter: 5.5 * Est.anatomy.scale,
+              size: (1.25 + usa.base.acaso() * 0.55) * Est.anatomy.scale,
               isCentralBeam: k === 3 || k === 6,
               rgb: bouton.rgb
             });
@@ -2007,8 +2036,8 @@ function (usa) {
             runtime.spawnAccumulator += dt;
             if (runtime.spawnAccumulator >= interval) {
               runtime.spawnAccumulator = 0;
-              if (minis.length) {
-                dispararMini(minis[Math.floor(usa.base.acaso() * minis.length)]);
+              if (Est.minis.length) {
+                dispararMini(Est.minis[Math.floor(usa.base.acaso() * Est.minis.length)]);
                 if (usa.base.acaso() < 0.22) triggerActionPotential();
               } else {
                 spawnDendriteSignal();
@@ -2043,7 +2072,7 @@ function (usa) {
           }
 
           // 2. Ciclo de vesículas e bolsas nos bulbos terminais
-          anatomy.boutonsTodos.forEach((b) => {
+          Est.anatomy.boutonsTodos.forEach((b) => {
             b.flash = Math.max(0, b.flash - dt * 1.9);
             for (let pi = 0; pi < 3; pi++) {
               b.pocketExcite[pi] = Math.max(0, b.pocketExcite[pi] - dt * 1.8);
@@ -2086,7 +2115,7 @@ function (usa) {
             }
           }
 
-          anatomy.nosTodos.forEach((n) => {
+          Est.anatomy.nosTodos.forEach((n) => {
             n.flash = Math.max(0, n.flash - dt * 2.8);
           });
 
@@ -2100,7 +2129,7 @@ function (usa) {
               miniAPs.splice(i, 1);
             }
           }
-          minis.forEach(function (m) {
+          Est.minis.forEach(function (m) {
             m.flash = Math.max(0, m.flash - dt * 1.9);
             m.excita = Math.max(0, m.excita - dt * 1.4);
             if (m.ativoT > 0) m.ativoT = Math.max(0, m.ativoT - dt);
@@ -2137,7 +2166,7 @@ function (usa) {
         // Renderizador unificado de pulso luminoso suave
         function drawUnifiedSmoothPulse(x, y, radius, lightR, lightG, lightB, r, g, b, glowFactor, alphaScale) {
           const a = alphaScale !== undefined ? alphaScale : 1;
-          radius *= pulsoZ;                                                   // de perto o brilho do pulso não cresce na mesma proporção
+          radius *= Est.pulsoZ;                                                   // de perto o brilho do pulso não cresce na mesma proporção
           const pGrad = ctx.createRadialGradient(x, y, 0.5, x, y, radius);
           pGrad.addColorStop(0, `rgba(255, 255, 255, ${0.92 * glowFactor * a})`);
           pGrad.addColorStop(0.45, `rgba(${lightR}, ${lightG}, ${lightB}, ${0.65 * glowFactor * a})`);
@@ -2165,12 +2194,12 @@ function (usa) {
           estaticoNaVista();
           // o que é vivo (pulsos, vesículas, neurotransmissores) é desenhado no espaço do neurônio e entra na mesma vista e na mesma lupa
           ctx.transform(lupa.z, 0, 0, lupa.z, lupa.ox, lupa.oy);
-          pulsoZ = Math.pow(lupa.z, -0.45);
+          Est.pulsoZ = Math.pow(lupa.z, -0.45);
           const zcL = zcDe(lupa.z);
           if (recortaNaEsfera()) ctx.clip(recorte2D());
           ctx.translate(vista.tx, vista.ty);
           ctx.scale(vista.k, vista.k);
-          giroCelula(ctx, anatomy);
+          giroCelula(ctx, Est.anatomy);
 
           let [r, g, b] = config.rgb;
           let lightR = Math.min(255, r + 95);
@@ -2206,7 +2235,7 @@ function (usa) {
           ctx.globalCompositeOperation = 'lighter';
 
           // 1b. Os neurônios menores: o disparo no soma, o sinal no axônio e nos telodendros, o brilho nos terminais
-          minis.forEach(function (m) {
+          Est.minis.forEach(function (m) {
             const cm = (m.ativoT > 0 && m.ativo) || m.rgb;
             const mr = cm[0], mg = cm[1], mb = cm[2], ml = Math.min(255, mr + 95), mgl = Math.min(255, mg + 95), mbl = Math.min(255, mb + 95);
             if (m.excita > 0.02) {
@@ -2251,17 +2280,17 @@ function (usa) {
           usaCor();
           // 2. Excitação dinâmica suave no Soma
           if (runtime.somaExcitation > 0.02) {
-            const exRad = anatomy.somaRadius * (1.25 + runtime.somaExcitation * 0.45);
+            const exRad = Est.anatomy.somaRadius * (1.25 + runtime.somaExcitation * 0.45);
             const exGrad = ctx.createRadialGradient(
-              anatomy.somaX, anatomy.somaY, anatomy.somaRadius * 0.2,
-              anatomy.somaX, anatomy.somaY, exRad
+              Est.anatomy.somaX, Est.anatomy.somaY, Est.anatomy.somaRadius * 0.2,
+              Est.anatomy.somaX, Est.anatomy.somaY, exRad
             );
             const sc = runtime.somaRgb;
             exGrad.addColorStop(0, sc ? `rgba(${Math.min(255, sc[0] + 95)}, ${Math.min(255, sc[1] + 95)}, ${Math.min(255, sc[2] + 95)}, ${0.34 * runtime.somaExcitation * glowFactor * (1 - 0.5 * zcL)})` : `rgba(${lightR}, ${lightG}, ${lightB}, ${0.34 * runtime.somaExcitation * glowFactor * (1 - 0.5 * zcL)})`);
             exGrad.addColorStop(1, sc ? `rgba(${sc[0]}, ${sc[1]}, ${sc[2]}, 0)` : `rgba(${r}, ${g}, ${b}, 0)`);
             ctx.fillStyle = exGrad;
             ctx.beginPath();
-            ctx.arc(anatomy.somaX, anatomy.somaY, exRad, 0, Math.PI * 2);
+            ctx.arc(Est.anatomy.somaX, Est.anatomy.somaY, exRad, 0, Math.PI * 2);
             ctx.fill();
           }
 
@@ -2276,15 +2305,15 @@ function (usa) {
             const x = pts[i0].x + (pts[i1].x - pts[i0].x) * frac;
             const y = pts[i0].y + (pts[i1].y - pts[i0].y) * frac;
 
-            if (sig.rgb) drawUnifiedSmoothPulse(x, y, 6.5 * anatomy.scale, Math.min(255, sig.rgb[0] + 95), Math.min(255, sig.rgb[1] + 95), Math.min(255, sig.rgb[2] + 95), sig.rgb[0], sig.rgb[1], sig.rgb[2], glowFactor, 1);
-            else drawUnifiedSmoothPulse(x, y, 6.5 * anatomy.scale, lightR, lightG, lightB, r, g, b, glowFactor, 1);
+            if (sig.rgb) drawUnifiedSmoothPulse(x, y, 6.5 * Est.anatomy.scale, Math.min(255, sig.rgb[0] + 95), Math.min(255, sig.rgb[1] + 95), Math.min(255, sig.rgb[2] + 95), sig.rgb[0], sig.rgb[1], sig.rgb[2], glowFactor, 1);
+            else drawUnifiedSmoothPulse(x, y, 6.5 * Est.anatomy.scale, lightR, lightG, lightB, r, g, b, glowFactor, 1);
           });
 
           // 4. Nódulos de Ranvier
-          anatomy.nosTodos.forEach((node) => {
+          Est.anatomy.nosTodos.forEach((node) => {
             usaCor(node.rgb);
             if (node.flash > 0.02) {
-              const nRad = 7.2 * anatomy.scale * (0.7 + node.flash * 0.45);
+              const nRad = 7.2 * Est.anatomy.scale * (0.7 + node.flash * 0.45);
               const foraN = fadeFora(node.x, node.y);
               if (foraN > 0.01) drawUnifiedSmoothPulse(node.x, node.y, nRad, lightR, lightG, lightB, r, g, b, glowFactor, node.flash * 0.85 * foraN);
             }
@@ -2308,7 +2337,7 @@ function (usa) {
                 const y = eixoPts[i0].y + (eixoPts[i1].y - eixoPts[i0].y) * frac;
 
                 const ratio = 1 - s / (trailSteps + 1);
-                const rad = (2.8 + ratio * 3.7) * anatomy.scale;
+                const rad = (2.8 + ratio * 3.7) * Est.anatomy.scale;
                 const fora = fadeFora(x, y);
                 if (fora > 0.01) drawUnifiedSmoothPulse(x, y, rad, lightR, lightG, lightB, r, g, b, glowFactor, ratio * 0.85 * fora);
               }
@@ -2328,7 +2357,7 @@ function (usa) {
                   const y = pts[i0].y + (pts[i1].y - pts[i0].y) * frac;
 
                   const ratio = 1 - s / (trailSteps + 1);
-                  const tRad = (2.5 + ratio * 3.6) * anatomy.scale;
+                  const tRad = (2.5 + ratio * 3.6) * Est.anatomy.scale;
                   drawUnifiedSmoothPulse(x, y, tRad, lightR, lightG, lightB, r, g, b, glowFactor, ratio * 0.88);
                 }
               });
@@ -2338,9 +2367,9 @@ function (usa) {
           ctx.globalCompositeOperation = 'source-over';
 
           // 6. Bulbos Pré-Sinápticos Unificados em Sino Contínuo + Vesículas + Bolsas de Exocitose
-          const boutonsMain = anatomy.terminalBoutons;
+          const boutonsMain = Est.anatomy.terminalBoutons;
           const detalheFino = lupa.z >= 1.5;                                  // os pontinhos das vesículas e os sulcos só aparecem com a lupa
-          anatomy.boutonsTodos.forEach((bouton) => {
+          Est.anatomy.boutonsTodos.forEach((bouton) => {
             usaCor(bouton.rgb);
             const leveB = !detalheFino && boutonsMain.indexOf(bouton) < 0;   // nos terminais dos axônios extras, a 1x, só o essencial
             ctx.save();
@@ -2375,7 +2404,7 @@ function (usa) {
               ctx.strokeStyle = idx % 2 === 0
                 ? `rgba(${lightR}, ${lightG}, ${lightB}, 0.22)`
                 : `rgba(${deepR}, ${deepG}, ${deepB}, 0.48)`;
-              ctx.lineWidth = 0.9 * anatomy.scale;
+              ctx.lineWidth = 0.9 * Est.anatomy.scale;
               ctx.beginPath();
               ctx.moveTo(-bw * 0.75, gy * 0.25);
               ctx.quadraticCurveTo(0, gy * (0.95 + gr.curve), bw * 0.52, gy * 0.85);
@@ -2386,7 +2415,7 @@ function (usa) {
             energyGrad.addColorStop(0, `rgba(${lightR}, ${lightG}, ${lightB}, ${0.55 + bouton.flash * 0.40})`);
             energyGrad.addColorStop(1, `rgba(${lightR}, ${lightG}, ${lightB}, ${0.35 + bouton.flash * 0.55})`);
             ctx.strokeStyle = energyGrad;
-            ctx.lineWidth = (1.4 + bouton.flash * 1.0) * anatomy.scale;
+            ctx.lineWidth = (1.4 + bouton.flash * 1.0) * Est.anatomy.scale;
             ctx.beginPath();
             ctx.moveTo(-bw * 0.85, 0);
             ctx.quadraticCurveTo(-bw * 0.15, -bh * 0.06, bw * 0.46, -bh * 0.24);
@@ -2412,7 +2441,7 @@ function (usa) {
                 ctx.fill();
 
                 ctx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${0.75 * vAlpha})`;
-                ctx.lineWidth = 0.75 * anatomy.scale;
+                ctx.lineWidth = 0.75 * Est.anatomy.scale;
                 ctx.stroke();
 
                 const dotR = drawR * 0.26;
@@ -2433,7 +2462,7 @@ function (usa) {
             }
 
             const pocketYList = [-bh * 0.26, 0, bh * 0.26];
-            const pocketRad = 2.2 * anatomy.scale;
+            const pocketRad = 2.2 * Est.anatomy.scale;
             pocketYList.forEach((py, pi) => {
               const pGlow = bouton.pocketExcite[pi] || 0;
               ctx.fillStyle = '#000000';
@@ -2442,7 +2471,7 @@ function (usa) {
               ctx.fill();
 
               ctx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${0.58 + pGlow * 0.42})`;
-              ctx.lineWidth = (0.95 + pGlow * 0.55) * anatomy.scale;
+              ctx.lineWidth = (0.95 + pGlow * 0.55) * Est.anatomy.scale;
               ctx.beginPath();
               ctx.arc(bw * 0.54, py, pocketRad, Math.PI * 0.52, Math.PI * 1.48);
               ctx.stroke();
@@ -2452,7 +2481,7 @@ function (usa) {
 
             // Contorno apenas nas paredes externas do sino (sem linha fechando o pescoço)
             ctx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, 0.54)`;
-            ctx.lineWidth = 1.0 * anatomy.scale;
+            ctx.lineWidth = 1.0 * Est.anatomy.scale;
             ctx.beginPath();
             ctx.moveTo(-bw * 0.92, -neckHalf);
             ctx.bezierCurveTo(-bw * 0.42, -neckHalf * 1.12, -bw * 0.14, -bh * 0.54, bw * 0.36, -bh * 0.50);
@@ -2471,7 +2500,7 @@ function (usa) {
 
             if (nt.isCentralBeam) {
               ctx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, 0.28)`;
-              ctx.lineWidth = 0.85 * anatomy.scale;
+              ctx.lineWidth = 0.85 * Est.anatomy.scale;
               ctx.beginPath();
               ctx.moveTo(nt.startX, nt.startY);
               ctx.lineTo(nt.targetX, nt.targetY);
@@ -2541,23 +2570,23 @@ function (usa) {
       desenhar: drawFrame,
       esfera: function () {
         let contato = 0, dentro = 0, fora = 0;
-        minis.forEach(function (m) {
+        Est.minis.forEach(function (m) {
           contato = Math.max(contato, Math.hypot(m.contato.x - m.alvo.tipX, m.contato.y - m.alvo.tipY) * vista.k);
-          m.pontos.forEach(function (p) { if (Math.hypot(p.x - anatomy.somaX, p.y - anatomy.somaY) <= vista.Rd) dentro++; else fora++; });
+          m.pontos.forEach(function (p) { if (Math.hypot(p.x - Est.anatomy.somaX, p.y - Est.anatomy.somaY) <= vista.Rd) dentro++; else fora++; });
         });
         let folga = Infinity;
-        for (let i = 0; i < minis.length; i++) for (let j = i + 1; j < minis.length; j++) {
-          const A1 = minis[i], B1 = minis[j];
+        for (let i = 0; i < Est.minis.length; i++) for (let j = i + 1; j < Est.minis.length; j++) {
+          const A1 = Est.minis[i], B1 = Est.minis[j];
           folga = Math.min(folga, Math.hypot(A1.soma.x - B1.soma.x, A1.soma.y - B1.soma.y) / (A1.rho + B1.rho));
         }
-        return { raio: vista.Rpx, terminais: vista.terminais, toques: vista.toques, minis: minis.length, contato: contato, folga: folga,
-          profundidades: minis.map(function (m) { return +m.z.toFixed(2); }), pontosDentro: dentro, pontosFora: fora, escondidos: +(fora / Math.max(1, fora + dentro)).toFixed(3), saida: opc.saida, centro: [vista.cx, vista.cy], RdTodos: vista.RdTodos, Rd: vista.Rd, k: vista.k,
-          raiosPrimarios: minis.map(function (m) { return Math.round(Math.hypot(m.alvo.tipX - anatomy.somaX, m.alvo.tipY - anatomy.somaY)); }),
-          raiosSomas: minis.map(function (m) { return Math.round(Math.hypot(m.soma.x - anatomy.somaX, m.soma.y - anatomy.somaY)); }),
-          rhos: minis.map(function (m) { return Math.round(m.rho); }),
-          somas: minis.map(function (m) { return [vista.tx + m.soma.x * vista.k, vista.ty + m.soma.y * vista.k]; }),
-          axonios: opc.axonios, pontas: [anatomy].concat(anatomy.extras || []).filter(function (E) { return E.axonPath.length; }).map(function (E) { const p = E.axonPath[E.axonPath.length - 1]; return [Math.round(vista.tx + p.x * vista.k), Math.round(vista.ty + p.y * vista.k)]; }),
-          pontaTronco: (function () { const p = anatomy.axonPath[anatomy.axonPath.length - 1]; return p ? [vista.tx + p.x * vista.k, vista.ty + p.y * vista.k] : null; })() };
+        return { raio: vista.Rpx, terminais: vista.terminais, toques: vista.toques, minis: Est.minis.length, contato: contato, folga: folga,
+          profundidades: Est.minis.map(function (m) { return +m.z.toFixed(2); }), pontosDentro: dentro, pontosFora: fora, escondidos: +(fora / Math.max(1, fora + dentro)).toFixed(3), saida: opc.saida, centro: [vista.cx, vista.cy], RdTodos: vista.RdTodos, Rd: vista.Rd, k: vista.k,
+          raiosPrimarios: Est.minis.map(function (m) { return Math.round(Math.hypot(m.alvo.tipX - Est.anatomy.somaX, m.alvo.tipY - Est.anatomy.somaY)); }),
+          raiosSomas: Est.minis.map(function (m) { return Math.round(Math.hypot(m.soma.x - Est.anatomy.somaX, m.soma.y - Est.anatomy.somaY)); }),
+          rhos: Est.minis.map(function (m) { return Math.round(m.rho); }),
+          somas: Est.minis.map(function (m) { return [vista.tx + m.soma.x * vista.k, vista.ty + m.soma.y * vista.k]; }),
+          axonios: opc.axonios, pontas: [Est.anatomy].concat(Est.anatomy.extras || []).filter(function (E) { return E.axonPath.length; }).map(function (E) { const p = E.axonPath[E.axonPath.length - 1]; return [Math.round(vista.tx + p.x * vista.k), Math.round(vista.ty + p.y * vista.k)]; }),
+          pontaTronco: (function () { const p = Est.anatomy.axonPath[Est.anatomy.axonPath.length - 1]; return p ? [vista.tx + p.x * vista.k, vista.ty + p.y * vista.k] : null; })() };
       },
       // a lupa: ampliar e voltar (botões), ir direto a um ponto (testes), o estado e um aviso a cada mudança
       lupa: {
@@ -2572,23 +2601,23 @@ function (usa) {
           lupa.ox = runtime.width / 2 - lupa.z * x; lupa.oy = runtime.height / 2 - lupa.z * y;
           prenderLupa(); marcarLupa();
         },
-        estado: function () { return { z: lupa.z, ox: lupa.ox, oy: lupa.oy, zmax: zMax(), pronto: !refino && !lupa.mudou && !lupa.anim, temDetalhe: !!detalhe }; },
+        estado: function () { return { z: lupa.z, ox: lupa.ox, oy: lupa.oy, zmax: zMax(), pronto: !Est.refino && !lupa.mudou && !lupa.anim, temDetalhe: !!Est.detalhe }; },
         aoMudar: function (fn) { lupa.ouvinte = typeof fn === 'function' ? fn : null; if (lupa.ouvinte) lupa.ouvinte(lupa.z); }
       },
       iniciar: function () {
         if (opc.modo === 'ligacoes') return;
-        if (minis.length) {
-          if (!opc.quieto) for (let i = 0; i < 3; i++) miniAPs.push({ m: minis[(i * 3) % minis.length], t: -i * 0.45 });
+        if (Est.minis.length) {
+          if (!opc.quieto) for (let i = 0; i < 3; i++) miniAPs.push({ m: Est.minis[(i * 3) % Est.minis.length], t: -i * 0.45 });
         } else if (!opc.quieto) {
           for (let i = 0; i < 6; i++) spawnDendriteSignal();
         }
         triggerActionPotential();
-        { const L = [anatomy].concat(anatomy.extras || []); for (let i = 1; i < L.length; i++) actionPotentials.push({ t: -0.28 * i, visitedNodes: new Set(), eixo: L[i], boutons: L[i].terminalBoutons, released: false }); }
+        { const L = [Est.anatomy].concat(Est.anatomy.extras || []); for (let i = 1; i < L.length; i++) actionPotentials.push({ t: -0.28 * i, visitedNodes: new Set(), eixo: L[i], boutons: L[i].terminalBoutons, released: false }); }
       },
       disparar: triggerActionPotential,
       // a cena manda: um pulso por uma ligação (pelo id), o corpo piscando na cor de quem fala, o sinal chegando a um dendrito
       dispararEixo: function (id, hex) {
-        const E = (anatomy.extras || []).filter(function (x) { return x.id === id; })[0];
+        const E = (Est.anatomy.extras || []).filter(function (x) { return x.id === id; })[0];
         if (!E) return false;
         actionPotentials.push({ t: 0, visitedNodes: new Set(), eixo: E, boutons: E.terminalBoutons, released: false, rgb: /^#[0-9a-fA-F]{6}$/.test(hex) ? hexToRgb(hex) : null });
         return true;
@@ -2602,10 +2631,10 @@ function (usa) {
         let melhor = null, d2 = Infinity;
         const rot = function (p) {
           if (!opc.giro0) return p;
-          const c = Math.cos(opc.giro0), s = Math.sin(opc.giro0), dx = p.x - anatomy.somaX, dy = p.y - anatomy.somaY;
-          return { x: anatomy.somaX + dx * c - dy * s, y: anatomy.somaY + dx * s + dy * c };
+          const c = Math.cos(opc.giro0), s = Math.sin(opc.giro0), dx = p.x - Est.anatomy.somaX, dy = p.y - Est.anatomy.somaY;
+          return { x: Est.anatomy.somaX + dx * c - dy * s, y: Est.anatomy.somaY + dx * s + dy * c };
         };
-        anatomy.dendriteTips.forEach(function (e) {
+        Est.anatomy.dendriteTips.forEach(function (e) {
           e.pts.forEach(function (p, j) {
             const q = rot(p), dx = vista.tx + q.x * vista.k - x, dy = vista.ty + q.y * vista.k - y, d = dx * dx + dy * dy;
             if (d < d2) { d2 = d; melhor = { e: e, j: j }; }
@@ -2619,18 +2648,18 @@ function (usa) {
       geometria: function () {
         const rot = function (p) {
           if (!opc.giro0) return p;
-          const c = Math.cos(opc.giro0), s = Math.sin(opc.giro0), dx = p.x - anatomy.somaX, dy = p.y - anatomy.somaY;
-          return { x: anatomy.somaX + dx * c - dy * s, y: anatomy.somaY + dx * s + dy * c };
+          const c = Math.cos(opc.giro0), s = Math.sin(opc.giro0), dx = p.x - Est.anatomy.somaX, dy = p.y - Est.anatomy.somaY;
+          return { x: Est.anatomy.somaX + dx * c - dy * s, y: Est.anatomy.somaY + dx * s + dy * c };
         };
         const px = function (p) { const q = rot(p); return [vista.tx + q.x * vista.k, vista.ty + q.y * vista.k, (p.w || 0) * vista.k]; };
-        const sm = px({ x: anatomy.somaX, y: anatomy.somaY });
-        return { cx: vista.cx, cy: vista.cy, R: vista.Rpx, k: vista.k, soma: [sm[0], sm[1]], rSoma: anatomy.somaRadius * vista.k,
-          dendritos: anatomy.dendriteBranches.map(function (br) {
+        const sm = px({ x: Est.anatomy.somaX, y: Est.anatomy.somaY });
+        return { cx: vista.cx, cy: vista.cy, R: vista.Rpx, k: vista.k, soma: [sm[0], sm[1]], rSoma: Est.anatomy.somaRadius * vista.k,
+          dendritos: Est.anatomy.dendriteBranches.map(function (br) {
             const L = br.pts.length, out = [];
             br.pts.forEach(function (p, j) { if (j % 2 === 0 || j === L - 1) out.push(px(p)); });
             return { nivel: br.level, pts: out };
           }),
-          contornoSoma: anatomy.somaOutline.filter(function (p, j) { return j % 4 === 0; }).map(function (p) { return px(p); }) };
+          contornoSoma: Est.anatomy.somaOutline.filter(function (p, j) { return j % 4 === 0; }).map(function (p) { return px(p); }) };
       },
       // as cabeças dos pulsos que estão correndo pelos axônios das ligações, com um rastro curto (px do canvas), para a cena pintar a cor de quem pediu por cima
       cabecas: function () {
@@ -2654,17 +2683,17 @@ function (usa) {
       minisGeometria: function () {
         const rot = function (p) {
           if (!opc.giro0) return p;
-          const c = Math.cos(opc.giro0), s = Math.sin(opc.giro0), dx = p.x - anatomy.somaX, dy = p.y - anatomy.somaY;
-          return { x: anatomy.somaX + dx * c - dy * s, y: anatomy.somaY + dx * s + dy * c };
+          const c = Math.cos(opc.giro0), s = Math.sin(opc.giro0), dx = p.x - Est.anatomy.somaX, dy = p.y - Est.anatomy.somaY;
+          return { x: Est.anatomy.somaX + dx * c - dy * s, y: Est.anatomy.somaY + dx * s + dy * c };
         };
         const px = function (p) { const q = rot(p); return [vista.tx + q.x * vista.k, vista.ty + q.y * vista.k]; };
-        return minis.map(function (m, i) {
+        return Est.minis.map(function (m, i) {
           const a = m.M[0], b = m.M[1], c = m.M[2], d = m.M[3], e = m.M[4], f = m.M[5];
           let melhor = null, dm = -1;
           m.A.dendriteBranches.forEach(function (br) {
             if (br.extra) return;
             br.pts.forEach(function (p) {
-              const w = { x: a * p.x + c * p.y + e, y: b * p.x + d * p.y + f }, r = Math.hypot(w.x - anatomy.somaX, w.y - anatomy.somaY);
+              const w = { x: a * p.x + c * p.y + e, y: b * p.x + d * p.y + f }, r = Math.hypot(w.x - Est.anatomy.somaX, w.y - Est.anatomy.somaY);
               if (r > dm) { dm = r; melhor = w; }
             });
           });
@@ -2672,12 +2701,12 @@ function (usa) {
         });
       },
       excitarMini: function (i, hex) {
-        const m = minis[i]; if (!m) return false;
+        const m = Est.minis[i]; if (!m) return false;
         m.excita = 1; m.ativo = /^#[0-9a-fA-F]{6}$/.test(hex) ? hexToRgb(hex) : null; m.ativoT = m.ativo ? 2.4 : 0;
         return true;
       },
       dispararMini: function (i, hex, cb) {
-        const m = minis[i]; if (!m) return false;
+        const m = Est.minis[i]; if (!m) return false;
         dispararMini(m, /^#[0-9a-fA-F]{6}$/.test(hex) ? hexToRgb(hex) : null, cb);
         return true;
       },
@@ -2685,13 +2714,13 @@ function (usa) {
       // o foco numa esfera: só as ligações dela, na vista dela (X = {k, tx, ty}); sem X volta tudo ao normal
       focoLigacoes: function (lista, X) {
         opc.ligacoes = Array.isArray(lista) ? lista : []; opc.vistaExt = X || null;
-        lupa.z = 1; lupa.ox = 0; lupa.oy = 0; lupa.mudou = false; lupa.anim = null; refino = null; detalhe = null;
+        lupa.z = 1; lupa.ox = 0; lupa.oy = 0; lupa.mudou = false; lupa.anim = null; Est.refino = null; Est.detalhe = null;
         redimensionar(runtime.width, runtime.height);
       },
       // a lupa da esfera em foco manda; as ligações a seguem (o refino refaz o desenho nítido quando para)
       lupaEspelho: function (z, ox, oy) {
         if (lupa.z === z && lupa.ox === ox && lupa.oy === oy) return;
-        lupa.z = z; lupa.ox = ox; lupa.oy = oy; lupa.mudou = true; lupa.ultimo = agora(); refino = null;
+        lupa.z = z; lupa.ox = ox; lupa.oy = oy; lupa.mudou = true; lupa.ultimo = agora(); Est.refino = null;
       },
       setLigacoes: function (lista, esc, semRefazer) { opc.ligacoes = Array.isArray(lista) ? lista : []; opc.vistaExt = null; if (esc) opc.escLig = esc; if (semRefazer) return; buildCompleteNeuron(); drawFrame(); },
       lupaLigar: function (ligada) {
@@ -2699,7 +2728,7 @@ function (usa) {
         canvas.style.pointerEvents = opc.lupa ? 'auto' : 'none';
         canvas.style.touchAction = opc.lupa ? 'none' : '';
         canvas.style.cursor = opc.lupa ? 'zoom-in' : '';
-        if (!opc.lupa) { lupa.anim = null; lupa.z = 1; lupa.ox = 0; lupa.oy = 0; lupa.mudou = false; refino = null; detalhe = null; if (lupa.ouvinte) lupa.ouvinte(1); }
+        if (!opc.lupa) { lupa.anim = null; lupa.z = 1; lupa.ox = 0; lupa.oy = 0; lupa.mudou = false; Est.refino = null; Est.detalhe = null; if (lupa.ouvinte) lupa.ouvinte(1); }
       },
       pausar: function (p) { runtime.paused = !!p; },
       setCor: function (hex) { aplicarCor(hex); buildCompleteNeuron(); drawFrame(); },
