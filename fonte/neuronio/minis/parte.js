@@ -8,6 +8,8 @@ function (usa) {
     var createSeededRandom = usa.sorteio.criar, hexToRgb = usa.cores.hexParaRgb;
     var MINI_ESC = Est.MINI_ESC, config = Est.config, opc = Est.opc;
     var axonStartFim = d.axonStartFim, montarAnatomia = d.montarAnatomia, caixaDe = d.caixaDe, pontasTerminais = d.pontasTerminais;
+    var miniAPs = Est.miniAPs;
+    var drawUnifiedSmoothPulse = d.drawUnifiedSmoothPulse;
 
 // Os neurônios menores: o mesmo desenho do principal, em escala. Cada um aponta o axônio para dentro e os terminais param na
         // ponta mais distante de um dendrito primário do principal (um menor por dendrito primário).
@@ -194,7 +196,55 @@ function (usa) {
           });
         }
 
-    return { montarMinis: montarMinis };
+
+// 1b. Os neurônios menores: o disparo no soma, o sinal no axônio e nos telodendros, o brilho nos terminais
+        function pintarMinisVivo(T) {
+          var glowFactor = T.glowFactor, r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
+          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
+          Est.minis.forEach(function (m) {
+            const cm = (m.ativoT > 0 && m.ativo) || m.rgb;
+            const mr = cm[0], mg = cm[1], mb = cm[2], ml = Math.min(255, mr + 95), mgl = Math.min(255, mg + 95), mbl = Math.min(255, mb + 95);
+            if (m.excita > 0.02) {
+              drawUnifiedSmoothPulse(m.soma.x, m.soma.y, 48 * m.s * (1.6 + m.excita * 0.6), ml, mgl, mbl, mr, mg, mb, glowFactor, 0.55 * m.excita * m.dA);
+            }
+            if (m.flash > 0.02) {
+              m.botoes.forEach(function (p) {
+                drawUnifiedSmoothPulse(p.x, p.y, 6.5 * m.ds, ml, mgl, mbl, mr, mg, mb, glowFactor, m.flash * 0.9 * m.dA);
+              });
+            }
+          });
+          miniAPs.forEach(function (ap) {
+            const m = ap.m;
+            if (ap.t < 0) return;
+            const cm = ap.rgb || m.rgb;
+            const mr = cm[0], mg = cm[1], mb = cm[2], ml = Math.min(255, mr + 95), mgl = Math.min(255, mg + 95), mbl = Math.min(255, mb + 95);
+            if (ap.t <= 1.0) {
+              const pts = m.eixo, head = ap.t * (pts.length - 1);
+              for (let k = 10; k >= 0; k--) {
+                const si = head - k * 1.1;
+                if (si < 0) continue;
+                const i0 = Math.floor(si), i1 = Math.min(pts.length - 1, i0 + 1), fr = si - i0;
+                const ratio = 1 - k / 11;
+                drawUnifiedSmoothPulse(pts[i0].x + (pts[i1].x - pts[i0].x) * fr, pts[i0].y + (pts[i1].y - pts[i0].y) * fr,
+                  (2.8 + ratio * 3.7) * 0.6 * m.ds, ml, mgl, mbl, mr, mg, mb, glowFactor, ratio * 0.85 * m.dA);
+              }
+            } else {
+              const subT = Math.min(1, (ap.t - 1.0) / 0.35);
+              m.ramos.forEach(function (pts) {
+                if (pts.length < 2) return;
+                for (let k = 8; k >= 0; k--) {
+                  const st = Math.max(0, subT - k * 0.032), si = st * (pts.length - 1);
+                  const i0 = Math.floor(si), i1 = Math.min(pts.length - 1, i0 + 1), fr = si - i0;
+                  const ratio = 1 - k / 9;
+                  drawUnifiedSmoothPulse(pts[i0].x + (pts[i1].x - pts[i0].x) * fr, pts[i0].y + (pts[i1].y - pts[i0].y) * fr,
+                    (2.5 + ratio * 3.6) * 0.5 * m.ds, ml, mgl, mbl, mr, mg, mb, glowFactor, ratio * 0.8 * m.dA);
+                }
+              });
+            }
+          });
+        }
+
+    return { montarMinis: montarMinis, pintarMinisVivo: pintarMinisVivo };
   }
 
   return { criar: criar };

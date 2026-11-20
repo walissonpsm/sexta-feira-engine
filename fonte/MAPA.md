@@ -15,6 +15,7 @@ Camadas (só se usa o que está embaixo): base < comum < neuronio, ligacoes, dad
 | laboratorio/neuronio | html | 1 | 1 | - | - | neuronio.html |
 | neuronio/camada | js | 1 | 1 | - | neuronio/celula  | neuronio.js |
 | neuronio/lupa | js | 1 | 1 | - | neuronio/celula  | neuronio.js |
+| neuronio/pulso | js | 1 | 1 | - | neuronio/celula  | neuronio.js |
 | neuronio/recorte | js | 1 | 1 | - | neuronio/celula  | neuronio.js |
 | neuronio/sinais | js | 1 | 1 | - | neuronio/celula  | neuronio.js |
 | neuronio/tinta | js | 1 | 1 | - | neuronio/celula  | neuronio.js |
@@ -32,6 +33,6 @@ Camadas (só se usa o que está embaixo): base < comum < neuronio, ligacoes, dad
 | neuronio/axonio | js | 1 | 1 | comum/ramos@1 comum/sorteio@1 | neuronio/celula  | neuronio.js |
 | neuronio/anatomia | js | 1 | 1 | comum/sorteio@1 comum/cores@1 | neuronio/celula  | neuronio.js |
 | ligacoes/tronco (juntadora) | js | 1 | 1 | comum/cores@1 comum/curvas@1 ligacoes/ponta@1 ligacoes/pulso@1 | cena/quadro  | ligacoes.js |
-| neuronio/celula (juntadora) | js | 1 | 1 | comum/sorteio@1 comum/cores@1 comum/ramos@1 neuronio/recorte@1 neuronio/anatomia@1 neuronio/sinais@1 neuronio/minis@1 neuronio/escala@1 neuronio/tinta@1 neuronio/dendritos@1 neuronio/corpo@1 neuronio/axonio@1 neuronio/terminais@1 neuronio/camada@1 neuronio/vidro@1 neuronio/lupa@1 | cena/quadro  | neuronio.js |
+| neuronio/celula (juntadora) | js | 1 | 1 | comum/sorteio@1 comum/cores@1 comum/ramos@1 neuronio/recorte@1 neuronio/anatomia@1 neuronio/sinais@1 neuronio/minis@1 neuronio/escala@1 neuronio/tinta@1 neuronio/dendritos@1 neuronio/corpo@1 neuronio/axonio@1 neuronio/terminais@1 neuronio/camada@1 neuronio/vidro@1 neuronio/lupa@1 neuronio/pulso@1 | cena/quadro  | neuronio.js |
 | cena/quadro (juntadora) | js | 1 | 1 | neuronio/celula@1 comum/sorteio@1 comum/cores@1 comum/curvas@1 ligacoes/ponta@1 ligacoes/pulso@1 ligacoes/tronco@1 ligacoes/pistas@1 | tela/inicio  | cena.js |
 | tela/inicio | js | 1 | 1 | dados/limpa@1 cena/quadro@1 | - | tela.js |

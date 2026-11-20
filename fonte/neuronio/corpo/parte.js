@@ -7,6 +7,7 @@ function (usa) {
   function criar(Est, d) {
     var trilhaSuave = usa.ramos.trilhaSuave;
     var createSeededRandom = usa.sorteio.criar;
+    var ctx = Est.ctx, runtime = Est.runtime;
 
 // 1. Halo atmosférico suave ao redor do Soma
         function pintarHalo(octx, A, T) {
@@ -213,7 +214,27 @@ function (usa) {
           octx.restore();
         }
 
-    return { pintarHalo: pintarHalo, pintarSoma: pintarSoma, pintarNucleo: pintarNucleo };
+
+// 2. Excitação dinâmica suave no Soma
+        function pintarExcitacaoSoma(T) {
+          var zcL = T.zcL, r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, glowFactor = T.glowFactor;
+          if (runtime.somaExcitation > 0.02) {
+            const exRad = Est.anatomy.somaRadius * (1.25 + runtime.somaExcitation * 0.45);
+            const exGrad = ctx.createRadialGradient(
+              Est.anatomy.somaX, Est.anatomy.somaY, Est.anatomy.somaRadius * 0.2,
+              Est.anatomy.somaX, Est.anatomy.somaY, exRad
+            );
+            const sc = runtime.somaRgb;
+            exGrad.addColorStop(0, sc ? `rgba(${Math.min(255, sc[0] + 95)}, ${Math.min(255, sc[1] + 95)}, ${Math.min(255, sc[2] + 95)}, ${0.34 * runtime.somaExcitation * glowFactor * (1 - 0.5 * zcL)})` : `rgba(${lightR}, ${lightG}, ${lightB}, ${0.34 * runtime.somaExcitation * glowFactor * (1 - 0.5 * zcL)})`);
+            exGrad.addColorStop(1, sc ? `rgba(${sc[0]}, ${sc[1]}, ${sc[2]}, 0)` : `rgba(${r}, ${g}, ${b}, 0)`);
+            ctx.fillStyle = exGrad;
+            ctx.beginPath();
+            ctx.arc(Est.anatomy.somaX, Est.anatomy.somaY, exRad, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+    return { pintarHalo: pintarHalo, pintarSoma: pintarSoma, pintarNucleo: pintarNucleo, pintarExcitacaoSoma: pintarExcitacaoSoma };
   }
 
   return { criar: criar };

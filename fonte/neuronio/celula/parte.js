@@ -132,27 +132,30 @@ function (usa) {
         // neuronio/sinais (v0.4.2): o comportamento dos sinais: quando nasce cada pulso de dendrito e potencial de ação, como a liberação de neurotransmissores e o disparo dos menores andam a cada passo. Só calcula, não desenha.
         const P_sinais = usa.sinais.criar(Est, {});
         const spawnDendriteSignal = P_sinais.spawnDendriteSignal, triggerActionPotential = P_sinais.triggerActionPotential, dispararMini = P_sinais.dispararMini, stepSimulation = P_sinais.stepSimulation;
+        // neuronio/pulso (v0.4.2): o pulso redondo e suave (drawUnifiedSmoothPulse): o brilho de um sinal num ponto, com o tamanho corrigido pela lupa. Usado pelos pulsos dos dendritos, do axônio e dos terminais.
+        const P_pulso = usa.pulso.criar(Est, {});
+        const drawUnifiedSmoothPulse = P_pulso.drawUnifiedSmoothPulse;
         // neuronio/minis (v0.4.2): os neurônios menores dentro da esfera: monta cada um (anatomia em escala, posição, profundidade, caixa) a partir da anatomia do principal. A anatomia chega pela juntadora.
-        const P_minis = usa.minis.criar(Est, { axonStartFim: P_anatomia.axonStartFim, montarAnatomia: P_anatomia.montarAnatomia, caixaDe: P_anatomia.caixaDe, pontasTerminais: P_anatomia.pontasTerminais });
-        const montarMinis = P_minis.montarMinis;
+        const P_minis = usa.minis.criar(Est, { axonStartFim: P_anatomia.axonStartFim, montarAnatomia: P_anatomia.montarAnatomia, caixaDe: P_anatomia.caixaDe, pontasTerminais: P_anatomia.pontasTerminais, drawUnifiedSmoothPulse: P_pulso.drawUnifiedSmoothPulse });
+        const montarMinis = P_minis.montarMinis, pintarMinisVivo = P_minis.pintarMinisVivo;
         // neuronio/escala (v0.4.2): o tamanho e o detalhe: o degrau de detalhe da lupa (nivel), 1 px em unidades do desenho (un), o zoom máximo, o contraste da lupa (zcDe), o giro da célula, o bitmap novo e os dois ramos que dependem do degrau (polígono afilado e ramo encorpado).
         const P_escala = usa.escala.criar(Est, {});
         const agora = P_escala.agora, zcDe = P_escala.zcDe, nivel = P_escala.nivel, un = P_escala.un, zMax = P_escala.zMax, giroCelula = P_escala.giroCelula, novoBitmap = P_escala.novoBitmap, drawSharpDendritePolygon = P_escala.drawSharpDendritePolygon, drawTaperedBranch = P_escala.drawTaperedBranch;
         // neuronio/tinta (v0.4.2): as cores e os brilhos derivados de uma célula (o topo do desenho aprovado): cor clara, cor funda, transparências e brilhos, o degrau de detalhe e o contraste da lupa. Quem pinta recebe o objeto T e lê daqui.
         const P_tinta = usa.tinta.criar(Est, { zcDe: P_escala.zcDe, nivel: P_escala.nivel, un: P_escala.un });
-        const tintaFixa = P_tinta.tintaFixa;
+        const tintaFixa = P_tinta.tintaFixa, tintaViva = P_tinta.tintaViva;
         // neuronio/dendritos (v0.4.2): o desenho parado dos dendritos afilados e das espinhas sinápticas (seção 2 do desenho aprovado). Recebe a tinta T.
-        const P_dendritos = usa.dendritos.criar(Est, { drawSharpDendritePolygon: P_escala.drawSharpDendritePolygon });
-        const pintarDendritos = P_dendritos.pintarDendritos;
+        const P_dendritos = usa.dendritos.criar(Est, { drawSharpDendritePolygon: P_escala.drawSharpDendritePolygon, drawUnifiedSmoothPulse: P_pulso.drawUnifiedSmoothPulse });
+        const pintarDendritos = P_dendritos.pintarDendritos, pintarPulsosEntrada = P_dendritos.pintarPulsosEntrada;
         // neuronio/corpo (v0.4.2): o desenho parado do corpo da célula: halo atmosférico, soma com parede 3D e núcleo texturizado (seções 1, 3 e 4 do desenho aprovado). Recebe a tinta T.
-        const P_corpo = usa.corpo.criar(Est, {});
-        const pintarHalo = P_corpo.pintarHalo, pintarSoma = P_corpo.pintarSoma, pintarNucleo = P_corpo.pintarNucleo;
+        const P_corpo = usa.corpo.criar(Est, {  });
+        const pintarHalo = P_corpo.pintarHalo, pintarSoma = P_corpo.pintarSoma, pintarNucleo = P_corpo.pintarNucleo, pintarExcitacaoSoma = P_corpo.pintarExcitacaoSoma;
         // neuronio/axonio (v0.4.2): o desenho parado do axônio: tronco encorpado, bainhas de mielina estriadas e nódulos de Ranvier (seção 5 do desenho aprovado), um por axônio. Recebe a tinta T.
-        const P_axonio = usa.axonio.criar(Est, { drawTaperedBranch: P_escala.drawTaperedBranch });
-        const pintarAxonio = P_axonio.pintarAxonio;
+        const P_axonio = usa.axonio.criar(Est, { drawTaperedBranch: P_escala.drawTaperedBranch, fadeFora: P_recorte.fadeFora, drawUnifiedSmoothPulse: P_pulso.drawUnifiedSmoothPulse });
+        const pintarAxonio = P_axonio.pintarAxonio, pintarNodulos = P_axonio.pintarNodulos, pintarPotenciais = P_axonio.pintarPotenciais;
         // neuronio/terminais (v0.4.2): o desenho parado dos terminais: ramos dos telodendros uniformes (seção 6 do desenho aprovado, um por axônio) e os botões fixos dos neurônios menores. Recebe a tinta T.
         const P_terminais = usa.terminais.criar(Est, { nivel: P_escala.nivel, drawTaperedBranch: P_escala.drawTaperedBranch });
-        const pintarTerminais = P_terminais.pintarTerminais, pintarBotoesFixos = P_terminais.pintarBotoesFixos;
+        const pintarTerminais = P_terminais.pintarTerminais, pintarBotoesFixos = P_terminais.pintarBotoesFixos, pintarNevoa = P_terminais.pintarNevoa, pintarBulbos = P_terminais.pintarBulbos, pintarNeurotransmissores = P_terminais.pintarNeurotransmissores;
         // neuronio/camada (v0.4.2): a camada fixa (pré-desenhada): a ordem das camadas (principal e menores), pintar uma camada com luz, névoa e sombra, o assado em fatias com orçamento de tempo, o lustre do soma, iluminar, reduzir e compor.
         const P_camada = usa.camada.criar(Est, { recortaNaEsfera: P_recorte.recortaNaEsfera, montarMascara: P_recorte.montarMascara, agora: P_escala.agora, zcDe: P_escala.zcDe, giroCelula: P_escala.giroCelula, novoBitmap: P_escala.novoBitmap, pintarBotoesFixos: P_terminais.pintarBotoesFixos, pintarCelula: pintarCelula });
         const iniciarAssado = P_camada.iniciarAssado, avancarAssado = P_camada.avancarAssado, bakeStaticLayer = P_camada.bakeStaticLayer;
@@ -244,369 +247,15 @@ function (usa) {
 
 
 
-        // Renderizador unificado de pulso luminoso suave
-        function drawUnifiedSmoothPulse(x, y, radius, lightR, lightG, lightB, r, g, b, glowFactor, alphaScale) {
-          const a = alphaScale !== undefined ? alphaScale : 1;
-          radius *= Est.pulsoZ;                                                   // de perto o brilho do pulso não cresce na mesma proporção
-          const pGrad = ctx.createRadialGradient(x, y, 0.5, x, y, radius);
-          pGrad.addColorStop(0, `rgba(255, 255, 255, ${0.92 * glowFactor * a})`);
-          pGrad.addColorStop(0.45, `rgba(${lightR}, ${lightG}, ${lightB}, ${0.65 * glowFactor * a})`);
-          pGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
-          ctx.fillStyle = pGrad;
-          ctx.beginPath();
-          ctx.arc(x, y, radius, 0, Math.PI * 2);
-          ctx.fill();
-        }
 
-        // A tinta do desenho animado: as cores e os brilhos da célula (e o usaCor, que troca a cor para o axônio ou a esfera de quem vai desenhar).
-        function tintaViva(zcL) {
-          let [r, g, b] = config.rgb;
-          let lightR = Math.min(255, r + 95);
-          let lightG = Math.min(255, g + 95);
-          let lightB = Math.min(255, b + 95);
-          let deepR = Math.round(r * 0.28);
-          let deepG = Math.round(g * 0.28);
-          let deepB = Math.round(b * 0.28);
-          const glowFactor = Math.max(0.15, config.brilhoGeral / 100);
-          const dendriteAlpha = Math.max(0.08, config.opacidadeDendritos / 100);
-          const T = { zcL: zcL, r: r, g: g, b: b, lightR: lightR, lightG: lightG, lightB: lightB, deepR: deepR, deepG: deepG, deepB: deepB, glowFactor: glowFactor, dendriteAlpha: dendriteAlpha };
-          // cada axônio das ligações tem a sua cor: quem desenha o que é dele chama T.usaCor(cor); sem cor vale a da célula
-          T.usaCor = function (c) {
-            c = c || config.rgb; T.r = c[0]; T.g = c[1]; T.b = c[2];
-            T.lightR = Math.min(255, T.r + 95); T.lightG = Math.min(255, T.g + 95); T.lightB = Math.min(255, T.b + 95);
-            T.deepR = Math.round(T.r * 0.28); T.deepG = Math.round(T.g * 0.28); T.deepB = Math.round(T.b * 0.28);
-          };
-          return T;
-        }
 
-        // 1. Névoa de Dispersão translúcida
-        function pintarNevoa(T) {
-          var zcL = T.zcL, r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
-          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
-          if (config.enableMist && zcL < 0.98) {
-            mistClouds.forEach((m) => {
-              usaCor(m.rgb);
-              const mGrad = ctx.createRadialGradient(m.x, m.y, 1, m.x, m.y, m.radius);
-              mGrad.addColorStop(0, `rgba(${lightR}, ${lightG}, ${lightB}, ${0.24 * m.life * (1 - zcL)})`);
-              mGrad.addColorStop(0.55, `rgba(${r}, ${g}, ${b}, ${0.12 * m.life * (1 - zcL)})`);
-              mGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
-              ctx.fillStyle = mGrad;
-              ctx.beginPath();
-              ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
-              ctx.fill();
-            });
-          }
-        }
 
-        // 1b. Os neurônios menores: o disparo no soma, o sinal no axônio e nos telodendros, o brilho nos terminais
-        function pintarMinisVivo(T) {
-          var glowFactor = T.glowFactor, r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
-          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
-          Est.minis.forEach(function (m) {
-            const cm = (m.ativoT > 0 && m.ativo) || m.rgb;
-            const mr = cm[0], mg = cm[1], mb = cm[2], ml = Math.min(255, mr + 95), mgl = Math.min(255, mg + 95), mbl = Math.min(255, mb + 95);
-            if (m.excita > 0.02) {
-              drawUnifiedSmoothPulse(m.soma.x, m.soma.y, 48 * m.s * (1.6 + m.excita * 0.6), ml, mgl, mbl, mr, mg, mb, glowFactor, 0.55 * m.excita * m.dA);
-            }
-            if (m.flash > 0.02) {
-              m.botoes.forEach(function (p) {
-                drawUnifiedSmoothPulse(p.x, p.y, 6.5 * m.ds, ml, mgl, mbl, mr, mg, mb, glowFactor, m.flash * 0.9 * m.dA);
-              });
-            }
-          });
-          miniAPs.forEach(function (ap) {
-            const m = ap.m;
-            if (ap.t < 0) return;
-            const cm = ap.rgb || m.rgb;
-            const mr = cm[0], mg = cm[1], mb = cm[2], ml = Math.min(255, mr + 95), mgl = Math.min(255, mg + 95), mbl = Math.min(255, mb + 95);
-            if (ap.t <= 1.0) {
-              const pts = m.eixo, head = ap.t * (pts.length - 1);
-              for (let k = 10; k >= 0; k--) {
-                const si = head - k * 1.1;
-                if (si < 0) continue;
-                const i0 = Math.floor(si), i1 = Math.min(pts.length - 1, i0 + 1), fr = si - i0;
-                const ratio = 1 - k / 11;
-                drawUnifiedSmoothPulse(pts[i0].x + (pts[i1].x - pts[i0].x) * fr, pts[i0].y + (pts[i1].y - pts[i0].y) * fr,
-                  (2.8 + ratio * 3.7) * 0.6 * m.ds, ml, mgl, mbl, mr, mg, mb, glowFactor, ratio * 0.85 * m.dA);
-              }
-            } else {
-              const subT = Math.min(1, (ap.t - 1.0) / 0.35);
-              m.ramos.forEach(function (pts) {
-                if (pts.length < 2) return;
-                for (let k = 8; k >= 0; k--) {
-                  const st = Math.max(0, subT - k * 0.032), si = st * (pts.length - 1);
-                  const i0 = Math.floor(si), i1 = Math.min(pts.length - 1, i0 + 1), fr = si - i0;
-                  const ratio = 1 - k / 9;
-                  drawUnifiedSmoothPulse(pts[i0].x + (pts[i1].x - pts[i0].x) * fr, pts[i0].y + (pts[i1].y - pts[i0].y) * fr,
-                    (2.5 + ratio * 3.6) * 0.5 * m.ds, ml, mgl, mbl, mr, mg, mb, glowFactor, ratio * 0.8 * m.dA);
-                }
-              });
-            }
-          });
-        }
 
-        // 2. Excitação dinâmica suave no Soma
-        function pintarExcitacaoSoma(T) {
-          var zcL = T.zcL, r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, glowFactor = T.glowFactor;
-          if (runtime.somaExcitation > 0.02) {
-            const exRad = Est.anatomy.somaRadius * (1.25 + runtime.somaExcitation * 0.45);
-            const exGrad = ctx.createRadialGradient(
-              Est.anatomy.somaX, Est.anatomy.somaY, Est.anatomy.somaRadius * 0.2,
-              Est.anatomy.somaX, Est.anatomy.somaY, exRad
-            );
-            const sc = runtime.somaRgb;
-            exGrad.addColorStop(0, sc ? `rgba(${Math.min(255, sc[0] + 95)}, ${Math.min(255, sc[1] + 95)}, ${Math.min(255, sc[2] + 95)}, ${0.34 * runtime.somaExcitation * glowFactor * (1 - 0.5 * zcL)})` : `rgba(${lightR}, ${lightG}, ${lightB}, ${0.34 * runtime.somaExcitation * glowFactor * (1 - 0.5 * zcL)})`);
-            exGrad.addColorStop(1, sc ? `rgba(${sc[0]}, ${sc[1]}, ${sc[2]}, 0)` : `rgba(${r}, ${g}, ${b}, 0)`);
-            ctx.fillStyle = exGrad;
-            ctx.beginPath();
-            ctx.arc(Est.anatomy.somaX, Est.anatomy.somaY, exRad, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
 
-        // 3. Pulsos de entrada nos dendritos
-        function pintarPulsosEntrada(T) {
-          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, glowFactor = T.glowFactor;
-          incomingSignals.forEach((sig) => {
-            const pts = sig.pts;
-            if (!pts || pts.length < 2) return;
-            const idxFloat = sig.progress * (pts.length - 1);
-            const i0 = Math.max(0, Math.floor(idxFloat));
-            const i1 = Math.min(pts.length - 1, i0 + 1);
-            const frac = idxFloat - i0;
-            const x = pts[i0].x + (pts[i1].x - pts[i0].x) * frac;
-            const y = pts[i0].y + (pts[i1].y - pts[i0].y) * frac;
 
-            if (sig.rgb) drawUnifiedSmoothPulse(x, y, 6.5 * Est.anatomy.scale, Math.min(255, sig.rgb[0] + 95), Math.min(255, sig.rgb[1] + 95), Math.min(255, sig.rgb[2] + 95), sig.rgb[0], sig.rgb[1], sig.rgb[2], glowFactor, 1);
-            else drawUnifiedSmoothPulse(x, y, 6.5 * Est.anatomy.scale, lightR, lightG, lightB, r, g, b, glowFactor, 1);
-          });
-        }
 
-        // 4. Nódulos de Ranvier
-        function pintarNodulos(T) {
-          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, glowFactor = T.glowFactor, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
-          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
-          Est.anatomy.nosTodos.forEach((node) => {
-            usaCor(node.rgb);
-            if (node.flash > 0.02) {
-              const nRad = 7.2 * Est.anatomy.scale * (0.7 + node.flash * 0.45);
-              const foraN = fadeFora(node.x, node.y);
-              if (foraN > 0.01) drawUnifiedSmoothPulse(node.x, node.y, nRad, lightR, lightG, lightB, r, g, b, glowFactor, node.flash * 0.85 * foraN);
-            }
-          });
-        }
 
-        // 5. Potenciais de ação percorrendo o axônio e entrando nos telodendros até os bulbos
-        function pintarPotenciais(T) {
-          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, glowFactor = T.glowFactor, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
-          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
-          actionPotentials.forEach((ap) => {
-            usaCor(ap.rgb || ap.eixo.rgb);
-            const eixoPts = ap.eixo.axonPath;
-            if (ap.t <= 1.0 && eixoPts.length > 1) {
-              const headPos = Math.max(0, ap.t) * (eixoPts.length - 1);
-              const trailSteps = 10;
 
-              for (let s = trailSteps; s >= 0; s--) {
-                const sampleIdx = headPos - s * 1.1;
-                if (sampleIdx < 0) continue;
-                const i0 = Math.floor(sampleIdx);
-                const i1 = Math.min(eixoPts.length - 1, i0 + 1);
-                const frac = sampleIdx - i0;
-                const x = eixoPts[i0].x + (eixoPts[i1].x - eixoPts[i0].x) * frac;
-                const y = eixoPts[i0].y + (eixoPts[i1].y - eixoPts[i0].y) * frac;
-
-                const ratio = 1 - s / (trailSteps + 1);
-                const rad = (2.8 + ratio * 3.7) * Est.anatomy.scale;
-                const fora = fadeFora(x, y);
-                if (fora > 0.01) drawUnifiedSmoothPulse(x, y, rad, lightR, lightG, lightB, r, g, b, glowFactor, ratio * 0.85 * fora);
-              }
-            } else {
-              const subT = Math.min(1, (ap.t - 1.0) / 0.35);
-              const trailSteps = 8;
-              ap.boutons.forEach((bouton) => {
-                const pts = bouton.branchPts;
-                if (!pts || pts.length < 2) return;
-                for (let s = trailSteps; s >= 0; s--) {
-                  const st = Math.max(0, subT - s * 0.032);
-                  const idxFloat = st * (pts.length - 1);
-                  const i0 = Math.floor(idxFloat);
-                  const i1 = Math.min(pts.length - 1, i0 + 1);
-                  const frac = idxFloat - i0;
-                  const x = pts[i0].x + (pts[i1].x - pts[i0].x) * frac;
-                  const y = pts[i0].y + (pts[i1].y - pts[i0].y) * frac;
-
-                  const ratio = 1 - s / (trailSteps + 1);
-                  const tRad = (2.5 + ratio * 3.6) * Est.anatomy.scale;
-                  drawUnifiedSmoothPulse(x, y, tRad, lightR, lightG, lightB, r, g, b, glowFactor, ratio * 0.88);
-                }
-              });
-            }
-          });
-        }
-
-        // 6. Bulbos Pré-Sinápticos Unificados em Sino Contínuo + Vesículas + Bolsas de Exocitose
-        function pintarBulbos(T) {
-          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB, dendriteAlpha = T.dendriteAlpha;
-          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
-          const boutonsMain = Est.anatomy.terminalBoutons;
-          const detalheFino = lupa.z >= 1.5;                                  // os pontinhos das vesículas e os sulcos só aparecem com a lupa
-          Est.anatomy.boutonsTodos.forEach((bouton) => {
-            usaCor(bouton.rgb);
-            const leveB = !detalheFino && boutonsMain.indexOf(bouton) < 0;   // nos terminais dos axônios extras, a 1x, só o essencial
-            ctx.save();
-            ctx.translate(bouton.x, bouton.y);
-            ctx.rotate(bouton.tipAngle);
-
-            const bw = bouton.bThick;
-            const bh = bouton.bWidth;
-            const neckHalf = bouton.neckW * 0.5;
-
-            ctx.beginPath();
-            ctx.moveTo(-bw * 0.92, -neckHalf);
-            ctx.bezierCurveTo(-bw * 0.42, -neckHalf * 1.12, -bw * 0.14, -bh * 0.54, bw * 0.36, -bh * 0.50);
-            ctx.bezierCurveTo(bw * 0.62, -bh * 0.46, bw * 0.64, bh * 0.46, bw * 0.36, bh * 0.50);
-            ctx.bezierCurveTo(-bw * 0.14, bh * 0.54, -bw * 0.42, neckHalf * 1.12, -bw * 0.92, neckHalf);
-            ctx.closePath();
-
-            const cupGrad = ctx.createLinearGradient(-bw * 0.85, 0, bw * 0.60, 0);
-            cupGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
-            cupGrad.addColorStop(0.28, `rgba(${r}, ${g}, ${b}, ${dendriteAlpha * 0.94})`);
-            cupGrad.addColorStop(0.68, `rgba(${deepR}, ${deepG}, ${deepB}, 0.88)`);
-            cupGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${0.72 + bouton.flash * 0.25})`);
-
-            ctx.fillStyle = cupGrad;
-            ctx.fill();
-
-            ctx.save();
-            ctx.clip();
-
-            if (!leveB) bouton.grooves.forEach((gr, idx) => {
-              const gy = gr.yNorm * bh;
-              ctx.strokeStyle = idx % 2 === 0
-                ? `rgba(${lightR}, ${lightG}, ${lightB}, 0.22)`
-                : `rgba(${deepR}, ${deepG}, ${deepB}, 0.48)`;
-              ctx.lineWidth = 0.9 * Est.anatomy.scale;
-              ctx.beginPath();
-              ctx.moveTo(-bw * 0.75, gy * 0.25);
-              ctx.quadraticCurveTo(0, gy * (0.95 + gr.curve), bw * 0.52, gy * 0.85);
-              ctx.stroke();
-            });
-
-            const energyGrad = ctx.createLinearGradient(-bw * 0.85, 0, bw * 0.52, 0);
-            energyGrad.addColorStop(0, `rgba(${lightR}, ${lightG}, ${lightB}, ${0.55 + bouton.flash * 0.40})`);
-            energyGrad.addColorStop(1, `rgba(${lightR}, ${lightG}, ${lightB}, ${0.35 + bouton.flash * 0.55})`);
-            ctx.strokeStyle = energyGrad;
-            ctx.lineWidth = (1.4 + bouton.flash * 1.0) * Est.anatomy.scale;
-            ctx.beginPath();
-            ctx.moveTo(-bw * 0.85, 0);
-            ctx.quadraticCurveTo(-bw * 0.15, -bh * 0.06, bw * 0.46, -bh * 0.24);
-            ctx.moveTo(-bw * 0.45, 0);
-            ctx.quadraticCurveTo(0, bh * 0.04, bw * 0.46, bh * 0.24);
-            ctx.stroke();
-
-            if (config.enableVesicles) {
-              bouton.vesicles.forEach((v) => {
-                const twinkle = 0.72 + 0.28 * Math.sin(runtime.time * 3.8 + v.phase);
-                const isFusing = v.fusionProgress > 0;
-                const vAlpha = isFusing
-                  ? Math.max(0.25, (1 - v.fusionProgress) * 0.95)
-                  : Math.min(1, twinkle * (0.80 + bouton.flash * 0.20));
-
-                const drawX = isFusing ? bw * 0.42 : v.localX;
-                const drawY = v.localY;
-                const drawR = v.radius;
-
-                ctx.fillStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${0.26 * vAlpha})`;
-                ctx.beginPath();
-                ctx.arc(drawX, drawY, drawR, 0, Math.PI * 2);
-                ctx.fill();
-
-                ctx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${0.75 * vAlpha})`;
-                ctx.lineWidth = 0.75 * Est.anatomy.scale;
-                ctx.stroke();
-
-                const dotR = drawR * 0.26;
-                ctx.fillStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${vAlpha})`;
-                for (let d = 0; d < (leveB ? 0 : 4); d++) {
-                  const da = v.phase + (d * Math.PI) / 2;
-                  ctx.beginPath();
-                  ctx.arc(
-                    drawX + Math.cos(da) * drawR * 0.42,
-                    drawY + Math.sin(da) * drawR * 0.42,
-                    dotR,
-                    0,
-                    Math.PI * 2
-                  );
-                  ctx.fill();
-                }
-              });
-            }
-
-            const pocketYList = [-bh * 0.26, 0, bh * 0.26];
-            const pocketRad = 2.2 * Est.anatomy.scale;
-            pocketYList.forEach((py, pi) => {
-              const pGlow = bouton.pocketExcite[pi] || 0;
-              ctx.fillStyle = '#000000';
-              ctx.beginPath();
-              ctx.arc(bw * 0.54, py, pocketRad, Math.PI * 0.5, Math.PI * 1.5);
-              ctx.fill();
-
-              ctx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${0.58 + pGlow * 0.42})`;
-              ctx.lineWidth = (0.95 + pGlow * 0.55) * Est.anatomy.scale;
-              ctx.beginPath();
-              ctx.arc(bw * 0.54, py, pocketRad, Math.PI * 0.52, Math.PI * 1.48);
-              ctx.stroke();
-            });
-
-            ctx.restore();
-
-            // Contorno apenas nas paredes externas do sino (sem linha fechando o pescoço)
-            ctx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, 0.54)`;
-            ctx.lineWidth = 1.0 * Est.anatomy.scale;
-            ctx.beginPath();
-            ctx.moveTo(-bw * 0.92, -neckHalf);
-            ctx.bezierCurveTo(-bw * 0.42, -neckHalf * 1.12, -bw * 0.14, -bh * 0.54, bw * 0.36, -bh * 0.50);
-            ctx.bezierCurveTo(bw * 0.62, -bh * 0.46, bw * 0.64, bh * 0.46, bw * 0.36, bh * 0.50);
-            ctx.bezierCurveTo(-bw * 0.14, bh * 0.54, -bw * 0.42, neckHalf * 1.12, -bw * 0.92, neckHalf);
-            ctx.stroke();
-
-            ctx.restore();
-          });
-        }
-
-        // 7. Neurotransmissores esféricos liberados na fenda sináptica
-        function pintarNeurotransmissores(T) {
-          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
-          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
-          releasedNeurotransmitters.forEach((nt) => {
-            usaCor(nt.rgb);
-            if (nt.progress < 0) return;
-
-            if (nt.isCentralBeam) {
-              ctx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, 0.28)`;
-              ctx.lineWidth = 0.85 * Est.anatomy.scale;
-              ctx.beginPath();
-              ctx.moveTo(nt.startX, nt.startY);
-              ctx.lineTo(nt.targetX, nt.targetY);
-              ctx.stroke();
-            }
-
-            const ntGrad = ctx.createRadialGradient(nt.x, nt.y, 0.2, nt.x, nt.y, nt.size * 2.4);
-            ntGrad.addColorStop(0, 'rgba(255, 255, 255, 0.96)');
-            ntGrad.addColorStop(0.45, `rgba(${lightR}, ${lightG}, ${lightB}, 0.85)`);
-            ntGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
-            ctx.fillStyle = ntGrad;
-            ctx.beginPath();
-            ctx.arc(nt.x, nt.y, nt.size * 2.4, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(nt.x, nt.y, nt.size * 0.72, 0, Math.PI * 2);
-            ctx.fill();
-          });
-        }
 
         // Renderização completa do neurônio montado
         function drawFrame() {

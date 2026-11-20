@@ -8,6 +8,8 @@ function (usa) {
     var ramos = usa.ramos; var trilhaSuave = ramos.trilhaSuave, bordasRamo = ramos.bordasRamo, desviar = ramos.desviar, mitocondrias = ramos.mitocondrias;
     var createSeededRandom = usa.sorteio.criar;
     var drawSharpDendritePolygon = d.drawSharpDendritePolygon;
+    var incomingSignals = Est.incomingSignals;
+    var drawUnifiedSmoothPulse = d.drawUnifiedSmoothPulse;
 
 // 2. DENDRITOS AFILADOS E ESPINHAS SINÁPTICAS
         function pintarDendritos(octx, A, T) {
@@ -96,7 +98,26 @@ function (usa) {
           octx.restore();
         }
 
-    return { pintarDendritos: pintarDendritos };
+
+// 3. Pulsos de entrada nos dendritos
+        function pintarPulsosEntrada(T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, glowFactor = T.glowFactor;
+          incomingSignals.forEach((sig) => {
+            const pts = sig.pts;
+            if (!pts || pts.length < 2) return;
+            const idxFloat = sig.progress * (pts.length - 1);
+            const i0 = Math.max(0, Math.floor(idxFloat));
+            const i1 = Math.min(pts.length - 1, i0 + 1);
+            const frac = idxFloat - i0;
+            const x = pts[i0].x + (pts[i1].x - pts[i0].x) * frac;
+            const y = pts[i0].y + (pts[i1].y - pts[i0].y) * frac;
+
+            if (sig.rgb) drawUnifiedSmoothPulse(x, y, 6.5 * Est.anatomy.scale, Math.min(255, sig.rgb[0] + 95), Math.min(255, sig.rgb[1] + 95), Math.min(255, sig.rgb[2] + 95), sig.rgb[0], sig.rgb[1], sig.rgb[2], glowFactor, 1);
+            else drawUnifiedSmoothPulse(x, y, 6.5 * Est.anatomy.scale, lightR, lightG, lightB, r, g, b, glowFactor, 1);
+          });
+        }
+
+    return { pintarDendritos: pintarDendritos, pintarPulsosEntrada: pintarPulsosEntrada };
   }
 
   return { criar: criar };

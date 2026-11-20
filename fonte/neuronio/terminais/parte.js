@@ -9,6 +9,7 @@ function (usa) {
     var createSeededRandom = usa.sorteio.criar;
     var config = Est.config;
     var nivel = d.nivel, drawTaperedBranch = d.drawTaperedBranch;
+    var ctx = Est.ctx, lupa = Est.lupa, mistClouds = Est.mistClouds, releasedNeurotransmitters = Est.releasedNeurotransmitters, runtime = Est.runtime;
 
 // 6. RAMOS DOS TELODENDROS UNIFORMES (Padrão aprovado) (um por axônio)
         function pintarTerminais(octx, A, E, T) {
@@ -78,7 +79,190 @@ function (usa) {
           });
         }
 
-    return { pintarTerminais: pintarTerminais, pintarBotoesFixos: pintarBotoesFixos };
+
+// 1. Névoa de Dispersão translúcida
+        function pintarNevoa(T) {
+          var zcL = T.zcL, r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
+          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
+          if (config.enableMist && zcL < 0.98) {
+            mistClouds.forEach((m) => {
+              usaCor(m.rgb);
+              const mGrad = ctx.createRadialGradient(m.x, m.y, 1, m.x, m.y, m.radius);
+              mGrad.addColorStop(0, `rgba(${lightR}, ${lightG}, ${lightB}, ${0.24 * m.life * (1 - zcL)})`);
+              mGrad.addColorStop(0.55, `rgba(${r}, ${g}, ${b}, ${0.12 * m.life * (1 - zcL)})`);
+              mGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+              ctx.fillStyle = mGrad;
+              ctx.beginPath();
+              ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
+              ctx.fill();
+            });
+          }
+        }
+
+// 6. Bulbos Pré-Sinápticos Unificados em Sino Contínuo + Vesículas + Bolsas de Exocitose
+        function pintarBulbos(T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB, dendriteAlpha = T.dendriteAlpha;
+          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
+          const boutonsMain = Est.anatomy.terminalBoutons;
+          const detalheFino = lupa.z >= 1.5;                                  // os pontinhos das vesículas e os sulcos só aparecem com a lupa
+          Est.anatomy.boutonsTodos.forEach((bouton) => {
+            usaCor(bouton.rgb);
+            const leveB = !detalheFino && boutonsMain.indexOf(bouton) < 0;   // nos terminais dos axônios extras, a 1x, só o essencial
+            ctx.save();
+            ctx.translate(bouton.x, bouton.y);
+            ctx.rotate(bouton.tipAngle);
+
+            const bw = bouton.bThick;
+            const bh = bouton.bWidth;
+            const neckHalf = bouton.neckW * 0.5;
+
+            ctx.beginPath();
+            ctx.moveTo(-bw * 0.92, -neckHalf);
+            ctx.bezierCurveTo(-bw * 0.42, -neckHalf * 1.12, -bw * 0.14, -bh * 0.54, bw * 0.36, -bh * 0.50);
+            ctx.bezierCurveTo(bw * 0.62, -bh * 0.46, bw * 0.64, bh * 0.46, bw * 0.36, bh * 0.50);
+            ctx.bezierCurveTo(-bw * 0.14, bh * 0.54, -bw * 0.42, neckHalf * 1.12, -bw * 0.92, neckHalf);
+            ctx.closePath();
+
+            const cupGrad = ctx.createLinearGradient(-bw * 0.85, 0, bw * 0.60, 0);
+            cupGrad.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0)`);
+            cupGrad.addColorStop(0.28, `rgba(${r}, ${g}, ${b}, ${dendriteAlpha * 0.94})`);
+            cupGrad.addColorStop(0.68, `rgba(${deepR}, ${deepG}, ${deepB}, 0.88)`);
+            cupGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, ${0.72 + bouton.flash * 0.25})`);
+
+            ctx.fillStyle = cupGrad;
+            ctx.fill();
+
+            ctx.save();
+            ctx.clip();
+
+            if (!leveB) bouton.grooves.forEach((gr, idx) => {
+              const gy = gr.yNorm * bh;
+              ctx.strokeStyle = idx % 2 === 0
+                ? `rgba(${lightR}, ${lightG}, ${lightB}, 0.22)`
+                : `rgba(${deepR}, ${deepG}, ${deepB}, 0.48)`;
+              ctx.lineWidth = 0.9 * Est.anatomy.scale;
+              ctx.beginPath();
+              ctx.moveTo(-bw * 0.75, gy * 0.25);
+              ctx.quadraticCurveTo(0, gy * (0.95 + gr.curve), bw * 0.52, gy * 0.85);
+              ctx.stroke();
+            });
+
+            const energyGrad = ctx.createLinearGradient(-bw * 0.85, 0, bw * 0.52, 0);
+            energyGrad.addColorStop(0, `rgba(${lightR}, ${lightG}, ${lightB}, ${0.55 + bouton.flash * 0.40})`);
+            energyGrad.addColorStop(1, `rgba(${lightR}, ${lightG}, ${lightB}, ${0.35 + bouton.flash * 0.55})`);
+            ctx.strokeStyle = energyGrad;
+            ctx.lineWidth = (1.4 + bouton.flash * 1.0) * Est.anatomy.scale;
+            ctx.beginPath();
+            ctx.moveTo(-bw * 0.85, 0);
+            ctx.quadraticCurveTo(-bw * 0.15, -bh * 0.06, bw * 0.46, -bh * 0.24);
+            ctx.moveTo(-bw * 0.45, 0);
+            ctx.quadraticCurveTo(0, bh * 0.04, bw * 0.46, bh * 0.24);
+            ctx.stroke();
+
+            if (config.enableVesicles) {
+              bouton.vesicles.forEach((v) => {
+                const twinkle = 0.72 + 0.28 * Math.sin(runtime.time * 3.8 + v.phase);
+                const isFusing = v.fusionProgress > 0;
+                const vAlpha = isFusing
+                  ? Math.max(0.25, (1 - v.fusionProgress) * 0.95)
+                  : Math.min(1, twinkle * (0.80 + bouton.flash * 0.20));
+
+                const drawX = isFusing ? bw * 0.42 : v.localX;
+                const drawY = v.localY;
+                const drawR = v.radius;
+
+                ctx.fillStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${0.26 * vAlpha})`;
+                ctx.beginPath();
+                ctx.arc(drawX, drawY, drawR, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${0.75 * vAlpha})`;
+                ctx.lineWidth = 0.75 * Est.anatomy.scale;
+                ctx.stroke();
+
+                const dotR = drawR * 0.26;
+                ctx.fillStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${vAlpha})`;
+                for (let d = 0; d < (leveB ? 0 : 4); d++) {
+                  const da = v.phase + (d * Math.PI) / 2;
+                  ctx.beginPath();
+                  ctx.arc(
+                    drawX + Math.cos(da) * drawR * 0.42,
+                    drawY + Math.sin(da) * drawR * 0.42,
+                    dotR,
+                    0,
+                    Math.PI * 2
+                  );
+                  ctx.fill();
+                }
+              });
+            }
+
+            const pocketYList = [-bh * 0.26, 0, bh * 0.26];
+            const pocketRad = 2.2 * Est.anatomy.scale;
+            pocketYList.forEach((py, pi) => {
+              const pGlow = bouton.pocketExcite[pi] || 0;
+              ctx.fillStyle = '#000000';
+              ctx.beginPath();
+              ctx.arc(bw * 0.54, py, pocketRad, Math.PI * 0.5, Math.PI * 1.5);
+              ctx.fill();
+
+              ctx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${0.58 + pGlow * 0.42})`;
+              ctx.lineWidth = (0.95 + pGlow * 0.55) * Est.anatomy.scale;
+              ctx.beginPath();
+              ctx.arc(bw * 0.54, py, pocketRad, Math.PI * 0.52, Math.PI * 1.48);
+              ctx.stroke();
+            });
+
+            ctx.restore();
+
+            // Contorno apenas nas paredes externas do sino (sem linha fechando o pescoço)
+            ctx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, 0.54)`;
+            ctx.lineWidth = 1.0 * Est.anatomy.scale;
+            ctx.beginPath();
+            ctx.moveTo(-bw * 0.92, -neckHalf);
+            ctx.bezierCurveTo(-bw * 0.42, -neckHalf * 1.12, -bw * 0.14, -bh * 0.54, bw * 0.36, -bh * 0.50);
+            ctx.bezierCurveTo(bw * 0.62, -bh * 0.46, bw * 0.64, bh * 0.46, bw * 0.36, bh * 0.50);
+            ctx.bezierCurveTo(-bw * 0.14, bh * 0.54, -bw * 0.42, neckHalf * 1.12, -bw * 0.92, neckHalf);
+            ctx.stroke();
+
+            ctx.restore();
+          });
+        }
+
+// 7. Neurotransmissores esféricos liberados na fenda sináptica
+        function pintarNeurotransmissores(T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
+          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
+          releasedNeurotransmitters.forEach((nt) => {
+            usaCor(nt.rgb);
+            if (nt.progress < 0) return;
+
+            if (nt.isCentralBeam) {
+              ctx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, 0.28)`;
+              ctx.lineWidth = 0.85 * Est.anatomy.scale;
+              ctx.beginPath();
+              ctx.moveTo(nt.startX, nt.startY);
+              ctx.lineTo(nt.targetX, nt.targetY);
+              ctx.stroke();
+            }
+
+            const ntGrad = ctx.createRadialGradient(nt.x, nt.y, 0.2, nt.x, nt.y, nt.size * 2.4);
+            ntGrad.addColorStop(0, 'rgba(255, 255, 255, 0.96)');
+            ntGrad.addColorStop(0.45, `rgba(${lightR}, ${lightG}, ${lightB}, 0.85)`);
+            ntGrad.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`);
+            ctx.fillStyle = ntGrad;
+            ctx.beginPath();
+            ctx.arc(nt.x, nt.y, nt.size * 2.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(nt.x, nt.y, nt.size * 0.72, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+
+    return { pintarTerminais: pintarTerminais, pintarBotoesFixos: pintarBotoesFixos, pintarNevoa: pintarNevoa, pintarBulbos: pintarBulbos, pintarNeurotransmissores: pintarNeurotransmissores };
   }
 
   return { criar: criar };

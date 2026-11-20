@@ -27,7 +27,29 @@ function (usa) {
           return { r: r, g: g, b: b, lightR: lightR, lightG: lightG, lightB: lightB, deepR: deepR, deepG: deepG, deepB: deepB, bodyAlpha: bodyAlpha, dendriteAlpha: dendriteAlpha, glowFactor: glowFactor, nucFactor: nucFactor, nv: nv, q: q, u: u, corOrg: corOrg };
         }
 
-    return { tintaFixa: tintaFixa };
+
+// A tinta do desenho animado: as cores e os brilhos da célula (e o usaCor, que troca a cor para o axônio ou a esfera de quem vai desenhar).
+        function tintaViva(zcL) {
+          let [r, g, b] = config.rgb;
+          let lightR = Math.min(255, r + 95);
+          let lightG = Math.min(255, g + 95);
+          let lightB = Math.min(255, b + 95);
+          let deepR = Math.round(r * 0.28);
+          let deepG = Math.round(g * 0.28);
+          let deepB = Math.round(b * 0.28);
+          const glowFactor = Math.max(0.15, config.brilhoGeral / 100);
+          const dendriteAlpha = Math.max(0.08, config.opacidadeDendritos / 100);
+          const T = { zcL: zcL, r: r, g: g, b: b, lightR: lightR, lightG: lightG, lightB: lightB, deepR: deepR, deepG: deepG, deepB: deepB, glowFactor: glowFactor, dendriteAlpha: dendriteAlpha };
+          // cada axônio das ligações tem a sua cor: quem desenha o que é dele chama T.usaCor(cor); sem cor vale a da célula
+          T.usaCor = function (c) {
+            c = c || config.rgb; T.r = c[0]; T.g = c[1]; T.b = c[2];
+            T.lightR = Math.min(255, T.r + 95); T.lightG = Math.min(255, T.g + 95); T.lightB = Math.min(255, T.b + 95);
+            T.deepR = Math.round(T.r * 0.28); T.deepG = Math.round(T.g * 0.28); T.deepB = Math.round(T.b * 0.28);
+          };
+          return T;
+        }
+
+    return { tintaFixa: tintaFixa, tintaViva: tintaViva };
   }
 
   return { criar: criar };

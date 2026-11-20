@@ -9,6 +9,8 @@ function (usa) {
     var createSeededRandom = usa.sorteio.criar;
     var opc = Est.opc;
     var drawTaperedBranch = d.drawTaperedBranch;
+    var actionPotentials = Est.actionPotentials;
+    var fadeFora = d.fadeFora, drawUnifiedSmoothPulse = d.drawUnifiedSmoothPulse;
 
 // 5. AXÔNIO ENCORPADO & 6 SEGMENTOS ESTRIADOS DE BAINHA DE MIELINA (um por axônio)
         function pintarAxonio(octx, A, E, T) {
@@ -107,7 +109,71 @@ function (usa) {
           octx.restore();
         }
 
-    return { pintarAxonio: pintarAxonio };
+
+// 4. Nódulos de Ranvier
+        function pintarNodulos(T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, glowFactor = T.glowFactor, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
+          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
+          Est.anatomy.nosTodos.forEach((node) => {
+            usaCor(node.rgb);
+            if (node.flash > 0.02) {
+              const nRad = 7.2 * Est.anatomy.scale * (0.7 + node.flash * 0.45);
+              const foraN = fadeFora(node.x, node.y);
+              if (foraN > 0.01) drawUnifiedSmoothPulse(node.x, node.y, nRad, lightR, lightG, lightB, r, g, b, glowFactor, node.flash * 0.85 * foraN);
+            }
+          });
+        }
+
+// 5. Potenciais de ação percorrendo o axônio e entrando nos telodendros até os bulbos
+        function pintarPotenciais(T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, glowFactor = T.glowFactor, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
+          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
+          actionPotentials.forEach((ap) => {
+            usaCor(ap.rgb || ap.eixo.rgb);
+            const eixoPts = ap.eixo.axonPath;
+            if (ap.t <= 1.0 && eixoPts.length > 1) {
+              const headPos = Math.max(0, ap.t) * (eixoPts.length - 1);
+              const trailSteps = 10;
+
+              for (let s = trailSteps; s >= 0; s--) {
+                const sampleIdx = headPos - s * 1.1;
+                if (sampleIdx < 0) continue;
+                const i0 = Math.floor(sampleIdx);
+                const i1 = Math.min(eixoPts.length - 1, i0 + 1);
+                const frac = sampleIdx - i0;
+                const x = eixoPts[i0].x + (eixoPts[i1].x - eixoPts[i0].x) * frac;
+                const y = eixoPts[i0].y + (eixoPts[i1].y - eixoPts[i0].y) * frac;
+
+                const ratio = 1 - s / (trailSteps + 1);
+                const rad = (2.8 + ratio * 3.7) * Est.anatomy.scale;
+                const fora = fadeFora(x, y);
+                if (fora > 0.01) drawUnifiedSmoothPulse(x, y, rad, lightR, lightG, lightB, r, g, b, glowFactor, ratio * 0.85 * fora);
+              }
+            } else {
+              const subT = Math.min(1, (ap.t - 1.0) / 0.35);
+              const trailSteps = 8;
+              ap.boutons.forEach((bouton) => {
+                const pts = bouton.branchPts;
+                if (!pts || pts.length < 2) return;
+                for (let s = trailSteps; s >= 0; s--) {
+                  const st = Math.max(0, subT - s * 0.032);
+                  const idxFloat = st * (pts.length - 1);
+                  const i0 = Math.floor(idxFloat);
+                  const i1 = Math.min(pts.length - 1, i0 + 1);
+                  const frac = idxFloat - i0;
+                  const x = pts[i0].x + (pts[i1].x - pts[i0].x) * frac;
+                  const y = pts[i0].y + (pts[i1].y - pts[i0].y) * frac;
+
+                  const ratio = 1 - s / (trailSteps + 1);
+                  const tRad = (2.5 + ratio * 3.6) * Est.anatomy.scale;
+                  drawUnifiedSmoothPulse(x, y, tRad, lightR, lightG, lightB, r, g, b, glowFactor, ratio * 0.88);
+                }
+              });
+            }
+          });
+        }
+
+    return { pintarAxonio: pintarAxonio, pintarNodulos: pintarNodulos, pintarPotenciais: pintarPotenciais };
   }
 
   return { criar: criar };
