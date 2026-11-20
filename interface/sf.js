@@ -2,10 +2,11 @@
 // ---- fonte/base/carregador/parte.js
 /* O carregador (SF): registra as partes, resolve as portas na ordem das dependências e dá a cada parte SÓ as portas que ela declarou (usa.<parte>).
  * É a única parte que lê o relógio, o sorteio e o ambiente de teste. Ele contém as falhas: uma parte que dá erro é desligada e a tela segue
- * (no teste, o erro sobe e reprova). Veja o LEIA-ME.md desta pasta. */
+ * (no teste, o erro sobe e reprova; só o teste da falha contida liga o modo { estrito: false }). Veja o LEIA-ME.md desta pasta. */
 (function (global) {
   'use strict';
   var T = global.SF_TESTE ? (typeof global.SF_TESTE === 'object' ? global.SF_TESTE : { estrito: true }) : null;     // só os testes definem SF_TESTE
+  var estrito = !!T && T.estrito !== false;     // no teste o erro sobe; só o teste da falha contida define SF_TESTE = { estrito: false }
   var registro = Object.create(null), ordemReg = [], pronto = Object.create(null), mortas = Object.create(null), ouvintes = [], iniciado = false, falhas = [];
 
   function curto(nome) { return nome.slice(nome.indexOf('/') + 1); }
@@ -26,7 +27,7 @@
       var ctx = ehContexto(arguments[0]) ? arguments[0] : null;
       if (ctx) ctx.save();
       try { return fn.apply(this, arguments); }
-      catch (e) { if (T) throw e; desliga(nome, e); return undefined; }
+      catch (e) { if (estrito) throw e; desliga(nome, e); return undefined; }
       finally { if (ctx) { try { ctx.restore(); } catch (e2) { /* sem estado para restaurar */ } } }
     };
   }
@@ -42,7 +43,7 @@
     // roda um pedaço da cena (uma esfera, um axônio) e contém a falha dele: desliga só aquele pedaço
     seguro: function (nome, fn) {
       if (mortas[nome]) return undefined;
-      try { return fn(); } catch (e) { if (T) throw e; desliga(nome, e); return undefined; }
+      try { return fn(); } catch (e) { if (estrito) throw e; desliga(nome, e); return undefined; }
     },
     aoDesligar: function (cb) { ouvintes.push(cb); falhas.forEach(function (n) { try { cb(n, falhas.slice()); } catch (e) { /* idem */ } }); }
   });
@@ -69,7 +70,7 @@
       usa[curto(dep)] = d.porta;
     }
     var porta;
-    try { porta = p.f(Object.freeze(usa)); } catch (e) { if (T) throw e; desliga(nome, e); p.estado = 2; return false; }
+    try { porta = p.f(Object.freeze(usa)); } catch (e) { if (estrito) throw e; desliga(nome, e); p.estado = 2; return false; }
     var final = {}, k;
     for (k in porta) {
       if (Object.prototype.hasOwnProperty.call(porta, k)) final[k] = (p.m.guarda && typeof porta[k] === 'function') ? guardar(nome, porta[k]) : porta[k];

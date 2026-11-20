@@ -1,0 +1,353 @@
+{
+ "cena/ciclo": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/cores@1"
+  ]
+ },
+ "cena/eixos": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": [
+   "ligacoes/tronco@1",
+   "ligacoes/pistas@1"
+  ]
+ },
+ "cena/foco": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": []
+ },
+ "cena/ligar": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/cores@1",
+   "comum/sorteio@1",
+   "comum/curvas@1"
+  ]
+ },
+ "cena/posicoes": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/curvas@1"
+  ]
+ },
+ "cena/quadro": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f0"
+  },
+  "porta": 1,
+  "requer": [
+   "neuronio/celula@1",
+   "comum/sorteio@1",
+   "comum/cores@1",
+   "comum/curvas@1",
+   "ligacoes/ponta@1",
+   "ligacoes/pulso@1",
+   "ligacoes/tronco@1",
+   "ligacoes/pistas@1",
+   "cena/posicoes@1",
+   "cena/ciclo@1",
+   "cena/foco@1",
+   "cena/eixos@1",
+   "cena/ligar@1"
+  ]
+ },
+ "comum/cores": {
+  "compativelDesde": 1,
+  "membros": {
+   "clar": "f1",
+   "ehCor": "f1",
+   "esc": "f2",
+   "hexParaRgb": "f1",
+   "rgbDe": "f1",
+   "rgba": "f2"
+  },
+  "porta": 1,
+  "requer": []
+ },
+ "comum/curvas": {
+  "compativelDesde": 1,
+  "membros": {
+   "curva": "f2",
+   "polar": "f4",
+   "suave": "f1",
+   "volta": "f1"
+  },
+  "porta": 1,
+  "requer": []
+ },
+ "comum/ramos": {
+  "compativelDesde": 1,
+  "membros": {
+   "bordasRamo": "f1",
+   "desviar": "f2",
+   "mitocondrias": "f6",
+   "poligonoAfilado": "f3",
+   "ramoEncorpado": "f3",
+   "trilhaSuave": "f3"
+  },
+  "porta": 1,
+  "requer": []
+ },
+ "comum/sorteio": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f1",
+   "hash": "f1"
+  },
+  "porta": 1,
+  "requer": []
+ },
+ "dados/limpa": {
+  "compativelDesde": 1,
+  "membros": {
+   "AGENTES": "object",
+   "CORRETORA": "object",
+   "MODULOS": "object",
+   "NUCLEO": "object",
+   "limpa": "f1"
+  },
+  "porta": 1,
+  "requer": []
+ },
+ "ligacoes/pistas": {
+  "compativelDesde": 1,
+  "membros": {
+   "caminho": "f0"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/curvas@1"
+  ]
+ },
+ "ligacoes/ponta": {
+  "compativelDesde": 1,
+  "membros": {
+   "altVent": "f0",
+   "cone": "f0",
+   "espVent": "f0",
+   "luz": "f0",
+   "raioVent": "f0",
+   "ventosa": "f0"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/cores@1"
+  ]
+ },
+ "ligacoes/pulso": {
+  "compativelDesde": 1,
+  "membros": {
+   "pulso": "f0"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/cores@1"
+  ]
+ },
+ "ligacoes/tronco": {
+  "compativelDesde": 1,
+  "membros": {
+   "medir": "f0",
+   "pintar": "f0",
+   "ponto": "f0",
+   "trechos": "f0"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/cores@1",
+   "comum/curvas@1",
+   "ligacoes/ponta@1",
+   "ligacoes/pulso@1"
+  ]
+ },
+ "neuronio/anatomia": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/sorteio@1",
+   "comum/cores@1"
+  ]
+ },
+ "neuronio/axonio": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/ramos@1",
+   "comum/sorteio@1"
+  ]
+ },
+ "neuronio/camada": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": []
+ },
+ "neuronio/celula": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f0"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/sorteio@1",
+   "comum/cores@1",
+   "comum/ramos@1",
+   "neuronio/recorte@1",
+   "neuronio/anatomia@1",
+   "neuronio/sinais@1",
+   "neuronio/minis@1",
+   "neuronio/escala@1",
+   "neuronio/tinta@1",
+   "neuronio/dendritos@1",
+   "neuronio/corpo@1",
+   "neuronio/axonio@1",
+   "neuronio/terminais@1",
+   "neuronio/camada@1",
+   "neuronio/vidro@1",
+   "neuronio/lupa@1",
+   "neuronio/pulso@1"
+  ]
+ },
+ "neuronio/corpo": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/ramos@1",
+   "comum/sorteio@1"
+  ]
+ },
+ "neuronio/dendritos": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/ramos@1",
+   "comum/sorteio@1"
+  ]
+ },
+ "neuronio/escala": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/ramos@1"
+  ]
+ },
+ "neuronio/lupa": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": []
+ },
+ "neuronio/minis": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/sorteio@1",
+   "comum/cores@1"
+  ]
+ },
+ "neuronio/pulso": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": []
+ },
+ "neuronio/recorte": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": []
+ },
+ "neuronio/sinais": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": []
+ },
+ "neuronio/terminais": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/ramos@1",
+   "comum/sorteio@1"
+  ]
+ },
+ "neuronio/tinta": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": []
+ },
+ "neuronio/vidro": {
+  "compativelDesde": 1,
+  "membros": {
+   "criar": "f2"
+  },
+  "porta": 1,
+  "requer": [
+   "comum/sorteio@1"
+  ]
+ },
+ "tela/inicio": {
+  "compativelDesde": 1,
+  "membros": {},
+  "porta": 1,
+  "requer": [
+   "dados/limpa@1",
+   "cena/quadro@1"
+  ]
+ }
+}

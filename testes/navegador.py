@@ -11,6 +11,7 @@ Os scripts da página só expõem a cena (window.SF_CENA) se window.SF_TESTE exi
 import functools
 import http.server
 import json
+import os
 import pathlib
 import threading
 import unittest
@@ -21,6 +22,7 @@ except Exception:  # sem playwright: tudo pulado
     sync_playwright = None
 
 INTERFACE = pathlib.Path(__file__).resolve().parent.parent / "interface"
+REFERENCIAS = pathlib.Path(__file__).resolve().parent / "referencias"
 AGENTES = ["cripto", "acoes-etfs", "fiis", "robo", "seguranca", "radar"]
 NOMES = {"cripto": "Cripto", "acoes-etfs": "Ações e ETFs", "fiis": "FIIs", "robo": "Robô", "seguranca": "Segurança", "radar": "Radar", "nucleo": "Sexta-Feira"}
 PREPARA = "window.SF_TESTE = true; window.__d = 0; (() => { const o = CanvasRenderingContext2D.prototype.drawImage; CanvasRenderingContext2D.prototype.drawImage = function () { window.__d++; return o.apply(this, arguments); }; })();"
@@ -52,7 +54,7 @@ class Tela(unittest.TestCase):
         cls.pw.stop()
         cls.srv.shutdown()
 
-    def abre(self, largura=1672, altura=941, query="", rota=None, dpr=1, celular=False, auto=True):
+    def abre(self, largura=1672, altura=941, query="", rota=None, dpr=1, celular=False, auto=True, estrito=True):
         ctx = self.nav.new_context(viewport={"width": largura, "height": altura}, device_scale_factor=dpr, has_touch=celular, is_mobile=celular)
         self.addCleanup(ctx.close)
         pg = ctx.new_page()
@@ -60,7 +62,7 @@ class Tela(unittest.TestCase):
         pg.on("console", lambda m: pg.erros.append(m.text) if m.type in ("error", "warning") else None)
         pg.on("pageerror", lambda e: pg.erros.append(str(e)))
         pg.on("request", lambda r: pg.externas.append(r.url) if not r.url.startswith("http://127.0.0.1:%d/" % self.srv.server_address[1]) else None)
-        pg.add_init_script(PREPARA)
+        pg.add_init_script(PREPARA if estrito else PREPARA.replace("window.SF_TESTE = true;", "window.SF_TESTE = { estrito: false };"))
         if rota:
             pg.route("**/dados-ficticios.js", lambda r: r.fulfill(body=rota, content_type="text/javascript"))
         pg.goto(self.url + query)
@@ -249,6 +251,39 @@ class Tela(unittest.TestCase):
             pg.wait_for_timeout(1500)
             self.espera_repouso(pg)
             self.assertEqual(pg.erros, [], "%dx%d" % (l, a))
+
+    # ---------------------------------------------------------------------------------------------------------------- falha contida e foto da porta (v0.4.2)
+    def test_falha_numa_esfera_desliga_so_ela_e_avisa(self):
+        pg = self.abre(auto=False, estrito=False)
+        self.assertEqual(pg.locator("#aviso-falha").count(), 0, "o aviso só nasce na falha")
+        self.assertEqual(pg.evaluate("() => window.SF.desligadas()"), [])
+        pg.evaluate("""() => { const e = window.SF_CENA.esferas().fiis, n0 = e.n;
+            e.n = Object.assign(Object.create(n0), { passo() { throw new Error('falha de teste'); }, desenhar() { throw new Error('falha de teste'); } }); }""")
+        pg.wait_for_timeout(800)
+        self.assertEqual(pg.evaluate("() => window.SF.desligadas()"), ["esfera:fiis"])
+        self.assertEqual(pg.locator("#aviso-falha").count(), 1)
+        self.assertIn("esfera:fiis", pg.locator("#aviso-falha").inner_text())
+        self.assertTrue(all(e.startswith("parte desligada: esfera:fiis") for e in pg.erros if "falha de teste" in e or "parte desligada" in e), pg.erros)
+        pg.evaluate("window.__d = 0")                                  # as outras esferas e a cena seguem
+        self.assertTrue(pg.evaluate("() => window.SF_CENA.pedir('cripto')"))
+        pg.wait_for_timeout(1500)
+        self.espera_repouso(pg)
+        self.assertGreater(pg.evaluate("window.__d"), 0)
+        self.assertEqual(pg.evaluate("() => window.SF.desligadas()"), ["esfera:fiis"], "só a esfera com defeito saiu")
+
+    def test_foto_da_porta_so_muda_com_a_versao_da_porta(self):
+        pg = self.abre(auto=False)
+        foto = pg.evaluate("() => window.SF.portas()")
+        ref_arq = REFERENCIAS / "portas.json"
+        if os.environ.get("SF_GRAVAR_PORTAS"):
+            ref_arq.write_text(json.dumps(foto, indent=1, sort_keys=True, ensure_ascii=False) + "\n", encoding="utf-8")
+        ref = json.loads(ref_arq.read_text(encoding="utf-8"))
+        self.assertEqual(sorted(foto), sorted(ref), "partes novas ou removidas: grave a foto com SF_GRAVAR_PORTAS=1 e diga na versão")
+        for nome, atual in foto.items():
+            antes = ref[nome]
+            if atual["membros"] != antes["membros"] or atual["requer"] != antes["requer"]:
+                self.assertGreater(atual["porta"], antes["porta"], "%s: a porta mudou (membros ou dependências) sem subir `porta:` no PARTE; mude e grave a foto com SF_GRAVAR_PORTAS=1" % nome)
+            self.assertGreaterEqual(atual["porta"], antes["porta"], nome)
 
     def test_fps_so_informa(self):
         pg = self.abre()

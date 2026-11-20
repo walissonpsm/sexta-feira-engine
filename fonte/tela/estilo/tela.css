@@ -45,3 +45,6 @@ button:disabled { cursor: default; }
 /* celular em pé: o botão de voltar desce para baixo dos selos, para não cobrir o "dados fictícios" */
 @media (max-width: 640px) { .voltar-cena { top: 44px; left: 8px; padding: 6px 12px; font-size: 14px; } }
 @media (max-height: 520px) and (min-width: 641px) { .voltar-cena { top: 36px; } }
+
+/* o aviso de falha contida: só existe se uma parte da cena foi desligada */
+#aviso-falha { position: fixed; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 30; max-width: 92vw; padding: 6px 14px; border-radius: 999px; background: rgba(40, 10, 10, .85); border: 1px solid rgba(255, 120, 120, .5); color: #ffd7d7; font-size: 13px; text-align: center; pointer-events: none; }

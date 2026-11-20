@@ -66,6 +66,16 @@ function (usa) {
     cena.ajustar(w, h);
   }
   ajusta();
+  // o aviso de falha contida (v0.4.2): se uma esfera, um axônio ou uma parte for desligada, uma linha curta diz qual (o elemento só nasce na falha; texto por textContent)
+  var aviso = null;
+  usa.base.aoDesligar(function (nome) {
+    if (!aviso) {
+      aviso = document.createElement('div');
+      aviso.id = 'aviso-falha'; aviso.setAttribute('role', 'status');
+      document.body.appendChild(aviso);
+    }
+    aviso.textContent = 'Parte desligada: ' + nome + '. O resto da tela segue.';
+  });
   if (window.SF_TESTE) { window.SF_CENA = cena; window.SF_LIMPA = usa.limpa.limpa; }          // gancho só dos testes automáticos (sem SF_TESTE nada é exposto)
   var espera = null;
   window.addEventListener('resize', function () { window.clearTimeout(espera); espera = window.setTimeout(ajusta, 150); });

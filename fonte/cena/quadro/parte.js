@@ -21,6 +21,7 @@ function (usa) {
 
 
   function criar(raiz, cfg) {
+    var seguro = usa.base.seguro;
     var Est = { UC: UC, cfg: cfg, raiz: raiz };        // O ESTADO da cena, num objeto só (v0.4.2): as partes recebem Est (ver o LEIA-ME.md desta pasta)
     var leve = !!cfg.leve;  Est.leve = leve;
     Est.W = 1000; Est.H = 600; Est.s = 0.5; Est.MG = 9;      // MG: a margem do canvas de cada esfera (o vidro desliza e brilha para fora do raio)
@@ -109,7 +110,7 @@ function (usa) {
       Est.relogio += dt;
       if (Est.sujo) { pintaEstatico(); Est.sujo = false; Est.sujoE = true; }
       Est.fixos.forEach(function (f) { if (f.flash > 0) { f.flash = Math.max(0, f.flash - dt * 1.6); if (visivel(f)) { vivo = true; bb = uneBB(bb, f.pw.x - m, f.pw.y - m, f.pw.x + m, f.pw.y + m); } } });
-      Est.eixos.forEach(function (ax) { passoEixo(ax, dt); if (visEixo(ax)) { if (ax.ativo) mexe = true; bb = uneBB(bb, ax.bb.x0, ax.bb.y0, ax.bb.x1, ax.bb.y1); } });
+      Est.eixos.forEach(function (ax) { seguro('eixo:' + ax.id, function () { passoEixo(ax, dt); }); if (visEixo(ax)) { if (ax.ativo) mexe = true; bb = uneBB(bb, ax.bb.x0, ax.bb.y0, ax.bb.x1, ax.bb.y1); } });
       var desenha = mexe || Est.eixosAntes || Est.sujoE;       // o tronco parado é liso: só se redesenha quando algo se mexe       // no modo leve (sem ondulação) só se redesenha quando algo se mexe
       Est.eixosAntes = mexe; Est.sujoE = false;
       if (!vivo && !desenha && !Est.bbAnt) return;
@@ -122,7 +123,7 @@ function (usa) {
       Est.ctxP.globalCompositeOperation = 'lighter';
       Est.fixos.forEach(function (f) { if (f.flash > 0 && visivel(f)) pintaFixo(f); });
       Est.ctxP.globalCompositeOperation = 'source-over';
-      Est.eixos.forEach(function (ax) { if (visEixo(ax)) pintaEixo(ax); });
+      Est.eixos.forEach(function (ax) { if (visEixo(ax)) seguro('eixo:' + ax.id, function () { pintaEixo(ax); }); });
     }
 
     // ---------------------------------------------------------------- as ligações (pares de axônios de mão única, que terminam em ventosa no vidro)
@@ -177,12 +178,16 @@ function (usa) {
       for (var i = Est.fila.length - 1; i >= 0; i--) if (Est.fila[i].t <= Est.tempo) { var it = Est.fila.splice(i, 1)[0]; it.fn(); }
       Est.proximo -= dt;
       if (Est.proximo <= 0) { if (Est.automatico) sortear(); Est.proximo = 1.0 + usa.base.acaso() * 1.6; }
-      ordem.forEach(function (id) { esf[id].n.passo(dt); });
+      // falha contida (v0.4.2): cada esfera e cada axônio roda dentro de usa.base.seguro; se um der erro, só ele é desligado (no teste o erro sobe)
+      ordem.forEach(function (id) { seguro('esfera:' + id, function () { esf[id].n.passo(dt); }); });
       if (Est.foco) {
-        var e = esf[Est.foco]; e.n.desenhar();
-        var st = e.n.lupa.estado();                           // a lupa da esfera em foco manda; os axônios e a parede a seguem
-        vistaTotal(st.z, st.ox, st.oy, false);
-      } else ordem.forEach(function (id) { esf[id].n.desenhar(); });
+        var id = Est.foco;
+        seguro('esfera:' + id, function () {
+          var e = esf[id]; e.n.desenhar();
+          var st = e.n.lupa.estado();                           // a lupa da esfera em foco manda; os axônios e a parede a seguem
+          vistaTotal(st.z, st.ox, st.oy, false);
+        });
+      } else ordem.forEach(function (id) { seguro('esfera:' + id, function () { esf[id].n.desenhar(); }); });
       passoPar(dt);
     }
 
