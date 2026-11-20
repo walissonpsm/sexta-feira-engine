@@ -1,7 +1,7 @@
 nome: neuronio/celula
 porta: 1
 compativel-desde: 1
-requer: comum/sorteio@1 comum/cores@1 comum/ramos@1 neuronio/recorte@1 neuronio/anatomia@1 neuronio/sinais@1 neuronio/minis@1 neuronio/escala@1 neuronio/tinta@1 neuronio/dendritos@1 neuronio/corpo@1 neuronio/axonio@1 neuronio/terminais@1 neuronio/camada@1
+requer: comum/sorteio@1 comum/cores@1 comum/ramos@1 neuronio/recorte@1 neuronio/anatomia@1 neuronio/sinais@1 neuronio/minis@1 neuronio/escala@1 neuronio/tinta@1 neuronio/dendritos@1 neuronio/corpo@1 neuronio/axonio@1 neuronio/terminais@1 neuronio/camada@1 neuronio/vidro@1 neuronio/lupa@1
 juntadora: sim
 guarda: sim
 dom: sim
