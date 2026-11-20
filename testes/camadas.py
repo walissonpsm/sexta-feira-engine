@@ -86,7 +86,8 @@ class Camadas(unittest.TestCase):
 
     def test_cada_parte_quebrada_derruba_so_quem_depende_dela(self):
         portas = self.portas()
-        self.assertGreater(len(portas), 30)
+        js = [d.parent.parent.name + "/" + d.parent.name for d in (INTERFACE.parent / "fonte").glob("*/*/PARTE") if "\ntipo:" not in "\n" + d.read_text(encoding="utf-8")]
+        self.assertEqual(sorted(portas), sorted(js), "as partes registradas no carregador têm de ser as partes js de fonte/")
         for nome in sorted(portas):
             with self.subTest(parte=nome):
                 pg = self.pagina("{ estrito: false, quebrar: %r }" % nome)
