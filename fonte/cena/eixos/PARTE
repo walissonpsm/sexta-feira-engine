@@ -1,0 +1,4 @@
+nome: cena/eixos
+porta: 1
+compativel-desde: 1
+requer: ligacoes/tronco@1 ligacoes/pistas@1

@@ -208,8 +208,71 @@ function maisLonge(g) {                // o ponto de dendrito mais longe do cent
 }
 
 );
+// ---- fonte/cena/eixos/parte.js
+SF.parte({nome:'cena/eixos',porta:1,compativelDesde:1,requer:['ligacoes/tronco@1','ligacoes/pistas@1'],guarda:false,dom:false},
+/* Sexta-Feira Engine v0.4.2: cena/eixos. a vida de cada axônio da cena: medir, pintar, refazer o caminho e o passo do tempo (cone de crescimento, pulso).
+ * Código movido sem reescrever de neuronio/celula: o estado vem de Est (a tabela dos campos está no LEIA-ME.md da juntadora e deste) e as funções
+ * das irmãs chegam em d, passadas pela juntadora. Só desenha/calcula o que está na lista da porta. */
+function (usa) {
+  'use strict';
+
+  function criar(Est, d) {
+    var esf = Est.esf;
+    var tronco = usa.tronco, pistas = usa.pistas;
+    var raioVent = d.raioVent, irPara = d.irPara, chegou = d.chegou;
+
+function medeEixo(ax) { tronco.medir(Est.s, ax); }
+
+function caminhoI(ax) { var N = esf.nucleo; return pistas.caminho(N, raioVent(N.R), ax); }
+
+function pintaEixo(ax) { tronco.pintar(Est.ctxP, Est.s, Est.relogio, ax); }
+
+function refazEixo(ax) { ax.base = ax.tipo === 'i' ? caminhoI(ax) : ax.base; medeEixo(ax); ax.sujoG = false; }
+
+function visEixo(ax) { return !Est.foco || Est.foco === 'nucleo' || ax.ag === Est.foco; }
+
+function passoEixo(ax, dt) {
+      var v = ax.vent, i;
+      if (ax.tipo === 'i') {
+        if (ax.p !== ax.pAlvo) { ax.p = ax.pAlvo > ax.p ? Math.min(ax.pAlvo, ax.p + dt / 0.4) : Math.max(ax.pAlvo, ax.p - dt / 0.3); ax.sujoG = true; }
+        if (ax.mdur > 0) {
+          ax.mt += dt; var q = Math.min(1, ax.mt / ax.mdur), ee = q * q * (3 - 2 * q);
+          ax.dC = ax.dDe + (ax.dPara - ax.dDe) * ee; ax.sujoG = true;
+          if (q >= 1) {
+            ax.mdur = 0; ax.dC = ax.dPara;
+            ax.pAlvo = 1; ax.estado = ax.estado === 'indo' ? 'pousando-ida' : 'pousando-volta';       // chegou: o cone se achata no vidro
+          }
+        }
+        if (ax.estado === 'pousando-ida' && ax.p >= 0.999) { ax.estado = 'pulso'; ax.pulso = { u: 0, k: 0 }; ax.pulsoCor = ax.corRgb; v.anel = 1; }
+        else if (ax.estado === 'pousando-volta' && ax.p >= 0.999) ax.estado = 'repouso';
+        if (ax.estado === 'preso') { ax.espera -= dt; if (ax.espera <= 0) { ax.estado = 'voltando'; ax.pAlvo = 0; irPara(ax, ax.dRep, 0.5 + 0.7 * Math.min(1, Math.abs(ax.dRep - ax.dC))); } }
+        if (ax.sujoG) refazEixo(ax);
+        v.ang = ax.thL + ax.dC;
+      }
+      var vivo = ax.estado !== 'repouso' || !!ax.pulso || v.flash > 0 || v.anel > 0;
+      if (v.flash > 0) v.flash = Math.max(0, v.flash - dt * 1.7);
+      if (v.anel > 0) v.anel = Math.max(0, v.anel - dt * 1.6);
+      if (ax.pulso) {
+        var P = ax.pulso; P.u += ax.vel * dt;
+        while (P.k < ax.nNos && ax.a0 + P.k * ax.pitch - 0.25 * ax.larg <= P.u) { ax.nos[P.k] = 1; P.k++; }
+        if (P.u >= ax.len) {
+          ax.pulso = null; if (ax.tipo === 'i') { ax.estado = 'preso'; ax.espera = 0.9; v.flash = 1; v.anel = 1; }
+          chegou(ax.id);
+        }
+      }
+      for (i = 0; i < ax.nos.length; i++) if (ax.nos[i] > 0) { ax.nos[i] = Math.max(0, ax.nos[i] - dt * 2.8); vivo = true; }
+      ax.ativo = vivo;
+    }
+
+    return { medeEixo: medeEixo, caminhoI: caminhoI, pintaEixo: pintaEixo, refazEixo: refazEixo, visEixo: visEixo, passoEixo: passoEixo };
+  }
+
+  return { criar: criar };
+}
+
+);
 // ---- fonte/cena/quadro/parte.js
-SF.parte({nome:'cena/quadro',porta:1,compativelDesde:1,requer:['neuronio/celula@1','comum/sorteio@1','comum/cores@1','comum/curvas@1','ligacoes/ponta@1','ligacoes/pulso@1','ligacoes/tronco@1','ligacoes/pistas@1','cena/posicoes@1','cena/ciclo@1','cena/foco@1'],guarda:true,dom:true},
+SF.parte({nome:'cena/quadro',porta:1,compativelDesde:1,requer:['neuronio/celula@1','comum/sorteio@1','comum/cores@1','comum/curvas@1','ligacoes/ponta@1','ligacoes/pulso@1','ligacoes/tronco@1','ligacoes/pistas@1','cena/posicoes@1','cena/ciclo@1','cena/foco@1','cena/eixos@1'],guarda:true,dom:true},
 /* Sexta-Feira Engine v0.3.0: a cena. O Núcleo no centro, seis agentes ao redor (três de cada lado) e a Corretora parada ao lado do Robô.
  * Cada esfera é um Neuronio.criar próprio. Axônio só leva e dendrito só recebe, e a PAREDE de vidro é a sinapse: para cada agente há um par de
  * axônios de mão única, lado a lado, e os dois PARAM no vidro (por fora). Do lado de dentro, um dendrito encosta no mesmo ponto.
@@ -307,43 +370,6 @@ function (usa) {
     // Cada um tem uma linha central (base) que o agente-para-Núcleo recalcula quando o alvo se move; por cima dela vai a ondulação parada. A bainha de mielina
     // são tubos de tamanho fixo contados a partir do começo (então crescem pela ponta quando o tronco se estica), com a cintura do nódulo entre eles.
     Est.eixos = []; Est.eixoById = {}; Est.sujoE = true; Est.eixosAntes = false; Est.relogio = 0;
-    function medeEixo(ax) { tronco.medir(Est.s, ax); }
-    function caminhoI(ax) { var N = esf.nucleo; return pistas.caminho(N, raioVent(N.R), ax); }
-    function pintaEixo(ax) { tronco.pintar(Est.ctxP, Est.s, Est.relogio, ax); }
-    function refazEixo(ax) { ax.base = ax.tipo === 'i' ? caminhoI(ax) : ax.base; medeEixo(ax); ax.sujoG = false; }
-    function visEixo(ax) { return !Est.foco || Est.foco === 'nucleo' || ax.ag === Est.foco; }
-    function passoEixo(ax, dt) {
-      var v = ax.vent, i;
-      if (ax.tipo === 'i') {
-        if (ax.p !== ax.pAlvo) { ax.p = ax.pAlvo > ax.p ? Math.min(ax.pAlvo, ax.p + dt / 0.4) : Math.max(ax.pAlvo, ax.p - dt / 0.3); ax.sujoG = true; }
-        if (ax.mdur > 0) {
-          ax.mt += dt; var q = Math.min(1, ax.mt / ax.mdur), ee = q * q * (3 - 2 * q);
-          ax.dC = ax.dDe + (ax.dPara - ax.dDe) * ee; ax.sujoG = true;
-          if (q >= 1) {
-            ax.mdur = 0; ax.dC = ax.dPara;
-            ax.pAlvo = 1; ax.estado = ax.estado === 'indo' ? 'pousando-ida' : 'pousando-volta';       // chegou: o cone se achata no vidro
-          }
-        }
-        if (ax.estado === 'pousando-ida' && ax.p >= 0.999) { ax.estado = 'pulso'; ax.pulso = { u: 0, k: 0 }; ax.pulsoCor = ax.corRgb; v.anel = 1; }
-        else if (ax.estado === 'pousando-volta' && ax.p >= 0.999) ax.estado = 'repouso';
-        if (ax.estado === 'preso') { ax.espera -= dt; if (ax.espera <= 0) { ax.estado = 'voltando'; ax.pAlvo = 0; irPara(ax, ax.dRep, 0.5 + 0.7 * Math.min(1, Math.abs(ax.dRep - ax.dC))); } }
-        if (ax.sujoG) refazEixo(ax);
-        v.ang = ax.thL + ax.dC;
-      }
-      var vivo = ax.estado !== 'repouso' || !!ax.pulso || v.flash > 0 || v.anel > 0;
-      if (v.flash > 0) v.flash = Math.max(0, v.flash - dt * 1.7);
-      if (v.anel > 0) v.anel = Math.max(0, v.anel - dt * 1.6);
-      if (ax.pulso) {
-        var P = ax.pulso; P.u += ax.vel * dt;
-        while (P.k < ax.nNos && ax.a0 + P.k * ax.pitch - 0.25 * ax.larg <= P.u) { ax.nos[P.k] = 1; P.k++; }
-        if (P.u >= ax.len) {
-          ax.pulso = null; if (ax.tipo === 'i') { ax.estado = 'preso'; ax.espera = 0.9; v.flash = 1; v.anel = 1; }
-          chegou(ax.id);
-        }
-      }
-      for (i = 0; i < ax.nos.length; i++) if (ax.nos[i] > 0) { ax.nos[i] = Math.max(0, ax.nos[i] - dt * 2.8); vivo = true; }
-      ax.ativo = vivo;
-    }
     function irPara(ax, dPara, dur) { ax.dDe = ax.dC; ax.dPara = dPara; ax.mt = 0; ax.mdur = Math.max(0.05, dur); }
     function pintaEstatico() {
       var salvo = Est.ctxP; Est.ctxP = Est.ctxF;
@@ -529,6 +555,9 @@ function (usa) {
     // cena/foco (v0.4.2): o foco numa esfera: ela ocupa o palco e ganha a lupa; a vista das camadas da parede e a volta à vista geral.
     const P_foco = usa.foco.criar(Est, { caixaDe: P_posicoes.caixaDe, pos: P_posicoes.pos, reiniciaCiclo: P_ciclo.reiniciaCiclo });
     const focar = P_foco.focar, sair = P_foco.sair, vistaTotal = P_foco.vistaTotal;
+    // cena/eixos (v0.4.2): a vida de cada axônio da cena: medir, pintar, refazer o caminho e o passo do tempo (cone de crescimento, pulso).
+    const P_eixos = usa.eixos.criar(Est, { raioVent: raioVent, irPara: irPara, chegou: P_ciclo.chegou });
+    const medeEixo = P_eixos.medeEixo, pintaEixo = P_eixos.pintaEixo, refazEixo = P_eixos.refazEixo, visEixo = P_eixos.visEixo, passoEixo = P_eixos.passoEixo;
     // FIM DOS BLOCOS DAS PARTES
     nomes();
 
