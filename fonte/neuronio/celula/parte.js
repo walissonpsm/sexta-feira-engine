@@ -129,7 +129,7 @@ function (usa) {
         const par = Est.par, PAREDE = Est.PAREDE;
 
 
-        const dendritos = usa.dendritos;
+        const dendritos = usa.ramos;
         const trilhaSuave = dendritos.trilhaSuave, bordasRamo = dendritos.bordasRamo, desviar = dendritos.desviar, mitocondrias = dendritos.mitocondrias;
         function drawSharpDendritePolygon(targetCtx, points) { dendritos.poligonoAfilado(targetCtx, points, nivel()); }
         function drawTaperedBranch(targetCtx, points) { dendritos.ramoEncorpado(targetCtx, points, nivel()); }

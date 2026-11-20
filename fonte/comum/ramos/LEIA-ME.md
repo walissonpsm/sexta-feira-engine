@@ -1,4 +1,4 @@
-# neuronio/dendritos
+# comum/ramos
 
 **O que faz**: desenha ramos: `poligonoAfilado(ctx, pts, nivel)` (dendrito até ponta aguda), `ramoEncorpado(ctx, pts, nivel)` (telodendro que se funde ao bulbo), `trilhaSuave(ctx, pts, inicio)` (curva por pontos médios), `bordasRamo(pts)` ({L, R}), `desviar(pts, f)` (linha por dentro do ramo) e `mitocondrias(ctx, pts, ate, rnd, cor, u)`. Os pontos são `{x, y, w}` (w = largura).
 **Porta**: `{ poligonoAfilado, ramoEncorpado, trilhaSuave, bordasRamo, desviar, mitocondrias }`. **Usa**: nada. Só desenha; `nivel` (0 longe, 1 de perto: bordas curvas) vem de quem chama.
