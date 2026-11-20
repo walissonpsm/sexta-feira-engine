@@ -137,7 +137,13 @@ function (usa) {
   menos.disabled = true; volta.disabled = true;
 
   // ---------------------------------------------------------------- escala, laço de animação
-  function ajusta() { cena.ajustar(window.innerWidth, window.innerHeight); }
+  var ultW = -1, ultH = -1, ultD = -1;   // só refaz a cena se o tamanho ou a densidade da tela mudaram de verdade (o navegador pode avisar "resize" sem mudança; refazer à toa mudava o desenho)
+  function ajusta() {
+    var w = window.innerWidth, h = window.innerHeight, d = window.devicePixelRatio || 1;
+    if (w === ultW && h === ultH && d === ultD) return;
+    ultW = w; ultH = h; ultD = d;
+    cena.ajustar(w, h);
+  }
   ajusta();
   if (window.SF_TESTE) { window.SF_CENA = cena; window.SF_LIMPA = usa.limpa.limpa; }          // gancho só dos testes automáticos (sem SF_TESTE nada é exposto)
   var espera = null;

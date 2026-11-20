@@ -43,8 +43,6 @@ window.__hashes = function () {
 };
 """
 
-INSTAVEIS = {"retrato", "paisagem"}
-
 # (nome, largura, altura, dpr, celular, query, passos)  passos: lista de ("pedir", id) | ("rodar", ms) | ("foto", ponto) | ("focar", id) | ("sair",) | ("lupa", fator) | ("tecla", nome)
 def ciclo(agente, extra=()):
     p = [("rodar", 2000), ("foto", "repouso"), ("pedir", agente)]
@@ -167,18 +165,6 @@ def main():
                         (d / src.name).write_bytes(src.read_bytes())
         return f
     falhas = list(erros) + compara(res)
-    # as cenas de celular (dpr 3) são instáveis até na v0.3.0 original (cerca de 1 rodada em 3 dá outro hash no canvas do Núcleo, causa ainda não achada):
-    # uma cena instável só reprova se NENHUMA de 6 tentativas bater; defeito de verdade falha em todas (os pixels mudam sempre do mesmo jeito)
-    for nome in [n for n in INSTAVEIS if n in res and any(f.startswith(n + "/") for f in falhas)]:
-        for tent in range(2, 7):
-            with sync_playwright() as p:
-                nav = p.chromium.launch()
-                r2, e2 = tirar(pathlib.Path(a.pasta), [nome], nav)
-                nav.close()
-            if not e2 and not compara(r2):
-                falhas = [f for f in falhas if not f.startswith(nome + "/")]
-                print("aviso: cena instável '%s' bateu na tentativa %d" % (nome, tent))
-                break
     total = sum(len(v) for v in res.values())
     if falhas:
         print("REPROVADO: %d ponto(s) diferentes de %d" % (len([f for f in falhas if "mudou" in f]), total))
