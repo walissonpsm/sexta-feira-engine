@@ -1,0 +1,4 @@
+nome: cena/ligar
+porta: 1
+compativel-desde: 1
+requer: comum/cores@1 comum/sorteio@1 comum/curvas@1
