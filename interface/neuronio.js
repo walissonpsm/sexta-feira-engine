@@ -118,148 +118,25 @@ function fadeFora(x, y) {
 }
 
 );
-// ---- fonte/neuronio/celula/parte.js
-SF.parte({nome:'neuronio/celula',porta:1,compativelDesde:1,requer:['comum/sorteio@1','comum/cores@1','comum/ramos@1','neuronio/recorte@1'],guarda:true,dom:true},
-/* Sexta-Feira Engine: o motor do neurônio (v0.3.0).
- * Vem do neuronio.html do dono (desenho aprovado: soma, dendritos, axônio, terminais), transformado em fábrica: cada canvas tem o seu
- * neurônio, com estado próprio. Só desenha; não lê dado, não usa rede, não mexe em nada fora do canvas que recebe.
- *
- *   var n = Neuronio.criar(canvas, { cor: '#8B3DFF', semente: 94127, leve: false });
- *   n.redimensionar(largura, altura);   // em pixels CSS; refaz o desenho estático
- *   n.passo(segundos); n.desenhar();     // um quadro (a tela chama, a 60 ou 24 por segundo)
- *   n.iniciar(); n.disparar(); n.pausar(true|false); n.setCor('#RRGGBB'); n.setLeve(true|false);
- *
- * Opções da esfera: rede: N (até 9) neurônios menores dentro da esfera, com o MESMO desenho, cada um com os terminais do axônio
- * na ponta de um dendrito primário do principal; saida: true faz só o tronco do axônio do principal atravessar a parede da esfera
- * (rumo às outras esferas): a esfera fica à esquerda do canvas e o resto da largura é a passagem do tronco, que some aos poucos.
- */
+// ---- fonte/neuronio/anatomia/parte.js
+SF.parte({nome:'neuronio/anatomia',porta:1,compativelDesde:1,requer:['comum/sorteio@1','comum/cores@1'],guarda:false,dom:false},
+/* Sexta-Feira Engine v0.4.2: neuronio/anatomia. a geometria do neurônio: onde fica cada ramo, o axônio, as bainhas, os terminais, as árvores das ligações e a vista (escala e centro) da esfera. Não desenha.
+ * Código movido sem reescrever de neuronio/celula: o estado vem de Est (a tabela dos campos está no LEIA-ME.md da juntadora e deste) e as funções
+ * das irmãs chegam em d, passadas pela juntadora. Só desenha/calcula o que está na lista da porta. */
 function (usa) {
   'use strict';
 
-  var createSeededRandom = usa.sorteio.criar, hexToRgb = usa.cores.hexParaRgb;
+  function criar(Est, d) {
+    var createSeededRandom = usa.sorteio.criar, hexToRgb = usa.cores.hexParaRgb;
+    var DH = Est.DH, DW = Est.DW, EIXO_BASE = Est.EIXO_BASE, MINI_EIXO = Est.MINI_EIXO, PAREDE = Est.PAREDE, config = Est.config, opc = Est.opc, runtime = Est.runtime, vista = Est.vista;
+// As ligações entre as esferas: cada uma é um axônio (caminho já no espaço do palco, em px) com bainhas, nódulos e uma
+        // pequena árvore de terminais que termina tocando um dendrito. Mão única: o sinal só corre do começo para o fim do caminho.
+        const arvoresCache = new Map();
 
-  function criar(canvas, opcoes) {
-    const opc = Object.assign({ cor: '#8B3DFF', semente: 94127, leve: false, rede: 0, saida: false, raioMax: Infinity, cores: null, anel: 0, lupa: false, axonios: 1, leque: 100, degrau: 0, abre: 200, miniEsc: 0.54, miniEixo: 0.25, giro: 0.9, sobra: 0.7, alcance: 0.8, semEixo: false, quieto: false, giro0: 0, dprMax: 3, margem: 3, dendritosExtra: null, arcos: null, corredor: 42, ligacoes: null, escLig: 1, aoChegar: null }, opcoes || {});
-    opc.semente = opc.semente >>> 0;
-    opc.rede = Math.max(0, Math.min(9, Math.floor(Number(opc.rede) || 0)));
-    opc.saida = !!opc.saida;
-    opc.axonios = Math.max(1, Math.min(8, Math.round(opc.axonios) || 1));
-    opc.semEixo = !!opc.semEixo; opc.quieto = !!opc.quieto; opc.giro0 = Number(opc.giro0) || 0;
-    opc.modo = Array.isArray(opc.ligacoes) ? 'ligacoes' : '';       // 'ligacoes': a camada só dos axônios que ligam as esferas (sem corpo, sem vidro)
-    const ctx = canvas.getContext('2d');
-    const DW = 1360, DH = 760;          // o neurônio é montado neste espaço e depois escalado para caber na esfera
-    const vista = { k: 1, tx: 0, ty: 0, cx: 0, cy: 0, Rpx: 1, Rd: 1, toques: 0, terminais: 0 };
-    // A lupa: a vista pode ser ampliada (z) e deslocada (ox, oy, em px do canvas). Quando ela para, a parte fixa é refeita naquela
-    // ampliação (resolução e detalhes novos), em fatias por quadro, sem travar a animação.
-    const lupa = { z: 1, ox: 0, oy: 0, mudou: false, ultimo: 0, anim: null, ouvinte: null };
-    const VISTA_1 = { z: 1, ox: 0, oy: 0 };
-
-        const config = {
-          agente: 'Sexta-Feira',
-          corHex: '#8B3DFF',
-          rgb: [139, 61, 255],
-          brilhoNucleo: 21,
-          transparenciaCorpo: 45,
-          opacidadeDendritos: 84,
-          brilhoGeral: 72,
-          ramificacaoDendritos: 82,
-          velocidadePulsos: 40,
-          frequenciaDisparos: 72,
-          enableVesicles: true,
-          enableMist: true,
-          enableSubBranches: true
-        };
-
-        const runtime = {
-          width: 1280,
-          height: 720,
-          dpr: 1,
-          paused: false,
-          showLabels: true,
-          sidebarOpen: true,
-          time: 0,
-          lastFrameTime: 0,
-          spawnAccumulator: 0,
-          somaExcitation: 0,
-          somaRgb: null
-        };
-
-
-        const incomingSignals = [];
-        const actionPotentials = [];
-        const mistClouds = [];
-        const releasedNeurotransmitters = [];
-        const MINI_ESC = opc.miniEsc;      // tamanho do menor em relação ao principal
-        const MINI_EIXO = opc.miniEixo;    // comprimento do axônio do menor em relação ao do principal
+// comprimento do axônio do menor em relação ao do principal
         function axonStartFim() { return DW * 0.25 + 48 * 1.44 + EIXO_BASE * MINI_EIXO; }
-        const miniAPs = [];                 // sinais correndo pelo axônio de cada neurônio menor
-        const EIXO_BASE = DW * 0.62 - (DW * 0.25 + 48 * 1.44);   // comprimento do axônio no desenho original
 
-        // O ESTADO do neurônio, num objeto só (v0.4.2): as partes recebem Est e leem/escrevem aqui. Cada campo está na tabela do LEIA-ME.md.
-        const Est = {
-          canvas: canvas,
-          opc: opc,
-          ctx: ctx,
-          DW: DW,
-          DH: DH,
-          vista: vista,
-          lupa: lupa,
-          VISTA_1: VISTA_1,
-          config: config,
-          runtime: runtime,
-          incomingSignals: incomingSignals,
-          actionPotentials: actionPotentials,
-          mistClouds: mistClouds,
-          releasedNeurotransmitters: releasedNeurotransmitters,
-          MINI_ESC: MINI_ESC,
-          MINI_EIXO: MINI_EIXO,
-          miniAPs: miniAPs,
-          EIXO_BASE: EIXO_BASE,
-          detalhe: null,
-          refino: null,
-          detZ: 1,
-          detLocal: 1,
-          pulsoZ: 1,
-          tmpCamada: null,
-          anatomy: {
-            somaX: 0,
-            somaY: 0,
-            somaRadius: 48,
-            scale: 1,
-            somaOutline: [],
-            membraneSpicules: [],
-            cytoplasmRidges: [],
-            membraneGranules: [],
-            nucleusChromatin: [],
-            dendriteBranches: [],
-            dendriteTips: [],
-            synapticSpines: [],
-            axonPath: [],
-            myelinSheaths: [],
-            ranvierNodes: [],
-            terminalBranches: [],
-            terminalBoutons: [],
-            offscreenCanvas: null
-          },
-          minis: [],  // os neurônios menores dentro da esfera (o mesmo desenho, em escala)
-          auxCv: null,
-          vidro: null,
-          par: { x: 0, y: 0, tx: 0, ty: 0 },
-          PAREDE: 0.955  // raio da parede interna do vidro (a mesma do traço da casca em construirVidro)
-        };
-        // neuronio/recorte (v0.4.2): a máscara da esfera e o corredor por onde o tronco do axônio sai dela (só geometria de recorte, sem desenho próprio).
-        const P_recorte = usa.recorte.criar(Est, {});
-        const recortaNaEsfera = P_recorte.recortaNaEsfera, recorte2D = P_recorte.recorte2D, montarMascara = P_recorte.montarMascara, fadeFora = P_recorte.fadeFora;
-        // FIM DOS BLOCOS DAS PARTES
-        const par = Est.par, PAREDE = Est.PAREDE;
-
-
-        const dendritos = usa.ramos;
-        const trilhaSuave = dendritos.trilhaSuave, bordasRamo = dendritos.bordasRamo, desviar = dendritos.desviar, mitocondrias = dendritos.mitocondrias;
-        function drawSharpDendritePolygon(targetCtx, points) { dendritos.poligonoAfilado(targetCtx, points, nivel()); }
-        function drawTaperedBranch(targetCtx, points) { dendritos.ramoEncorpado(targetCtx, points, nivel()); }
-
-        // Monta a anatomia completa de um neurônio (o desenho aprovado) a partir de uma semente; não desenha nada
+// Monta a anatomia completa de um neurônio (o desenho aprovado) a partir de uma semente; não desenha nada
         function montarAnatomia(semente, fimAxonio, principal, extrasMini) {
           const rng = createSeededRandom(semente);
           const somaX = DW * 0.25;
@@ -548,7 +425,7 @@ function (usa) {
           };
         }
 
-        // Axônio com bainha de mielina e nódulos de Ranvier. No comprimento original o resultado é idêntico ao desenho aprovado;
+// Axônio com bainha de mielina e nódulos de Ranvier. No comprimento original o resultado é idêntico ao desenho aprovado;
         // mais longo (o tronco que sai da esfera), a onda, a espessura e o tamanho das bainhas ficam iguais e só aumentam em número.
         function montarAxonio(somaX, somaY, somaRadius, scale, axonEndX) {
           const axonStartX = somaX + somaRadius * 1.44;
@@ -607,10 +484,7 @@ function (usa) {
           return { axonPath, myelinSheaths, ranvierNodes, axonEscala: 1 / rel };
         }
 
-        // As ligações entre as esferas: cada uma é um axônio (caminho já no espaço do palco, em px) com bainhas, nódulos e uma
-        // pequena árvore de terminais que termina tocando um dendrito. Mão única: o sinal só corre do começo para o fim do caminho.
-        const arvoresCache = new Map();
-        function arvoreDe(semente) {
+function arvoreDe(semente) {
           if (!arvoresCache.has(semente)) {
             const B = montarAnatomia(semente), pts = pontasTerminais(B), raiz = B.axonPath[B.axonPath.length - 1];
             let cx = 0, cy = 0;
@@ -621,14 +495,16 @@ function (usa) {
           }
           return arvoresCache.get(semente);
         }
-        function anatomiaLigacoes() {
+
+function anatomiaLigacoes() {
           const A = { somaX: 0, somaY: 0, somaRadius: 0, scale: opc.escLig || 1, somaOutline: [], membraneSpicules: [], cytoplasmRidges: [], membraneGranules: [], nucleusChromatin: [],
             dendriteBranches: [], dendriteTips: [], synapticSpines: [], axonPath: [], myelinSheaths: [], ranvierNodes: [], terminalBranches: [], terminalBoutons: [],
             offscreenCanvas: null, semCorpo: true, semente: opc.semente, axonEscala: 1 };
           A.extras = opc.ligacoes.map(montarLigacao).filter(Boolean);
           return A;
         }
-        function montarLigacao(L, i) {
+
+function montarLigacao(L, i) {
           const P = L && L.caminho, T = L && L.arvore;
           if (!P || P.length < 8) return null;
           const esc = L.esc || 1, n = P.length, rgb = /^#[0-9a-fA-F]{6}$/.test(L.cor) ? hexToRgb(L.cor) : config.rgb;
@@ -664,11 +540,325 @@ function (usa) {
           return { id: L.id, axonPath: axonPath, myelinSheaths: bn.myelinSheaths, ranvierNodes: bn.ranvierNodes, axonEscala: 1 / rel,
             terminalBranches: B.terminalBranches, terminalBoutons: B.terminalBoutons, scale: esc, indice: i, rgb: rgb };
         }
-        // Onde fica a raiz da árvore para um centro de pontas (x, y), direção de chegada ang e escala f (a cena precisa saber antes de traçar o caminho)
+
+// Onde fica a raiz da árvore para um centro de pontas (x, y), direção de chegada ang e escala f (a cena precisa saber antes de traçar o caminho)
         function raizDaArvore(semente, x, y, ang, f, lat) {
           const a = arvoreDe(semente >>> 0), ca = Math.cos(ang), sa = Math.sin(ang), dx = f * a.rx, dy = f * (lat || 1) * a.ry;
           return { x: x + ca * dx - sa * dy, y: y + sa * dx + ca * dy, fwd: f * a.fx };
         }
+
+// A caixa (no espaço do desenho) que um menor ocupa: ramos, axônio, terminais, espinhas e o halo do soma
+        function caixaDe(B, leva, S, hr) {
+          let x0 = S.x - hr, y0 = S.y - hr, x1 = S.x + hr, y1 = S.y + hr;
+          const poe = function (p) { const q = leva(p); if (q.x < x0) x0 = q.x; if (q.y < y0) y0 = q.y; if (q.x > x1) x1 = q.x; if (q.y > y1) y1 = q.y; };
+          B.dendriteBranches.forEach(function (br) { br.pts.forEach(poe); });
+          B.terminalBranches.forEach(function (br) { br.pts.forEach(poe); });
+          B.axonPath.forEach(poe); B.somaOutline.forEach(poe);
+          B.synapticSpines.forEach(function (sp) { poe({ x: sp.x2, y: sp.y2 }); });
+          B.terminalBoutons.forEach(function (bt) { poe({ x: bt.x, y: bt.y }); });
+          return { x0: x0, y0: y0, x1: x1, y1: y1 };
+        }
+
+// Só o tronco do axônio do principal atravessa a parede: ele segue até a borda do canvas, rumo às outras esferas.
+        // Os terminais dele ficam nas outras esferas e por isso não são desenhados aqui.
+        function estenderTronco() {
+          const borda = (runtime.width - vista.tx) / vista.k - 6;
+          const ramos = Est.anatomy.terminalBranches, boutons = Est.anatomy.terminalBoutons;
+          const velho = Est.anatomy.axonPath[Est.anatomy.axonPath.length - 1];
+          // o quanto os terminais do Núcleo se espalham para a direita (com os bulbos), para que caibam no canvas
+          let ext = 0;
+          ramos.forEach(function (br) { br.pts.forEach(function (q) { ext = Math.max(ext, q.x - velho.x); }); });
+          boutons.forEach(function (bt) { ext = Math.max(ext, bt.x - velho.x + (bt.bWidth || 0)); });
+          const eixo = montarAxonio(Est.anatomy.somaX, Est.anatomy.somaY, Est.anatomy.somaRadius, Est.anatomy.scale, Math.max(DW * 0.62, borda - ext - 6));
+          const novo = eixo.axonPath[eixo.axonPath.length - 1], dx = novo.x - velho.x, dy = novo.y - velho.y;
+          const feitos = new Set();
+          ramos.forEach(function (br) { if (!feitos.has(br.pts)) { feitos.add(br.pts); br.pts.forEach(function (q) { q.x += dx; q.y += dy; }); } });
+          boutons.forEach(function (bt) {
+            if (!feitos.has(bt.branchPts)) { feitos.add(bt.branchPts); bt.branchPts.forEach(function (q) { q.x += dx; q.y += dy; }); }
+            bt.x += dx; bt.y += dy;
+          });
+          Est.anatomy.axonPath = eixo.axonPath;
+          Est.anatomy.myelinSheaths = eixo.myelinSheaths;
+          Est.anatomy.ranvierNodes = eixo.ranvierNodes;
+          Est.anatomy.axonEscala = eixo.axonEscala;
+          Est.anatomy.terminalBranches = ramos;        // os terminais do Núcleo ficam fora da esfera, no fim do tronco
+          Est.anatomy.terminalBoutons = boutons;
+        }
+
+// As bainhas de mielina e os nódulos de Ranvier de um axônio já traçado (a mesma regra do montarAxonio; delta muda o número de
+        // bainhas para que os axônios do feixe não tenham os nódulos alinhados)
+        function bainhasNos(axonPath, rel, axonSteps, scale, delta, livre) {
+          const myelinSheaths = [], ranvierNodes = [];
+          const numSheaths = Math.max(3, Math.round(6 * (rel - 0.1) / 0.9) + (delta || 0));
+          const gapRatio = 0.028 / rel;
+          const startOffset = Math.max(0.04 / rel, (livre || 0) / (rel * EIXO_BASE));     // livre: o começo do axônio fica sem bainha (segmento inicial)
+          const usableSpan = 1 - 0.10 / rel - (startOffset - 0.04 / rel);
+          const segSpan = (usableSpan - gapRatio * (numSheaths - 1)) / numSheaths;
+          for (let m = 0; m < numSheaths; m++) {
+            const t0 = startOffset + m * (segSpan + gapRatio);
+            const t1 = t0 + segSpan;
+            const idx0 = Math.floor(t0 * axonSteps);
+            const idx1 = Math.min(axonSteps, Math.ceil(t1 * axonSteps));
+            const pStart = axonPath[idx0], pEnd = axonPath[idx1], pMid = axonPath[Math.floor((idx0 + idx1) / 2)];
+            myelinSheaths.push({
+              pStart, pMid, pEnd,
+              angle: Math.atan2(pEnd.y - pStart.y, pEnd.x - pStart.x),
+              length: Math.hypot(pEnd.x - pStart.x, pEnd.y - pStart.y),
+              thickness: (15.0 + (m % 2) * 1.4) * scale
+            });
+            if (m < numSheaths - 1) {
+              const tGap = t1 + gapRatio * 0.5;
+              const gapIdx = Math.min(axonSteps, Math.round(tGap * axonSteps));
+              ranvierNodes.push({ x: axonPath[gapIdx].x, y: axonPath[gapIdx].y, t: tGap, flash: 0 });
+            }
+          }
+          return { myelinSheaths, ranvierNodes };
+        }
+
+// Os axônios do Núcleo (opc.axonios): saem do soma em leque curto, correm juntos e paralelos pelo corredor, atravessam a parede e
+        // abrem em leque rumo às esferas dos agentes (uma ponta para cada). O principal (o do desenho aprovado) é um deles; os outros
+        // levam terminais próprios (outra semente). Cada um é um objeto com as mesmas peças do principal (anatomy.extras).
+        function montarFeixe() {
+          const A = Est.anatomy, n = opc.axonios, k = vista.k, esc = A.scale;
+          const somaX = A.somaX, somaY = A.somaY;
+          const meio = (n - 1) / 2, iMain = Math.floor(meio);
+          const x0 = somaX + A.somaRadius * 1.44;                                   // de onde parte o axônio original (fase da onda)
+          const xBorda = (runtime.width - vista.tx) / k - 6;
+          const xParede = (vista.cx + vista.Rpx * PAREDE - vista.tx) / k;
+          const xAbre = xParede - opc.abre;                                         // onde o leque começa a abrir (antes da parede)
+          const xFeixe = somaX + 330 * esc;                                         // daí em diante correm juntos, em paralelo
+          const sp = 24 * esc;                                                      // distância entre os axônios no feixe
+          const dyE = opc.leque / k;                                                // distância entre as pontas, no desenho
+          const sm = function (u) { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); };
+          const onda = function (x) { return Math.sin((x - x0) / EIXO_BASE * Math.PI * 1.65) * 15 * esc; };
+          const raioSoma = function (ang) {
+            const m = A.somaOutline.length, f = (((ang % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI) * m;
+            const i0 = Math.floor(f) % m, i1 = (i0 + 1) % m, fr = f - Math.floor(f);
+            return A.somaOutline[i0].r * (1 - fr) + A.somaOutline[i1].r * fr;
+          };
+          const extras = [];
+          for (let i = 0; i < n; i++) {
+            const q = i - meio;
+            const th = q * 0.22, rs = raioSoma(th) - 6 * esc;
+            const sx = somaX + Math.cos(th) * rs, sy = somaY + Math.sin(th) * rs;
+            const fy = somaY + q * sp, yE = somaY + q * dyE;
+            // os terminais deste axônio: no principal, os que já existem; nos outros, um conjunto novo
+            let ramos, boutons, raiz;
+            if (i === iMain) { ramos = A.terminalBranches; boutons = A.terminalBoutons; raiz = A.axonPath[A.axonPath.length - 1]; }
+            else { const B = montarAnatomia((opc.semente + 104729 * (i + 1)) >>> 0); ramos = B.terminalBranches; boutons = B.terminalBoutons; raiz = B.axonPath[B.axonPath.length - 1]; }
+            const rx = raiz.x, ry = raiz.y;
+            let ext = 0;
+            ramos.forEach(function (br) { br.pts.forEach(function (p) { ext = Math.max(ext, p.x - rx); }); });
+            boutons.forEach(function (bt) { ext = Math.max(ext, bt.x - rx + (bt.bWidth || 0)); });
+            const xE = xBorda - ext - 6 - (i % 2 ? opc.degrau / k : 0);
+            const len = xE - sx, rel = len / EIXO_BASE, steps = Math.max(24, Math.round(72 * rel));
+            const axonPath = [];
+            for (let s2 = 0; s2 <= steps; s2++) {
+              const t = s2 / steps, x = sx + t * len;
+              const y = sy + (fy - sy) * sm((x - sx) / (xFeixe - sx)) + (yE - fy) * sm((x - xAbre) / (xE - xAbre)) + onda(x) - onda(sx);
+              axonPath.push({ x, y, t, w: (7.8 - Math.min(1, (x - sx) / EIXO_BASE) * 0.8) * esc });
+            }
+            const bn = bainhasNos(axonPath, rel, steps, esc, (i % 3) - 1, 120 * esc);
+            const fim = axonPath[axonPath.length - 1], dx = fim.x - rx, dy = fim.y - ry, feitos = new Set();
+            ramos.forEach(function (br) { if (!feitos.has(br.pts)) { feitos.add(br.pts); br.pts.forEach(function (p) { p.x += dx; p.y += dy; }); } });
+            boutons.forEach(function (bt) {
+              if (!feitos.has(bt.branchPts)) { feitos.add(bt.branchPts); bt.branchPts.forEach(function (p) { p.x += dx; p.y += dy; }); }
+              bt.x += dx; bt.y += dy;
+            });
+            const E = { axonPath: axonPath, myelinSheaths: bn.myelinSheaths, ranvierNodes: bn.ranvierNodes, axonEscala: 1 / rel, terminalBranches: ramos, terminalBoutons: boutons, scale: esc, indice: i };
+            if (i === iMain) {
+              A.axonPath = E.axonPath; A.myelinSheaths = E.myelinSheaths; A.ranvierNodes = E.ranvierNodes; A.axonEscala = E.axonEscala;
+              A.terminalBranches = ramos; A.terminalBoutons = boutons;
+            } else extras.push(E);
+          }
+          A.extras = extras;
+        }
+
+// Esfera de vidro: o menor círculo que contém o neurônio inteiro (soma, dendritos, axônio e terminais). Os pontos mais distantes,
+        // em geral as pontas dos terminais do axônio, encostam na parede. Aproximação de Bădoiu-Clarkson (sem dependência).
+        function pontasTerminais(A) {
+          return A.terminalBoutons.map(function (b) { return { x: b.x + Math.cos(b.tipAngle) * (b.bThick || 0) * 0.6, y: b.y + Math.sin(b.tipAngle) * (b.bThick || 0) * 0.6 }; });
+        }
+
+function calcularVista() {
+          if (opc.modo === 'ligacoes') {          // as ligações vivem no espaço do palco (1 unidade = 1 px do canvas)
+            const X = opc.vistaExt;           // no foco de uma esfera, a cena inteira entra na vista dela (escala e deslocamento)
+            vista.k = X ? X.k : 1; vista.tx = X ? X.tx : 0; vista.ty = X ? X.ty : 0; vista.cx = runtime.width / 2; vista.cy = runtime.height / 2;
+            vista.Rpx = Math.max(runtime.width, runtime.height); vista.Rd = vista.Rpx; vista.RdTodos = vista.Rd; vista.recorte2D = null; vista.terminais = 0; vista.toques = 0;
+            return;
+          }
+          const term = (opc.saida || opc.semEixo) ? [] : pontasTerminais(Est.anatomy);
+          const pts = term.slice();
+          Est.anatomy.dendriteTips.forEach(function (d) { pts.push({ x: d.tipX, y: d.tipY }); });
+          Est.anatomy.somaOutline.forEach(function (p) { pts.push({ x: p.x, y: p.y }); });
+          Est.minis.forEach(function (m) { m.pontos.forEach(function (p) { pts.push(p); }); });
+          // o centro da esfera é o corpo celular (soma); o raio vai até a ponta mais distante
+          const cx = Est.anatomy.somaX, cy = Est.anatomy.somaY;
+          let Rd = 0;
+          pts.forEach(function (p) { Rd = Math.max(Rd, Math.hypot(p.x - cx, p.y - cy)); });
+          Rd = Est.minis.length ? Rd * 1.03 : Rd + 3;
+          const Rpx = Math.max(10, Math.min(runtime.width, runtime.height) / 2 - (opc.margem || 3));
+          vista.RdTodos = Rd;
+          Rd = Math.min(Rd, opc.raioMax);
+          vista.k = Rpx / Rd;
+          vista.recorte2D = null;
+          vista.cx = opc.saida ? Rpx + 3 : runtime.width / 2; vista.cy = runtime.height / 2; vista.Rpx = Rpx; vista.Rd = Rd;
+          vista.tx = vista.cx - cx * vista.k; vista.ty = vista.cy - cy * vista.k;
+          vista.terminais = term.length;
+          vista.toques = term.filter(function (p) { return Math.hypot(p.x - cx, p.y - cy) > Rd * 0.93; }).length;
+        }
+
+    return { axonStartFim: axonStartFim, montarAnatomia: montarAnatomia, montarAxonio: montarAxonio, arvoreDe: arvoreDe, anatomiaLigacoes: anatomiaLigacoes, montarLigacao: montarLigacao, raizDaArvore: raizDaArvore, caixaDe: caixaDe, estenderTronco: estenderTronco, bainhasNos: bainhasNos, montarFeixe: montarFeixe, pontasTerminais: pontasTerminais, calcularVista: calcularVista };
+  }
+
+  return { criar: criar };
+}
+
+);
+// ---- fonte/neuronio/celula/parte.js
+SF.parte({nome:'neuronio/celula',porta:1,compativelDesde:1,requer:['comum/sorteio@1','comum/cores@1','comum/ramos@1','neuronio/recorte@1','neuronio/anatomia@1'],guarda:true,dom:true},
+/* Sexta-Feira Engine: o motor do neurônio (v0.3.0).
+ * Vem do neuronio.html do dono (desenho aprovado: soma, dendritos, axônio, terminais), transformado em fábrica: cada canvas tem o seu
+ * neurônio, com estado próprio. Só desenha; não lê dado, não usa rede, não mexe em nada fora do canvas que recebe.
+ *
+ *   var n = Neuronio.criar(canvas, { cor: '#8B3DFF', semente: 94127, leve: false });
+ *   n.redimensionar(largura, altura);   // em pixels CSS; refaz o desenho estático
+ *   n.passo(segundos); n.desenhar();     // um quadro (a tela chama, a 60 ou 24 por segundo)
+ *   n.iniciar(); n.disparar(); n.pausar(true|false); n.setCor('#RRGGBB'); n.setLeve(true|false);
+ *
+ * Opções da esfera: rede: N (até 9) neurônios menores dentro da esfera, com o MESMO desenho, cada um com os terminais do axônio
+ * na ponta de um dendrito primário do principal; saida: true faz só o tronco do axônio do principal atravessar a parede da esfera
+ * (rumo às outras esferas): a esfera fica à esquerda do canvas e o resto da largura é a passagem do tronco, que some aos poucos.
+ */
+function (usa) {
+  'use strict';
+
+  var createSeededRandom = usa.sorteio.criar, hexToRgb = usa.cores.hexParaRgb;
+
+  function criar(canvas, opcoes) {
+    const opc = Object.assign({ cor: '#8B3DFF', semente: 94127, leve: false, rede: 0, saida: false, raioMax: Infinity, cores: null, anel: 0, lupa: false, axonios: 1, leque: 100, degrau: 0, abre: 200, miniEsc: 0.54, miniEixo: 0.25, giro: 0.9, sobra: 0.7, alcance: 0.8, semEixo: false, quieto: false, giro0: 0, dprMax: 3, margem: 3, dendritosExtra: null, arcos: null, corredor: 42, ligacoes: null, escLig: 1, aoChegar: null }, opcoes || {});
+    opc.semente = opc.semente >>> 0;
+    opc.rede = Math.max(0, Math.min(9, Math.floor(Number(opc.rede) || 0)));
+    opc.saida = !!opc.saida;
+    opc.axonios = Math.max(1, Math.min(8, Math.round(opc.axonios) || 1));
+    opc.semEixo = !!opc.semEixo; opc.quieto = !!opc.quieto; opc.giro0 = Number(opc.giro0) || 0;
+    opc.modo = Array.isArray(opc.ligacoes) ? 'ligacoes' : '';       // 'ligacoes': a camada só dos axônios que ligam as esferas (sem corpo, sem vidro)
+    const ctx = canvas.getContext('2d');
+    const DW = 1360, DH = 760;          // o neurônio é montado neste espaço e depois escalado para caber na esfera
+    const vista = { k: 1, tx: 0, ty: 0, cx: 0, cy: 0, Rpx: 1, Rd: 1, toques: 0, terminais: 0 };
+    // A lupa: a vista pode ser ampliada (z) e deslocada (ox, oy, em px do canvas). Quando ela para, a parte fixa é refeita naquela
+    // ampliação (resolução e detalhes novos), em fatias por quadro, sem travar a animação.
+    const lupa = { z: 1, ox: 0, oy: 0, mudou: false, ultimo: 0, anim: null, ouvinte: null };
+    const VISTA_1 = { z: 1, ox: 0, oy: 0 };
+
+        const config = {
+          agente: 'Sexta-Feira',
+          corHex: '#8B3DFF',
+          rgb: [139, 61, 255],
+          brilhoNucleo: 21,
+          transparenciaCorpo: 45,
+          opacidadeDendritos: 84,
+          brilhoGeral: 72,
+          ramificacaoDendritos: 82,
+          velocidadePulsos: 40,
+          frequenciaDisparos: 72,
+          enableVesicles: true,
+          enableMist: true,
+          enableSubBranches: true
+        };
+
+        const runtime = {
+          width: 1280,
+          height: 720,
+          dpr: 1,
+          paused: false,
+          showLabels: true,
+          sidebarOpen: true,
+          time: 0,
+          lastFrameTime: 0,
+          spawnAccumulator: 0,
+          somaExcitation: 0,
+          somaRgb: null
+        };
+
+
+        const incomingSignals = [];
+        const actionPotentials = [];
+        const mistClouds = [];
+        const releasedNeurotransmitters = [];
+        const MINI_ESC = opc.miniEsc;      // tamanho do menor em relação ao principal
+        const MINI_EIXO = opc.miniEixo;        const miniAPs = [];                 // sinais correndo pelo axônio de cada neurônio menor
+        const EIXO_BASE = DW * 0.62 - (DW * 0.25 + 48 * 1.44);   // comprimento do axônio no desenho original
+
+        // O ESTADO do neurônio, num objeto só (v0.4.2): as partes recebem Est e leem/escrevem aqui. Cada campo está na tabela do LEIA-ME.md.
+        const Est = {
+          canvas: canvas,
+          opc: opc,
+          ctx: ctx,
+          DW: DW,
+          DH: DH,
+          vista: vista,
+          lupa: lupa,
+          VISTA_1: VISTA_1,
+          config: config,
+          runtime: runtime,
+          incomingSignals: incomingSignals,
+          actionPotentials: actionPotentials,
+          mistClouds: mistClouds,
+          releasedNeurotransmitters: releasedNeurotransmitters,
+          MINI_ESC: MINI_ESC,
+          MINI_EIXO: MINI_EIXO,
+          miniAPs: miniAPs,
+          EIXO_BASE: EIXO_BASE,
+          detalhe: null,
+          refino: null,
+          detZ: 1,
+          detLocal: 1,
+          pulsoZ: 1,
+          tmpCamada: null,
+          anatomy: {
+            somaX: 0,
+            somaY: 0,
+            somaRadius: 48,
+            scale: 1,
+            somaOutline: [],
+            membraneSpicules: [],
+            cytoplasmRidges: [],
+            membraneGranules: [],
+            nucleusChromatin: [],
+            dendriteBranches: [],
+            dendriteTips: [],
+            synapticSpines: [],
+            axonPath: [],
+            myelinSheaths: [],
+            ranvierNodes: [],
+            terminalBranches: [],
+            terminalBoutons: [],
+            offscreenCanvas: null
+          },
+          minis: [],  // os neurônios menores dentro da esfera (o mesmo desenho, em escala)
+          auxCv: null,
+          vidro: null,
+          par: { x: 0, y: 0, tx: 0, ty: 0 },
+          PAREDE: 0.955  // raio da parede interna do vidro (a mesma do traço da casca em construirVidro)
+        };
+        // neuronio/recorte (v0.4.2): a máscara da esfera e o corredor por onde o tronco do axônio sai dela (só geometria de recorte, sem desenho próprio).
+        const P_recorte = usa.recorte.criar(Est, {});
+        const recortaNaEsfera = P_recorte.recortaNaEsfera, recorte2D = P_recorte.recorte2D, montarMascara = P_recorte.montarMascara, fadeFora = P_recorte.fadeFora;
+        // neuronio/anatomia (v0.4.2): a geometria do neurônio: onde fica cada ramo, o axônio, as bainhas, os terminais, as árvores das ligações e a vista (escala e centro) da esfera. Não desenha.
+        const P_anatomia = usa.anatomia.criar(Est, {});
+        const axonStartFim = P_anatomia.axonStartFim, montarAnatomia = P_anatomia.montarAnatomia, anatomiaLigacoes = P_anatomia.anatomiaLigacoes, raizDaArvore = P_anatomia.raizDaArvore, caixaDe = P_anatomia.caixaDe, estenderTronco = P_anatomia.estenderTronco, montarFeixe = P_anatomia.montarFeixe, pontasTerminais = P_anatomia.pontasTerminais, calcularVista = P_anatomia.calcularVista;
+        // FIM DOS BLOCOS DAS PARTES
+        const par = Est.par, PAREDE = Est.PAREDE;
+
+
+        const dendritos = usa.ramos;
+        const trilhaSuave = dendritos.trilhaSuave, bordasRamo = dendritos.bordasRamo, desviar = dendritos.desviar, mitocondrias = dendritos.mitocondrias;
+        function drawSharpDendritePolygon(targetCtx, points) { dendritos.poligonoAfilado(targetCtx, points, nivel()); }
+        function drawTaperedBranch(targetCtx, points) { dendritos.ramoEncorpado(targetCtx, points, nivel()); }
+
+
+
 
         // Constrói o que a esfera mostra: o neurônio principal (soma no centro) e, com a opção rede, os menores em volta
         function buildCompleteNeuron() {
@@ -685,17 +875,6 @@ function (usa) {
           bakeStaticLayer();
         }
 
-        // A caixa (no espaço do desenho) que um menor ocupa: ramos, axônio, terminais, espinhas e o halo do soma
-        function caixaDe(B, leva, S, hr) {
-          let x0 = S.x - hr, y0 = S.y - hr, x1 = S.x + hr, y1 = S.y + hr;
-          const poe = function (p) { const q = leva(p); if (q.x < x0) x0 = q.x; if (q.y < y0) y0 = q.y; if (q.x > x1) x1 = q.x; if (q.y > y1) y1 = q.y; };
-          B.dendriteBranches.forEach(function (br) { br.pts.forEach(poe); });
-          B.terminalBranches.forEach(function (br) { br.pts.forEach(poe); });
-          B.axonPath.forEach(poe); B.somaOutline.forEach(poe);
-          B.synapticSpines.forEach(function (sp) { poe({ x: sp.x2, y: sp.y2 }); });
-          B.terminalBoutons.forEach(function (bt) { poe({ x: bt.x, y: bt.y }); });
-          return { x0: x0, y0: y0, x1: x1, y1: y1 };
-        }
 
         // Os neurônios menores: o mesmo desenho do principal, em escala. Cada um aponta o axônio para dentro e os terminais param na
         // ponta mais distante de um dendrito primário do principal (um menor por dendrito primário).
@@ -882,154 +1061,10 @@ function (usa) {
           });
         }
 
-        // Só o tronco do axônio do principal atravessa a parede: ele segue até a borda do canvas, rumo às outras esferas.
-        // Os terminais dele ficam nas outras esferas e por isso não são desenhados aqui.
-        function estenderTronco() {
-          const borda = (runtime.width - vista.tx) / vista.k - 6;
-          const ramos = Est.anatomy.terminalBranches, boutons = Est.anatomy.terminalBoutons;
-          const velho = Est.anatomy.axonPath[Est.anatomy.axonPath.length - 1];
-          // o quanto os terminais do Núcleo se espalham para a direita (com os bulbos), para que caibam no canvas
-          let ext = 0;
-          ramos.forEach(function (br) { br.pts.forEach(function (q) { ext = Math.max(ext, q.x - velho.x); }); });
-          boutons.forEach(function (bt) { ext = Math.max(ext, bt.x - velho.x + (bt.bWidth || 0)); });
-          const eixo = montarAxonio(Est.anatomy.somaX, Est.anatomy.somaY, Est.anatomy.somaRadius, Est.anatomy.scale, Math.max(DW * 0.62, borda - ext - 6));
-          const novo = eixo.axonPath[eixo.axonPath.length - 1], dx = novo.x - velho.x, dy = novo.y - velho.y;
-          const feitos = new Set();
-          ramos.forEach(function (br) { if (!feitos.has(br.pts)) { feitos.add(br.pts); br.pts.forEach(function (q) { q.x += dx; q.y += dy; }); } });
-          boutons.forEach(function (bt) {
-            if (!feitos.has(bt.branchPts)) { feitos.add(bt.branchPts); bt.branchPts.forEach(function (q) { q.x += dx; q.y += dy; }); }
-            bt.x += dx; bt.y += dy;
-          });
-          Est.anatomy.axonPath = eixo.axonPath;
-          Est.anatomy.myelinSheaths = eixo.myelinSheaths;
-          Est.anatomy.ranvierNodes = eixo.ranvierNodes;
-          Est.anatomy.axonEscala = eixo.axonEscala;
-          Est.anatomy.terminalBranches = ramos;        // os terminais do Núcleo ficam fora da esfera, no fim do tronco
-          Est.anatomy.terminalBoutons = boutons;
-        }
 
 
-        // As bainhas de mielina e os nódulos de Ranvier de um axônio já traçado (a mesma regra do montarAxonio; delta muda o número de
-        // bainhas para que os axônios do feixe não tenham os nódulos alinhados)
-        function bainhasNos(axonPath, rel, axonSteps, scale, delta, livre) {
-          const myelinSheaths = [], ranvierNodes = [];
-          const numSheaths = Math.max(3, Math.round(6 * (rel - 0.1) / 0.9) + (delta || 0));
-          const gapRatio = 0.028 / rel;
-          const startOffset = Math.max(0.04 / rel, (livre || 0) / (rel * EIXO_BASE));     // livre: o começo do axônio fica sem bainha (segmento inicial)
-          const usableSpan = 1 - 0.10 / rel - (startOffset - 0.04 / rel);
-          const segSpan = (usableSpan - gapRatio * (numSheaths - 1)) / numSheaths;
-          for (let m = 0; m < numSheaths; m++) {
-            const t0 = startOffset + m * (segSpan + gapRatio);
-            const t1 = t0 + segSpan;
-            const idx0 = Math.floor(t0 * axonSteps);
-            const idx1 = Math.min(axonSteps, Math.ceil(t1 * axonSteps));
-            const pStart = axonPath[idx0], pEnd = axonPath[idx1], pMid = axonPath[Math.floor((idx0 + idx1) / 2)];
-            myelinSheaths.push({
-              pStart, pMid, pEnd,
-              angle: Math.atan2(pEnd.y - pStart.y, pEnd.x - pStart.x),
-              length: Math.hypot(pEnd.x - pStart.x, pEnd.y - pStart.y),
-              thickness: (15.0 + (m % 2) * 1.4) * scale
-            });
-            if (m < numSheaths - 1) {
-              const tGap = t1 + gapRatio * 0.5;
-              const gapIdx = Math.min(axonSteps, Math.round(tGap * axonSteps));
-              ranvierNodes.push({ x: axonPath[gapIdx].x, y: axonPath[gapIdx].y, t: tGap, flash: 0 });
-            }
-          }
-          return { myelinSheaths, ranvierNodes };
-        }
 
-        // Os axônios do Núcleo (opc.axonios): saem do soma em leque curto, correm juntos e paralelos pelo corredor, atravessam a parede e
-        // abrem em leque rumo às esferas dos agentes (uma ponta para cada). O principal (o do desenho aprovado) é um deles; os outros
-        // levam terminais próprios (outra semente). Cada um é um objeto com as mesmas peças do principal (anatomy.extras).
-        function montarFeixe() {
-          const A = Est.anatomy, n = opc.axonios, k = vista.k, esc = A.scale;
-          const somaX = A.somaX, somaY = A.somaY;
-          const meio = (n - 1) / 2, iMain = Math.floor(meio);
-          const x0 = somaX + A.somaRadius * 1.44;                                   // de onde parte o axônio original (fase da onda)
-          const xBorda = (runtime.width - vista.tx) / k - 6;
-          const xParede = (vista.cx + vista.Rpx * PAREDE - vista.tx) / k;
-          const xAbre = xParede - opc.abre;                                         // onde o leque começa a abrir (antes da parede)
-          const xFeixe = somaX + 330 * esc;                                         // daí em diante correm juntos, em paralelo
-          const sp = 24 * esc;                                                      // distância entre os axônios no feixe
-          const dyE = opc.leque / k;                                                // distância entre as pontas, no desenho
-          const sm = function (u) { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); };
-          const onda = function (x) { return Math.sin((x - x0) / EIXO_BASE * Math.PI * 1.65) * 15 * esc; };
-          const raioSoma = function (ang) {
-            const m = A.somaOutline.length, f = (((ang % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / (2 * Math.PI) * m;
-            const i0 = Math.floor(f) % m, i1 = (i0 + 1) % m, fr = f - Math.floor(f);
-            return A.somaOutline[i0].r * (1 - fr) + A.somaOutline[i1].r * fr;
-          };
-          const extras = [];
-          for (let i = 0; i < n; i++) {
-            const q = i - meio;
-            const th = q * 0.22, rs = raioSoma(th) - 6 * esc;
-            const sx = somaX + Math.cos(th) * rs, sy = somaY + Math.sin(th) * rs;
-            const fy = somaY + q * sp, yE = somaY + q * dyE;
-            // os terminais deste axônio: no principal, os que já existem; nos outros, um conjunto novo
-            let ramos, boutons, raiz;
-            if (i === iMain) { ramos = A.terminalBranches; boutons = A.terminalBoutons; raiz = A.axonPath[A.axonPath.length - 1]; }
-            else { const B = montarAnatomia((opc.semente + 104729 * (i + 1)) >>> 0); ramos = B.terminalBranches; boutons = B.terminalBoutons; raiz = B.axonPath[B.axonPath.length - 1]; }
-            const rx = raiz.x, ry = raiz.y;
-            let ext = 0;
-            ramos.forEach(function (br) { br.pts.forEach(function (p) { ext = Math.max(ext, p.x - rx); }); });
-            boutons.forEach(function (bt) { ext = Math.max(ext, bt.x - rx + (bt.bWidth || 0)); });
-            const xE = xBorda - ext - 6 - (i % 2 ? opc.degrau / k : 0);
-            const len = xE - sx, rel = len / EIXO_BASE, steps = Math.max(24, Math.round(72 * rel));
-            const axonPath = [];
-            for (let s2 = 0; s2 <= steps; s2++) {
-              const t = s2 / steps, x = sx + t * len;
-              const y = sy + (fy - sy) * sm((x - sx) / (xFeixe - sx)) + (yE - fy) * sm((x - xAbre) / (xE - xAbre)) + onda(x) - onda(sx);
-              axonPath.push({ x, y, t, w: (7.8 - Math.min(1, (x - sx) / EIXO_BASE) * 0.8) * esc });
-            }
-            const bn = bainhasNos(axonPath, rel, steps, esc, (i % 3) - 1, 120 * esc);
-            const fim = axonPath[axonPath.length - 1], dx = fim.x - rx, dy = fim.y - ry, feitos = new Set();
-            ramos.forEach(function (br) { if (!feitos.has(br.pts)) { feitos.add(br.pts); br.pts.forEach(function (p) { p.x += dx; p.y += dy; }); } });
-            boutons.forEach(function (bt) {
-              if (!feitos.has(bt.branchPts)) { feitos.add(bt.branchPts); bt.branchPts.forEach(function (p) { p.x += dx; p.y += dy; }); }
-              bt.x += dx; bt.y += dy;
-            });
-            const E = { axonPath: axonPath, myelinSheaths: bn.myelinSheaths, ranvierNodes: bn.ranvierNodes, axonEscala: 1 / rel, terminalBranches: ramos, terminalBoutons: boutons, scale: esc, indice: i };
-            if (i === iMain) {
-              A.axonPath = E.axonPath; A.myelinSheaths = E.myelinSheaths; A.ranvierNodes = E.ranvierNodes; A.axonEscala = E.axonEscala;
-              A.terminalBranches = ramos; A.terminalBoutons = boutons;
-            } else extras.push(E);
-          }
-          A.extras = extras;
-        }
 
-        // Esfera de vidro: o menor círculo que contém o neurônio inteiro (soma, dendritos, axônio e terminais). Os pontos mais distantes,
-        // em geral as pontas dos terminais do axônio, encostam na parede. Aproximação de Bădoiu-Clarkson (sem dependência).
-        function pontasTerminais(A) {
-          return A.terminalBoutons.map(function (b) { return { x: b.x + Math.cos(b.tipAngle) * (b.bThick || 0) * 0.6, y: b.y + Math.sin(b.tipAngle) * (b.bThick || 0) * 0.6 }; });
-        }
-        function calcularVista() {
-          if (opc.modo === 'ligacoes') {          // as ligações vivem no espaço do palco (1 unidade = 1 px do canvas)
-            const X = opc.vistaExt;           // no foco de uma esfera, a cena inteira entra na vista dela (escala e deslocamento)
-            vista.k = X ? X.k : 1; vista.tx = X ? X.tx : 0; vista.ty = X ? X.ty : 0; vista.cx = runtime.width / 2; vista.cy = runtime.height / 2;
-            vista.Rpx = Math.max(runtime.width, runtime.height); vista.Rd = vista.Rpx; vista.RdTodos = vista.Rd; vista.recorte2D = null; vista.terminais = 0; vista.toques = 0;
-            return;
-          }
-          const term = (opc.saida || opc.semEixo) ? [] : pontasTerminais(Est.anatomy);
-          const pts = term.slice();
-          Est.anatomy.dendriteTips.forEach(function (d) { pts.push({ x: d.tipX, y: d.tipY }); });
-          Est.anatomy.somaOutline.forEach(function (p) { pts.push({ x: p.x, y: p.y }); });
-          Est.minis.forEach(function (m) { m.pontos.forEach(function (p) { pts.push(p); }); });
-          // o centro da esfera é o corpo celular (soma); o raio vai até a ponta mais distante
-          const cx = Est.anatomy.somaX, cy = Est.anatomy.somaY;
-          let Rd = 0;
-          pts.forEach(function (p) { Rd = Math.max(Rd, Math.hypot(p.x - cx, p.y - cy)); });
-          Rd = Est.minis.length ? Rd * 1.03 : Rd + 3;
-          const Rpx = Math.max(10, Math.min(runtime.width, runtime.height) / 2 - (opc.margem || 3));
-          vista.RdTodos = Rd;
-          Rd = Math.min(Rd, opc.raioMax);
-          vista.k = Rpx / Rd;
-          vista.recorte2D = null;
-          vista.cx = opc.saida ? Rpx + 3 : runtime.width / 2; vista.cy = runtime.height / 2; vista.Rpx = Rpx; vista.Rd = Rd;
-          vista.tx = vista.cx - cx * vista.k; vista.ty = vista.cy - cy * vista.k;
-          vista.terminais = term.length;
-          vista.toques = term.filter(function (p) { return Math.hypot(p.x - cx, p.y - cy) > Rd * 0.93; }).length;
-        }
 
         function giroCelula(c, A) {
           if (!opc.giro0) return;
