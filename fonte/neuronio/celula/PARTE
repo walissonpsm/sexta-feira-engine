@@ -1,7 +1,7 @@
 nome: neuronio/celula
 porta: 1
 compativel-desde: 1
-requer: comum/sorteio@1 comum/cores@1 comum/ramos@1
+requer: comum/sorteio@1 comum/cores@1 comum/ramos@1 neuronio/recorte@1
 juntadora: sim
 guarda: sim
 dom: sim
