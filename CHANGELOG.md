@@ -1,5 +1,16 @@
 # Changelog — Sexta-Feira Engine
 
+## v0.4.4 — sorteio separado por pedaço da anatomia (20/11)
+
+Pastas: todas
+
+- **O arranjo dos galhos mudou, uma única vez, de propósito.** Em `neuronio/anatomia` o corpo (contorno, espículas, anel, núcleo), cada tronco de dendrito e cada dendrito de contato passaram a ter o PRÓPRIO sorteio (`rngDe(nome)`: semente do neurônio misturada com o hash do nome do pedaço). Antes todos bebiam do mesmo sorteio: mexer no contorno mudava todos os galhos. Agora cada pedaço só depende da semente e de si mesmo. O estilo, as cores, os eixos dos axônios e o tamanho são os mesmos; só os galhos caem em outros lugares (imagens antes/depois entregues).
+- **Referências regravadas, com motivo:** `testes/referencias/cena.json` (9 cenas, 101 pontos) e `testes/referencias/roteiro.json`, porque a anatomia sorteia diferente. Depois de regravar, `imagens.py` dá 101 pontos idênticos e o `roteiro.py` passa. `portas.json` NÃO mudou (nenhuma porta, `requer` ou aridade mudou).
+- **Sorteio separado também nos testes por parte:** com `SF_TESTE`, o carregador dá a cada parte o próprio `usa.base.acaso` (semente = nome da parte), então uma parte não gasta sorteios de outra. Novo `SF.porta(nome)` (só com `SF_TESTE`) e `anatomia()` na celula (só geometria, sem dado) para os testes.
+- **Teste novo** (`navegador.py`, `test_sorteio_separado_por_pedaco_da_anatomia`, 19 testes agora): mesma semente dá a mesma anatomia; outra semente dá outro corpo; gastar sorteios do contorno muda o contorno mas NÃO muda os dendritos; um dendrito de contato extra não mexe nos troncos. Prova vermelha: com o tronco ligado de volta ao sorteio do contorno o teste reprova.
+- **Instabilidade rara do `imagens.py`: causa NÃO achada.** Investigação com tempo limitado: 20 rodadas de `ciclo-cripto-2x` sem nenhuma repetição (a taxa antiga era cerca de 1 em 100, então 20 rodadas não provam nada). A nova tentativa (até 4) e o resumo das cenas repetidas continuam.
+- **Decisão: NÃO voltar a guarda nas funções internas.** Ela mudaria o orçamento de tempo real da lupa e o desenho; a falha já é contida na entrada da porta, por esfera, por axônio e por órgão.
+
 ## v0.4.3 — provas por parte (20/11)
 
 Pastas: todas

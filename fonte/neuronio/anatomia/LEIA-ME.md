@@ -36,3 +36,7 @@ Sem guarda: a porta é uma fábrica chamada uma vez por neurônio; as funções 
 ## Como mexer
 
 Abra só esta pasta, mude o que precisa, rode `bash ferramentas/montar-interface.sh`, `bash testes/conferir.sh` e `python3 testes/imagens.py`. Se mudar um campo de `E` ou uma função da porta, suba `porta:` no `PARTE` e atualize as juntadoras.
+
+## Sorteio por pedaço (v0.4.4)
+
+O contorno do corpo, cada tronco de dendrito e cada contato têm o próprio sorteio (`rngDe(nome)`): mexer em um não muda os outros. Mudar um nome muda os galhos dele e exige regravar as referências.

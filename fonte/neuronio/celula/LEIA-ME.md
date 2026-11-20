@@ -15,3 +15,7 @@ Grupos: o canvas e o contexto (`canvas`, `opc`, `ctx`, `DW`, `DH`); a vista e a 
 ## Falha contida por órgão (v0.4.3)
 
 `orgao(contexto, nome, fn)` roda cada órgão do desenho (halo, dendritos, soma, núcleo, axônio, terminais no desenho parado; névoa, minis, excitação, pulsos, nódulos, potenciais, bulbos e neurotransmissores no vivo) dentro de `usa.base.seguro('<id da esfera>:<órgão>')`. Se um órgão der erro, só ele para NAQUELA esfera e o contexto volta à transformação, à composição e à opacidade de antes dele. Um `clip` ou um `save` aberto pelo órgão não dá para desfazer (fica até o `restore` do quadro). O `id` vem da cena (`opc.id`). Sem erro, o desenho não muda (`imagens.py` idêntico).
+
+## `anatomia()` (v0.4.4)
+
+Só para teste: devolve a geometria da anatomia (sem dado nenhum). Só é montada depois de `redimensionar`.

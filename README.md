@@ -10,7 +10,7 @@ Abra `http://127.0.0.1:8765/engine/` (servida pelo mapa da Sexta-Feira). No cent
 
 - **Suas cores**: edite só `fonte/cores/cores/cores.css` e rode `bash ferramentas/montar-interface.sh` (copia para `interface/cores.css`) (variáveis `--cor-...`); a borda e o neurônio de cada agente e cada módulo seguem a variável dele.
 - **Modo leve** para poupar a GPU: `?leve=1` no endereço, ou automático se o sistema pede movimento reduzido.
-- **A fonte (v0.4.0 a v0.4.3)**: a tela é gerada de `fonte/<camada>/<parte>/` (cada parte com `PARTE`, o código, `LEIA-ME.md`); `interface/` é o resultado e **não se edita à mão**. Para mudar uma parte: abra só a pasta dela (e o `LEIA-ME.md`), rode `bash ferramentas/montar-interface.sh` e confira com `bash testes/conferir.sh`. O mapa de quem usa quem está em `fonte/MAPA.md`.
+- **A fonte (v0.4.0 a v0.4.4)**: a tela é gerada de `fonte/<camada>/<parte>/` (cada parte com `PARTE`, o código, `LEIA-ME.md`); `interface/` é o resultado e **não se edita à mão**. Para mudar uma parte: abra só a pasta dela (e o `LEIA-ME.md`), rode `bash ferramentas/montar-interface.sh` e confira com `bash testes/conferir.sh`. O mapa de quem usa quem está em `fonte/MAPA.md`.
 - Arquivos gerados em `interface/`: `index.html` (estrutura), `tela.css` (layout), `tela.js` (monta a tela, só com `textContent`), `cena.js` (a cena e o ciclo do pedido), `ligacoes.js` (a ponta e o pulso dos axônios), `neuronio.js` (o motor de desenho do neurônio), `sf.js` (o carregador das partes), `dados-ficticios.js`.
 
 ## O laboratório do neurônio (`interface/neuronio.html`)

@@ -19,4 +19,6 @@ não vaza); se der erro, só aquela parte é desligada (`console.error` com a pi
 **Como testar**: `bash testes/conferir.sh` (estrutura, dependências, globais proibidos) e `python3 testes/imagens.py` (a tela tem de sair idêntica).
 
 **Limites da falha contida**: `seguro` NÃO salva/restaura o canvas (só a guarda das portas faz isso); quem usar `seguro` num desenho que mude `ctxP` deve fazer o próprio save/restore (a `neuronio/celula` faz, no `orgao`). O aviso na tela é a parte `tela/aviso` (v0.4.3), que não depende de nenhuma outra e por isso avisa também quando a cena ou a `tela/inicio` caem.
+**Sorteio por parte (v0.4.4):** com `SF_TESTE`, cada parte recebe o próprio `usa.base.acaso` (semente = hash do nome da parte), e `SF.porta(nome)` devolve a porta de uma parte (só no teste).
+
 **Só nos testes (`SF_TESTE` objeto)**: `{ estrito: false }` contém as falhas em vez de relançar; `{ quebrar: '<parte>' }` faz aquela parte falhar ao montar (o `testes/camadas.py` usa, uma parte por vez); `{ medir: true }` cronometra as funções das portas e, um nível abaixo, os métodos do objeto devolvido (`SF.tempos()`; só informa, nunca reprova; muda o tempo real, por isso nunca no `imagens.py`).
