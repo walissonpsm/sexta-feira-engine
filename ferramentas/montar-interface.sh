@@ -5,7 +5,7 @@
 #   ferramentas/montar-interface.sh --em PASTA   gera os mesmos arquivos (e o MAPA.md) numa PASTA (o conferir.sh usa isto para comparar)
 #
 # Cada parte é uma pasta fonte/<camada>/<parte>/ com o manifesto PARTE (nome, tipo, porta, requer...), o parte.js (ou o arquivo dela), o LEIA-ME.md
-# e a pasta teste/ (referências só dos testes; nunca vai para a tela). Veja o README.md e o AGENTS.md (seção 7, v0.4.0).
+# e a pasta teste/ (referências só dos testes; nunca vai para a tela). Veja o README.md (seção "A fonte"), o LEIA-ME.md de cada parte e as regras permanentes na seção 7 do AGENTS.md.
 #
 # Camadas (só se usa o que está embaixo): base < comum < neuronio, ligacoes, dados < cena < tela. Dentro de uma camada só a parte marcada
 # "juntadora: sim" pode usar as irmãs. Versões de porta: "requer: x@N" vale se compativel-desde(x) <= N <= porta(x). Ciclo: o tsort recusa.

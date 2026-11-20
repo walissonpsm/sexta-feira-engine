@@ -116,7 +116,7 @@ class Roteiro(unittest.TestCase):
 
     # o pulso de cada axônio (o de entrada do módulo e o violeta de volta), olhado a cada quadro do relógio preso (16 ms): o nódulo é a cintura entre duas bainhas (`nosU[k]`) e acende no
     # quadro em que o pulso passa por ela (`ax.pulso.u` chega a `nosU[k]`); todos os nódulos do axônio acendem. Medida de v0.5.0: antes do ajuste os nódulos acendiam pela conta uniforme
-    # (`a0 + k * pitch`), até ~54 px longe da cintura desenhada, e em alguns axônios o último nódulo nunca acendia.
+    # (`a0 + k * pitch`), até ~40 px antes e ~57 px depois da cintura desenhada (6 agentes, 327 nódulos), e 2 desses 327 nunca acendiam.
     AMOSTRA = """(ag) => window.SF_CENA.parede().eixos.filter(x => x.ag === ag && x.pulso).map(x => ({ id: x.id, u: x.pulso.u, nos: x.nos.slice(0, x.nNos), nosU: x.nosU.slice(0, x.nNos), vel: x.vel, larg: x.larg }))"""
 
     def test_os_nodulos_acendem_onde_o_pulso_passa(self):
