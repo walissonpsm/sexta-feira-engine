@@ -92,12 +92,17 @@ def tirar(pasta, nomes, nav):
             pg.wait_for_timeout(400)         # tempo REAL para o navegador (celular emulado) assentar o tamanho da janela antes de o relógio falso andar
             # o performance.now do relógio falso parte de 2 ou 3 ms conforme a carga da página (a diferença de 1 ms vale até o fim da cena e muda,
             # por exemplo, a paralaxe do vidro em frações de pixel); aqui ele é refeito para sempre partir de 2 ms (o valor das referências)
-            pg.evaluate("() => { var base = performance.now.bind(performance), desvio = base() - 2; performance.now = function () { return base() - desvio; }; }")
+            pg.evaluate("() => { var base = performance.now.bind(performance), desvio = base() - 2; window.__raw = base; performance.now = function () { return base() - desvio; }; }")
+            # A CAUSA da instabilidade residual (achada na v0.4.3): o relógio falso parte de 2 a 5 ms (conforme a carga da página) e as quadros caem sempre em múltiplos de
+            # 16 ms; um "rodar 1500" de duração fixa terminava então em 1502 ou em 1505, e o quadro de 1504 caía ANTES ou DEPOIS do passo seguinte (por exemplo, o pedido):
+            # o axônio ficava um quadro (4% do crescimento) atrás. Por isso os passos "rodar" andam até um instante ABSOLUTO do relógio (alvo), o mesmo em toda rodada.
+            alvo = 2
             pg.evaluate("() => window.SF_CENA.automatico(false)")
             pontos = {}
             for p in passos:
                 if p[0] == "rodar":
-                    pg.clock.run_for(p[1])
+                    alvo += p[1]
+                    pg.clock.run_for(max(0, int(round(alvo - pg.evaluate("() => window.__raw()")))))
                 elif p[0] == "pedir":
                     if not pg.evaluate("(id) => window.SF_CENA.pedir(id)", p[1]):
                         erros.append("%s: pedido de %s recusado" % (nome, p[1]))
@@ -168,9 +173,10 @@ def main():
                         (d / src.name).write_bytes(src.read_bytes())
         return f
     falhas = list(erros) + compara(res)
-    # Instabilidade rara que sobrou (cerca de 1 rodada em 80 numa cena de ciclo; as causas achadas até aqui, o resize sem mudança de tamanho e o
-    # desvio de 1 ms do performance.now, já foram corrigidas): uma cena que falhou é refeita até 3 vezes e só reprova se NENHUMA das 4 rodadas bater
+    # Instabilidade rara que sobrou (cerca de 1 rodada em 100 numa cena de ciclo, só o canvas da parede no primeiro ponto; as causas achadas até aqui, o resize sem
+    # mudança de tamanho, o desvio de 1 ms do performance.now e a corrida do quadro de fronteira dos passos 'rodar', já foram corrigidas): uma cena que falhou é refeita até 3 vezes e só reprova se NENHUMA das 4 rodadas bater
     # (defeito de verdade muda os pixels sempre do mesmo jeito). Cada cena que precisou de nova rodada é avisada; nada é regravado.
+    repetidas = []
     for nome in [n for n in res if any(f.startswith(n + "/") for f in falhas)]:
         for tent in range(2, 5):
             with sync_playwright() as p:
@@ -180,6 +186,7 @@ def main():
             if not e2 and not compara(r2):
                 falhas = [f for f in falhas if not f.startswith(nome + "/")]
                 print("aviso: cena instável '%s' bateu na tentativa %d de 4" % (nome, tent))
+                repetidas.append("%s (tentativa %d)" % (nome, tent))
                 break
     total = sum(len(v) for v in res.values())
     if falhas:
@@ -189,6 +196,8 @@ def main():
         print("capturas em /tmp/imagens-diferenca/")
         return 1
     print("APROVADO: %d pontos idênticos às referências (pixel a pixel)." % total)
+    if repetidas:
+        print("  atenção: precisaram de nova rodada (instabilidade conhecida, ver AGENTS.md): %s" % ", ".join(repetidas))
     return 0
 
 

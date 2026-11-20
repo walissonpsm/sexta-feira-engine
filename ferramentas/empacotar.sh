@@ -28,6 +28,9 @@ if [ "${ENGINE_TESTE:-}" != "1" ] && ! python3 -c 'import playwright' 2>/dev/nul
 fi
 if [ "${ENGINE_TESTE:-}" != "1" ]; then
     python3 testes/imagens.py >/dev/null || { python3 testes/imagens.py >&2 || true; echo "empacotar: a tela não bate com as referências (testes/imagens.py)" >&2; exit 1; }
+    # o roteiro do ciclo (testes/roteiro.py) e uma parte quebrada de cada vez (testes/camadas.py): também travam o empacotamento (v0.4.3)
+    python3 testes/roteiro.py >/dev/null 2>&1 || { python3 testes/roteiro.py >&2 || true; echo "empacotar: o roteiro do ciclo mudou (testes/roteiro.py)" >&2; exit 1; }
+    python3 testes/camadas.py >/dev/null 2>&1 || { python3 testes/camadas.py >&2 || true; echo "empacotar: uma parte quebrada derrubou mais (ou menos) do que devia (testes/camadas.py)" >&2; exit 1; }
 fi
 
 if git rev-parse -q --verify "refs/tags/v$V" >/dev/null; then

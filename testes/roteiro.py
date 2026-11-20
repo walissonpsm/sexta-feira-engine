@@ -65,9 +65,10 @@ class Roteiro(unittest.TestCase):
         pg.wait_for_function("() => window.SF_CENA")
         pg.wait_for_load_state("load")
         pg.wait_for_timeout(400)
-        pg.evaluate("() => { var base = performance.now.bind(performance), desvio = base() - 2; performance.now = function () { return base() - desvio; }; }")
+        pg.evaluate("() => { var base = performance.now.bind(performance), desvio = base() - 2; window.__raw = base; performance.now = function () { return base() - desvio; }; }")
         pg.evaluate("() => window.SF_CENA.automatico(false)")
-        pg.clock.run_for(2000)
+        alvo = 2 + 2000                                   # os passos andam até instantes ABSOLUTOS do relógio (ver a causa em imagens.py)
+        pg.clock.run_for(max(0, int(round(alvo - pg.evaluate("() => window.__raw()")))))
         self.assertTrue(pg.evaluate("(id) => window.SF_CENA.pedir(id)", agente))
         passos, ultimo, t = [], None, 0
         while t <= total_ms:
@@ -77,7 +78,8 @@ class Roteiro(unittest.TestCase):
             if estado != ultimo:
                 passos.append([t, estado])
                 ultimo = estado
-            pg.clock.run_for(50)
+            alvo += 50
+            pg.clock.run_for(max(0, int(round(alvo - pg.evaluate("() => window.__raw()")))))
             t += 50
         self.assertEqual(erros, [])
         return passos
