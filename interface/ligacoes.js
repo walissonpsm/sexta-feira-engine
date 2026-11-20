@@ -1,4 +1,4 @@
-/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.4). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.5.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
 // ---- fonte/ligacoes/pulso/parte.js
 SF.parte({nome:'ligacoes/pulso',porta:1,compativelDesde:1,requer:['comum/cores@1'],guarda:true,dom:false},
 /* O pulso que corre pelo tronco (o desenho da v09): centro branco, cor clara e a cor sumindo nas bordas. Só desenha. */
@@ -192,8 +192,9 @@ function (usa) {
 // ---- fonte/ligacoes/caminho/parte.js
 SF.parte({nome:'ligacoes/caminho',porta:1,compativelDesde:1,requer:['comum/curvas@2'],guarda:true,dom:false},
 /* O ajuste fino do caminho de um axônio (v0.5.0), como um galho que passa em volta do que encontra: parte do esboço (`ax.base`, de ligacoes/pistas), ondula de leve,
- * contorna as esferas e os neurônios do caminho (`ax.obst`), se afasta de quem corre junto dele (`ax.vizG`), arredonda as quinas e refaz a chegada ao terminal. Não guarda
- * estado nem desenha: devolve a lista de pontos. Tem guarda: se der erro, só esta parte cai e o tronco (ligacoes/tronco) fica com o esboço, que já é um caminho inteiro. */
+ * contorna as esferas e os neurônios do caminho (`ax.obst`), se afasta de quem corre junto dele (`ax.vizG`), arredonda as quinas e refaz a chegada ao terminal. Não desenha:
+ * devolve a lista de pontos e só guarda em `ax.ck` o ponto de partida das rodadas seguintes do MESMO axônio (ver o passo 40 em `refinar`). Tem guarda: se der erro, só esta parte
+ * cai e o tronco (ligacoes/tronco) fica com o esboço, que já é um caminho inteiro. */
 function (usa) {
   'use strict';
   var suave = usa.curvas.suave, volta = usa.curvas.volta, chegada = usa.curvas.chegada;

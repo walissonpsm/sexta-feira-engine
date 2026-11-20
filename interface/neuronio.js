@@ -1,4 +1,4 @@
-/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.4). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.5.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
 // ---- fonte/neuronio/camada/parte.js
 SF.parte({nome:'neuronio/camada',porta:1,compativelDesde:1,requer:[],guarda:false,dom:true},
 /* Sexta-Feira Engine v0.4.2: neuronio/camada. a camada fixa (pré-desenhada): a ordem das camadas (principal e menores), pintar uma camada com luz, névoa e sombra, o assado em fatias com orçamento de tempo, o lustre do soma, iluminar, reduzir e compor.

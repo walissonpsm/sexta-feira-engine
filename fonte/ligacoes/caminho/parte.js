@@ -1,6 +1,7 @@
 /* O ajuste fino do caminho de um axônio (v0.5.0), como um galho que passa em volta do que encontra: parte do esboço (`ax.base`, de ligacoes/pistas), ondula de leve,
- * contorna as esferas e os neurônios do caminho (`ax.obst`), se afasta de quem corre junto dele (`ax.vizG`), arredonda as quinas e refaz a chegada ao terminal. Não guarda
- * estado nem desenha: devolve a lista de pontos. Tem guarda: se der erro, só esta parte cai e o tronco (ligacoes/tronco) fica com o esboço, que já é um caminho inteiro. */
+ * contorna as esferas e os neurônios do caminho (`ax.obst`), se afasta de quem corre junto dele (`ax.vizG`), arredonda as quinas e refaz a chegada ao terminal. Não desenha:
+ * devolve a lista de pontos e só guarda em `ax.ck` o ponto de partida das rodadas seguintes do MESMO axônio (ver o passo 40 em `refinar`). Tem guarda: se der erro, só esta parte
+ * cai e o tronco (ligacoes/tronco) fica com o esboço, que já é um caminho inteiro. */
 function (usa) {
   'use strict';
   var suave = usa.curvas.suave, volta = usa.curvas.volta, chegada = usa.curvas.chegada;

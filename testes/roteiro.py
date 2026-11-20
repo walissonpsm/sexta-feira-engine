@@ -2,7 +2,7 @@
 """Sexta-Feira Engine: o roteiro do ciclo de um pedido (v0.4.3). Só na nuvem (playwright + Chromium; sem eles tudo é pulado).
 
 Relógio preso e sorteio com semente fixa (os mesmos do `imagens.py`). O teste pede um agente, anda de 50 em 50 ms e grava cada MUDANÇA de estado:
-o axônio de ida (`i-<agente>`), o de volta (`o-<agente>`), se há algum módulo ou agente brilhando, e quantos axônios estão fora do repouso.
+o axônio de ida (desde a v0.5.0 há um por módulo que o agente pede, `i-<agente>#<módulo>`: o teste pede sempre o PRIMEIRO módulo do agente, para o roteiro não depender do sorteio; enquanto algum está fora do repouso, é o dele que vale), o de volta (`o-<agente>`), se há algum módulo ou agente brilhando, e quantos axônios estão fora do repouso.
 Compara com `testes/referencias/roteiro.json`: se a ordem dos passos ou o tempo mudar, reprova.
 Roteiro 1: um pedido inteiro (fiis). Roteiro 2: o foco muda no meio do pedido (o retorno de um pedido velho não pode fazer nada: no fim, tudo em repouso e nada brilhando).
 Regravar (só com motivo dito na versão): SF_GRAVAR_ROTEIRO=1 python3 testes/roteiro.py
@@ -26,9 +26,12 @@ RAIZ = pathlib.Path(__file__).resolve().parent.parent
 INTERFACE = RAIZ / "interface"
 REF = RAIZ / "testes" / "referencias" / "roteiro.json"
 
-ESTADO = """(ag) => { const w = window.SF_CENA.parede(), e = (id) => w.eixos.find(x => x.id === id);
-  const i = e('i-' + ag), o = e('o-' + ag);
-  return [i.estado + (i.pulso ? '*' : ''), o.estado + (o.pulso ? '*' : ''), w.fixos.some(f => f.flash > 0) || (w.fixoAg[ag] && w.fixoAg[ag].flash > 0) ? 'brilha' : '-', w.ramos.length]; }"""
+ESTADO = """(ag) => { const w = window.SF_CENA.parede(), is = w.eixos.filter(x => x.tipo === 'i' && x.ag === ag), o = w.eixos.find(x => x.id === 'o-' + ag);
+  const i = is.find(x => x.estado !== 'repouso' || x.pulso) || is[0], txt = (x) => x ? x.estado + (x.pulso ? '*' : '') : 'sem';
+  return [txt(i), txt(o), w.fixos.some(f => f.flash > 0) || (w.fixoAg[ag] && w.fixoAg[ag].flash > 0) ? 'brilha' : '-', w.ramos.length]; }"""
+
+# o primeiro módulo que o agente pede (o id do axônio é i-<agente>#<módulo>): assim o roteiro não depende do sorteio do módulo
+PEDIR = """(ag) => { const a = window.SF_CENA.parede().eixos.find(x => x.tipo === 'i' && x.ag === ag); return !!a && window.SF_CENA.pedir(ag, Number(a.id.split('#')[1])); }"""
 
 
 @unittest.skipIf(sync_playwright is None, "playwright não instalado")
@@ -69,7 +72,7 @@ class Roteiro(unittest.TestCase):
         pg.evaluate("() => window.SF_CENA.automatico(false)")
         alvo = 2 + 2000                                   # os passos andam até instantes ABSOLUTOS do relógio (ver a causa em imagens.py)
         pg.clock.run_for(max(0, int(round(alvo - pg.evaluate("() => window.__raw()")))))
-        self.assertTrue(pg.evaluate("(id) => window.SF_CENA.pedir(id)", agente))
+        self.assertTrue(pg.evaluate(PEDIR, agente))
         passos, ultimo, t = [], None, 0
         while t <= total_ms:
             if meio and t == meio[0]:

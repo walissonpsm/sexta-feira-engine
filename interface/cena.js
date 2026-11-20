@@ -1,4 +1,4 @@
-/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.4.4). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
+/* GERADO por ferramentas/montar-interface.sh a partir de fonte/ (versão 0.5.0). NÃO edite aqui: edite a parte em fonte/ e rode o montador. */
 // ---- fonte/cena/foco/parte.js
 SF.parte({nome:'cena/foco',porta:1,compativelDesde:1,requer:[],guarda:false,dom:true},
 /* Sexta-Feira Engine v0.4.2: cena/foco. o foco numa esfera: ela ocupa o palco e ganha a lupa; a vista das camadas da parede e a volta à vista geral.

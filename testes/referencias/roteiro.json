@@ -3,16 +3,7 @@
   [
    0,
    [
-    "indo",
-    "repouso",
-    "-",
-    1
-   ]
-  ],
-  [
-   350,
-   [
-    "pousando-ida",
+    "pulso*",
     "repouso",
     "-",
     1
@@ -32,24 +23,6 @@
   [
    0,
    [
-    "indo",
-    "repouso",
-    "-",
-    1
-   ]
-  ],
-  [
-   350,
-   [
-    "pousando-ida",
-    "repouso",
-    "-",
-    1
-   ]
-  ],
-  [
-   750,
-   [
     "pulso*",
     "repouso",
     "-",
@@ -57,7 +30,7 @@
    ]
   ],
   [
-   1900,
+   1500,
    [
     "preso",
     "repouso",
@@ -66,7 +39,7 @@
    ]
   ],
   [
-   2550,
+   2150,
    [
     "preso",
     "repouso",
@@ -75,25 +48,7 @@
    ]
   ],
   [
-   2800,
-   [
-    "voltando",
-    "repouso",
-    "-",
-    1
-   ]
-  ],
-  [
-   3300,
-   [
-    "pousando-volta",
-    "repouso",
-    "-",
-    1
-   ]
-  ],
-  [
-   3700,
+   2400,
    [
     "repouso",
     "repouso",
@@ -102,7 +57,7 @@
    ]
   ],
   [
-   5300,
+   4700,
    [
     "repouso",
     "repouso*",
@@ -111,7 +66,7 @@
    ]
   ],
   [
-   5950,
+   5500,
    [
     "repouso",
     "repouso",
@@ -120,7 +75,7 @@
    ]
   ],
   [
-   6600,
+   6150,
    [
     "repouso",
     "repouso",
