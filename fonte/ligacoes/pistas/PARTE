@@ -1,5 +1,5 @@
 nome: ligacoes/pistas
-porta: 1
+porta: 2
 compativel-desde: 1
-requer: comum/curvas@1
+requer: comum/curvas@2
 guarda: sim

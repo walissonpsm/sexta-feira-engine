@@ -1358,7 +1358,7 @@ function (usa) {
             })() : null;
             alvos = [];
             for (let k = 0; k < n; k++) {
-              const fi = angArcos ? angArcos[k] : a0 + (a1 - a0) * k / (n - 1), P = { x: C.x + opc.anel * Math.cos(fi), y: C.y + opc.anel * Math.sin(fi) };
+              const fi = angArcos ? angArcos[k] : a0 + (a1 - a0) * k / (n - 1), rk = opc.anel * (0.84 + 0.30 * ((k * 0.618034) % 1)), P = { x: C.x + rk * Math.cos(fi), y: C.y + rk * Math.sin(fi) };   // v0.5.0: raios alternados, mais espalhados
               let melhor = null, custo = Infinity;
               todas.forEach(function (o) {
                 if (o.d < 0.45 * maxD || escolhidos.some(function (q) { return Math.hypot(q.e.tipX - o.e.tipX, q.e.tipY - o.e.tipY) < 28; })) return;

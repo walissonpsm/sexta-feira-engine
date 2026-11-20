@@ -1,10 +1,11 @@
-/* O tronco do axônio: mede a linha (comprimento, normais, caixa), acha pontos e trechos nela e desenha o fio, as bainhas de mielina, os nódulos, o pulso e a ponta
- * (cone ou ventosa, de ligacoes/ponta). Não guarda estado: o axônio (`ax`) é de quem chama (cena/quadro). Juntadora da camada ligacoes. */
+/* O tronco do axônio: mede a linha (a rota ajustada por ligacoes/caminho; comprimento, normais, caixa), acha pontos e trechos nela e desenha o fio, as bainhas de
+ * mielina (cada uma com o seu comprimento), os nódulos, o pulso (que incha o axônio por onde passa), os dendritos que passam por cima e o terminal axonal (de
+ * ligacoes/ponta). Não guarda estado: o axônio (`ax`) é de quem chama (cena/quadro). Juntadora da camada ligacoes. */
 function (usa) {
   'use strict';
-  var rgba = usa.cores.rgba, clar = usa.cores.clar, esc = usa.cores.esc, suave = usa.curvas.suave, ponta = usa.ponta, pulsoP = usa.pulso;
+  var rgba = usa.cores.rgba, clar = usa.cores.clar, esc = usa.cores.esc, suave = usa.curvas.suave, ponta = usa.ponta, pulsoP = usa.pulso, caminho = usa.caminho;
     function medeEixo(s, ax) {
-      var p = ax.base, n = p.length, i, c = ax.cum, nx = ax.nx, ny = ax.ny, x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+      var p = caminho.refinar(s, ax) || ax.base, n = p.length, i, c = ax.cum, nx = ax.nx, ny = ax.ny, x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
       c.length = n; nx.length = n; ny.length = n; c[0] = 0;
       for (i = 1; i < n; i++) c[i] = c[i - 1] + Math.hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y);
       for (i = 0; i < n; i++) {
@@ -13,10 +14,41 @@ function (usa) {
         if (p[i].x < x0) x0 = p[i].x; if (p[i].x > x1) x1 = p[i].x; if (p[i].y < y0) y0 = p[i].y; if (p[i].y > y1) y1 = p[i].y;
       }
       ax.len = c[n - 1];
-      var mg = ax.larg * 1.6 + 8 * s + 8; ax.bb = { x0: x0 - mg, y0: y0 - mg, x1: x1 + mg, y1: y1 + mg };
+      var mg = ax.larg * 1.6 + 14 * s + 10; ax.bb = { x0: x0 - mg, y0: y0 - mg, x1: x1 + mg, y1: y1 + mg };
       while (ax.pts.length < n) ax.pts.push({ x: 0, y: 0 });
       ax.pts.length = n;
-      for (i = 0; i < n; i++) { ax.pts[i].x = p[i].x; ax.pts[i].y = p[i].y; }      // o tronco é liso e parado; quem se mexe é a ponta
+      // o axônio é orgânico: uma ondulação lenta e irregular (duas ondas com fase própria do axônio), parada, que some nas duas pontas. Quem tem lista de
+      // obstáculos (`ax.obst`) já ganhou a ondulação em ligacoes/caminho, junto com o desvio dos vizinhos, e aqui não ganha de novo
+      var f = ax.fase || 0, A = Math.max(2, 9 * s), L = ax.len, ent = Math.max(30, 60 * s);
+      for (i = 0; i < n; i++) {
+        var u = c[i], env = Math.min(1, u / ent, (L - u) / ent); env = env <= 0 ? 0 : env * env * (3 - 2 * env);
+        var o = ax.obst ? 0 : A * env * (0.65 * Math.sin(u / (95 * s + 30) + f * 3.1) + 0.35 * Math.sin(u / (41 * s + 14) + f * 7.3));
+        ax.pts[i].x = p[i].x + nx[i] * o; ax.pts[i].y = p[i].y + ny[i] * o;
+      }
+      for (i = 1; i < n; i++) c[i] = c[i - 1] + Math.hypot(ax.pts[i].x - ax.pts[i - 1].x, ax.pts[i].y - ax.pts[i - 1].y);
+      ax.len = c[n - 1];
+      ax.sobre = ax.grade ? cruzamentos(ax) : [];
+    }
+    // onde um dendrito cruza o axônio, metade das vezes ele passa POR CIMA (é repintado por cima do axônio, na cor dele); na outra metade passa por baixo.
+    // A escolha é fixa para cada cruzamento (`d.cima`, sorteada em cena/ligar).
+    function cruzamentos(ax) {
+      var G = ax.grade, out = [], visto = {}, p = ax.pts, i;
+      for (i = 0; i + 1 < p.length; i += 1) {
+        var a = p[i], b = p[i + 1], cx = Math.floor((a.x + b.x) / 2 / G.cel), cy = Math.floor((a.y + b.y) / 2 / G.cel);
+        for (var gx = cx - 1; gx <= cx + 1; gx++) for (var gy = cy - 1; gy <= cy + 1; gy++) {
+          var lista = G.m[gx + ',' + gy]; if (!lista) continue;
+          for (var j = 0; j < lista.length; j++) {
+            var d = lista[j]; if (visto[d.id]) continue;
+            if (corta(a, b, d)) { visto[d.id] = 1; if (d.cima) out.push(d); }
+          }
+        }
+      }
+      return out;
+    }
+    function corta(a, b, d) {
+      var r = function (p, q, x, y) { return (q.x - p.x) * (y - p.y) - (q.y - p.y) * (x - p.x); };
+      var d1 = r(a, b, d.x1, d.y1), d2 = r(a, b, d.x2, d.y2), d3 = (d.x2 - d.x1) * (a.y - d.y1) - (d.y2 - d.y1) * (a.x - d.x1), d4 = (d.x2 - d.x1) * (b.y - d.y1) - (d.y2 - d.y1) * (b.x - d.x1);
+      return (d1 > 0) !== (d2 > 0) && (d3 > 0) !== (d4 > 0);
     }
     function ponto(ax, u) {               // o ponto da linha (com a ondulação) na distância u do começo
       var c = ax.cum, p = ax.pts, n = p.length, lo = 0, hi = n - 1;
@@ -35,11 +67,15 @@ function (usa) {
     }
     function trechos(s, ax) {                  // as bainhas: [começo, fim, grupo de espessura] contadas desde o começo do axônio
       var w = ax.larg, Ls = 5.0 * w, gap = 0.5 * w, pitch = Ls + gap, Lm = ax.len - ponta.altVent(s) - 6 * s, out = [], tail = Math.max(1, Lm - 4 * pitch);
-      for (var k = 0, a = ax.a0; a < Lm - 0.3 * Ls; k++, a = ax.a0 + k * pitch) {
-        var b = Math.min(a + Ls, Lm), f = 0.70 + 0.30 * (1 - suave((a - tail) / (4 * pitch)));
-        out.push([a, b, f > 0.93 ? 0 : f > 0.80 ? 1 : 2, k]);
+      var nos = [], a = ax.a0, fs = ax.fase || 0;
+      for (var k = 0; a < Lm - 0.3 * Ls; k++) {          // cada bainha tem o seu comprimento (como no tecido real), fixo por axônio
+        var vr = Math.sin(k * 12.9898 + fs * 78.233) * 43758.5453; vr = vr - Math.floor(vr);
+        var Lk = Ls * (0.62 + 0.76 * vr), gk = gap * (0.8 + 0.5 * ((vr * 7.31) % 1));
+        var b = Math.min(a + Lk, Lm), f = 0.70 + 0.30 * (1 - suave((a - tail) / (4 * pitch)));
+        out.push([a, b, f > 0.93 ? 0 : f > 0.80 ? 1 : 2, k]); nos.push(a - 0.25 * w);
+        a = b + gk;
       }
-      ax.pitch = pitch; ax.nNos = out.length; return out;
+      ax.pitch = pitch; ax.nNos = out.length; ax.nosU = nos; return out;
     }
     var QG = [1, 0.86, 0.72];
     function pintaEixo(ctxP, s, relogio, ax) {
@@ -48,21 +84,29 @@ function (usa) {
       var fio = new Path2D();                                    // só onde não há bainha: o começo, a cintura de cada nódulo e o fim
       if (!tr.length) caminhoSub(ax, 0, fim, fio);
       else { caminhoSub(ax, 0, tr[0][0] + 0.5, fio); for (i = 0; i + 1 < tr.length; i++) caminhoSub(ax, tr[i][1] - 0.5, tr[i + 1][0] + 0.5, fio); caminhoSub(ax, tr[tr.length - 1][1] - 0.5, fim, fio); }       // o fio nu, de ponta a ponta (aparece na cintura dos nódulos e perto da ponta)
-      ctxP.strokeStyle = 'rgb(6,4,14)'; ctxP.lineWidth = 0.40 * w + 2 * ou; ctxP.stroke(fio);
       ctxP.strokeStyle = rgba(clar(cor), 0.85); ctxP.lineWidth = 0.40 * w; ctxP.stroke(fio);
       var mains = [new Path2D(), new Path2D()], tem = [false, false];
       tr.forEach(function (t) { var g2 = t[2] ? 1 : 0; tem[g2] = true; caminhoSub(ax, t[0], t[1], mains[g2]); });
       var dk = 'rgb(6,4,14)', c42 = rgba(esc(cor, 0.42), 1), c80 = rgba(esc(cor, 0.80), 1), cl = null;
-      for (g = 0; g < 2; g++) { if (tem[g]) { ctxP.strokeStyle = dk; ctxP.lineWidth = w * QG[g * 2] + 2 * ou; ctxP.stroke(mains[g]); } }
       for (g = 0; g < 2; g++) {
         if (!tem[g]) continue; var q = w * QG[g * 2];
         ctxP.strokeStyle = c42; ctxP.lineWidth = q; ctxP.stroke(mains[g]);
         ctxP.strokeStyle = c80; ctxP.lineWidth = 0.60 * q; ctxP.stroke(mains[g]);
       }
+      if (ax.pulso) {                                  // onde o potencial de ação passa, o axônio incha de leve
+        var inch = new Path2D(); caminhoSub(ax, Math.max(0, ax.pulso.u - 26 * s), Math.min(fim, ax.pulso.u + 6 * s), inch);
+        ctxP.strokeStyle = c42; ctxP.lineWidth = w * 1.16; ctxP.stroke(inch);
+        ctxP.strokeStyle = c80; ctxP.lineWidth = 0.66 * w; ctxP.stroke(inch);
+      }
+      if (ax.sobre && ax.sobre.length) {              // o dendrito que passa por cima: o trecho dele é pintado por cima do axônio, na cor dele (sem buraco nem sombra)
+        ctxP.save(); ctxP.lineCap = 'round'; ctxP.lineJoin = 'round';
+        ax.sobre.forEach(function (d) { ctxP.strokeStyle = d.cor; ctxP.lineWidth = d.w; ctxP.beginPath(); ctxP.moveTo(d.x0, d.y0); ctxP.lineTo(d.x1, d.y1); ctxP.lineTo(d.x2, d.y2); ctxP.lineTo(d.x3, d.y3); ctxP.stroke(); });
+        ctxP.restore();
+      }
       ctxP.globalCompositeOperation = 'lighter';
       for (i = 0; i < ax.nos.length; i++) {       // o nódulo por onde o pulso acabou de saltar (o mesmo brilho da v09)
         if (ax.nos[i] <= 0.02) continue;
-        var pp = ponto(ax, ax.a0 + i * ax.pitch - 0.25 * w), fl = ax.nos[i];
+        var pp = ponto(ax, ax.nosU && ax.nosU[i] != null ? ax.nosU[i] : ax.a0 + i * ax.pitch - 0.25 * w), fl = ax.nos[i];
         pulsoP.pulso(ctxP, pp.x, pp.y, 0.9 * w * (0.7 + fl * 0.45), ax.pulsoCor, fl * 0.85);
       }
       if (ax.pulso) {                              // o pulso da v09: cabeça e rastro de 11 pontos, branco no centro, cor clara e a cor sumindo nas bordas
@@ -74,7 +118,7 @@ function (usa) {
       ctxP.globalCompositeOperation = 'source-over';
       var v = ax.vent;
       if (ax.tipo === 'i' && ax.p < 0.999) ponta.cone(ctxP, s, relogio, ax);
-      if (ax.p > 0.5) { var ga = ctxP.globalAlpha; ctxP.globalAlpha = ax.p >= 0.999 ? 1 : (ax.p - 0.5) * 2; ponta.ventosa(ctxP, s, v.cx, v.cy, v.R + 0.4, v.ang, v.cor, v.flash, v.anel, w); ctxP.globalAlpha = ga; }
+      if (ax.p > 0.5) { var ga = ctxP.globalAlpha; ctxP.globalAlpha = ax.p >= 0.999 ? 1 : (ax.p - 0.5) * 2; ponta.terminal(ctxP, s, v.cx, v.cy, v.R + 0.4, v.ang, v.cor, v.flash, w, ax.fase || 0, ponto(ax, fim)); ctxP.globalAlpha = ga; }
     }
 
   return { medir: medeEixo, ponto: ponto, trechos: trechos, pintar: pintaEixo };

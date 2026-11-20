@@ -1,8 +1,8 @@
 # cena/ligar
 
-monta as ligações da cena: os axônios de ida e volta de cada agente e as ventosas.
+Monta as ligações da cena (v0.5.0): o axônio violeta de volta de cada agente (Núcleo → agente) e um axônio de entrada **parado** para cada módulo que o agente pede (agente → Núcleo): `i-<agente>#<módulo>`, no máximo 4 por agente (os 4 primeiros da lista de pedidos, sem repetir; sem pedidos, um só, para o módulo mais perto). Cada axônio de entrada sai do corpo do agente num ponto um pouco diferente (`mkHead`), corre na sua pista e termina, com o seu terminal axonal, no vidro do Núcleo junto do módulo. Largura: 10,8·s (violeta) e 6,75·s (entrada); o pulso corre a 1200·s px/s.
 
-Código movido sem reescrever de `cena/quadro` (v0.4.2). Cada função continua com o mesmo corpo; só mudou de onde vêm as dependências.
+Passos de `montarLigacoes`: (1) os receptores dos módulos (`Est.fixoMod`: o ponto do vidro de cada módulo); (2) para cada agente: o giro do agente, o canal, o violeta e os axônios de entrada com um plano provisório; (3) `escolherRotas` (`cena/rotas`: lado, pista, ordem e ponto de pouso de cada axônio de entrada, e o caminho refeito); (4) a grade dos trechos de dendrito (`Est.grade`: metade dos cruzamentos de dendrito passa por cima do axônio); (5) os obstáculos de cada axônio (as outras esferas e os neurônios menores do Núcleo) e a primeira medição; (6) três rodadas em que cada axônio se afasta de quem corre junto dele (grade de vizinhos `VG`, chave numérica).
 
 ## Porta (`usa.ligar.criar(Est, d)` devolve)
 
@@ -10,25 +10,23 @@ Código movido sem reescrever de `cena/quadro` (v0.4.2). Cada função continua 
 
 ## Estado (Est)
 
-- Campos reatribuídos (acessados como `Est.campo`): `eixoById`, `eixos`, `fixoAg`, `fixoMod`, `fixos`, `idAg`, `ligMapa`, `ligMapaTodo`, `nLig`, `s`, `sujo`, `sujoE`, `ventById`, `ventosas`
-- Objetos compartilhados lidos de Est no início: nenhum
+- Campos reatribuídos (acessados como `Est.campo`): `eixoById`, `eixos`, `fixoAg`, `fixoMod`, `fixos`, `grade`, `idAg`, `ligMapa`, `ligMapaTodo`, `nLig`, `s`, `sujo`, `sujoE`, `ventById`, `ventosas`
+- Objetos compartilhados lidos de Est no início: `esf`, `cfg`, `UC`, `VIOLETA`
 
 ## Vem das irmãs (`d`, passado pela juntadora)
 
-- `raioVent` (de `a própria juntadora (função dela, passada por nome)`)
-- `modulosDe` (de `a própria juntadora (função dela, passada por nome)`)
-- `alvoRel` (de `a própria juntadora (função dela, passada por nome)`)
-- `canalUC` (de `cena/posicoes`)
-- `caixaDe` (de `cena/posicoes`)
-- `paraPalco` (de `cena/posicoes`)
-- `contornoMaisPerto` (de `cena/posicoes`)
-- `maisLonge` (de `cena/posicoes`)
-- `medeEixo` (de `cena/eixos`)
-- `refazEixo` (de `cena/eixos`)
+- `raioVent`, `modulosDe`, `alvoRel` (da própria juntadora; `modulosDe` dá os módulos com axônio de cada agente)
+- `canalUC`, `caixaDe`, `paraPalco`, `contornoMaisPerto`, `maisLonge` (de `cena/posicoes`)
+- `medeEixo`, `refazEixo` (de `cena/eixos`)
+- `escolherRotas` (de `cena/rotas`)
 
 ## Guarda
 
-Sem guarda: a porta é uma fábrica chamada uma vez por neurônio; as funções internas são chamadas em laço e a guarda mudaria o desenho (ver AGENTS.md, seção 7, v0.4.1).
+Sem guarda: a porta é uma fábrica chamada uma vez por montagem; as funções internas rodam em laço e a guarda mudaria o tempo (ver AGENTS.md, seção 7, v0.4.1).
+
+## Não mexer
+
+A ordem de criação (violeta primeiro, depois as entradas na ordem de `modulosDe`): o `id` de cada axônio (`i-<agente>#<módulo>`) é o que o ciclo, o foco, os testes e a lista de ligações usam. As larguras, as 3 rodadas e as constantes de `VG` (`cel`, `folga`) e de `G` (`cel`) foram ajustadas nas 4 telas de teste.
 
 ## Como mexer
 

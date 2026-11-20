@@ -1,8 +1,8 @@
 # cena/eixos
 
-a vida de cada axônio da cena: medir, pintar, refazer o caminho e o passo do tempo (cone de crescimento, pulso).
+a vida de cada axônio da cena: medir, pintar, refazer o caminho e o passo do tempo (pulso, nódulos, o terminal que acende).
 
-Código movido sem reescrever de `cena/quadro` (v0.4.2). Cada função continua com o mesmo corpo; só mudou de onde vêm as dependências.
+Desde a v0.5.0 o terminal fica onde está: depois do pulso o axônio espera 0,9 s (`preso`) e volta ao `repouso`, sem desplugar. O movimento de plugar (`ax.p`, `ax.pAlvo`, `ax.mdur`, o cone de crescimento) sobrou como código que não roda mais.
 
 ## Porta (`usa.eixos.criar(Est, d)` devolve)
 
@@ -20,8 +20,7 @@ Código movido sem reescrever de `cena/quadro` (v0.4.2). Cada função continua 
 
 ## Vem das irmãs (`d`, passado pela juntadora)
 
-- `raioVent` (de `a própria juntadora (função dela, passada por nome)`)
-- `irPara` (de `a própria juntadora (função dela, passada por nome)`)
+- `raioVent` (da própria juntadora)
 - `chegou` (de `cena/ciclo`)
 
 ## Guarda

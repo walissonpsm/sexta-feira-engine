@@ -1,7 +1,8 @@
 # ligacoes/tronco (juntadora)
 
-**O que faz**: tudo do tronco do axônio que não é estado: `medir(s, ax)` (comprimento, normais, caixa, pontos lisos), `ponto(ax, u)`, `trechos(s, ax)` (as bainhas), `pintar(ctx, s, relogio, ax)` (fio, bainhas, nódulos acesos, pulso com rastro e a ponta: cone enquanto solta, ventosa quando assenta).
-**Porta**: `{ medir, ponto, trechos, pintar }`. **Usa**: `comum/cores`, `comum/curvas`, `ligacoes/ponta`, `ligacoes/pulso` (é a juntadora da camada). O estado do axônio (`ax.p`, `ax.pulso`, `ax.nos`...) é de `cena/quadro`.
-**Lê/escreve em `ax`**: lê `base, larg, a0, corRgb, pulsoCor, vent, p, tipo, fase`; `medir` escreve `cum, nx, ny, len, bb, pts`; `trechos` escreve `pitch, nNos`.
-**Não mexer**: a ordem dos traços (escuro, cor, brilho) e as espessuras `QG`; o tronco é liso e parado (só a ponta se mexe).
-**Testar**: `python3 testes/imagens.py`.
+**O que faz**: tudo do tronco do axônio que não é estado: `medir(s, ax)` (a rota de `ligacoes/caminho`, ou o esboço `ax.base` se o ajuste fino caiu; comprimento, normais, caixa, pontos, os dendritos que passam por cima), `ponto(ax, u)`, `trechos(s, ax)` (as bainhas de mielina, cada uma com o seu comprimento, fixo por axônio, e os nódulos) e `pintar(ctx, s, relogio, ax)` (fio, bainhas, o axônio que incha por onde o pulso passa, os dendritos repintados por cima, nódulos acesos, pulso com rastro e o terminal axonal). Sem contorno escuro: o que passa por baixo ou por cima é o desenho de quem está por cima.
+**Porta**: `{ medir, ponto, trechos, pintar }`. **Usa**: `comum/cores`, `comum/curvas`, `ligacoes/caminho`, `ligacoes/ponta`, `ligacoes/pulso` (é a juntadora da camada). O estado do axônio (`ax.p`, `ax.pulso`, `ax.nos`...) é de `cena/quadro`.
+**Lê/escreve em `ax`**: lê `base, obst, larg, a0, corRgb, pulsoCor, vent, p, tipo, fase, grade, nos, pulso`; `medir` escreve `cum, nx, ny, len, bb, pts, sobre`; `trechos` escreve `pitch, nNos, nosU`.
+**Não mexer**: a ordem dos traços (fio, bainha escura, bainha clara, inchaço, dendritos por cima, brilho) e as espessuras `QG`; o fim da bainha (`altVent`) tem de bater com o começo do terminal; o tronco é parado (só o pulso, o brilho e a transmissão do terminal se mexem).
+**Armadilhas**: (1) `medir` chama `caminho.refinar`: se ele devolver `undefined` (parte desligada) cai no esboço, e a ondulação própria só vale para quem não tem `ax.obst`. (2) `ax.sobre` só tem os dendritos que cruzam o axônio e foram sorteados "por cima" (`d.cima`).
+**Testar**: `python3 testes/navegador.py -k pedido_corre -k falha_no_ajuste` e `python3 testes/imagens.py`.

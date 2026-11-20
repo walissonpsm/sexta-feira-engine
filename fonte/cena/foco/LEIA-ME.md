@@ -2,7 +2,7 @@
 
 o foco numa esfera: ela ocupa o palco e ganha a lupa; a vista das camadas da parede e a volta à vista geral.
 
-Código movido sem reescrever de `cena/quadro` (v0.4.2). Cada função continua com o mesmo corpo; só mudou de onde vêm as dependências.
+Desde a v0.5.0, ao focar um agente ficam as ligações dele: a volta violeta (`o-<id>`) e todos os axônios de entrada dele (`i-<id>#<módulo>`).
 
 ## Porta (`usa.foco.criar(Est, d)` devolve)
 

@@ -1,0 +1,74 @@
+/* Sexta-Feira Engine v0.5.0: cena/rotas. Escolhe, para cada axônio de entrada (um por módulo que o agente pede), o lado e a pista em volta do Núcleo que menos cruzam os
+ * outros, a ordem dos axônios de um mesmo agente (a que não cruza dentro do corpo dele) e o ponto do vidro onde cada terminal pousa: os terminais de um mesmo módulo ficam
+ * lado a lado (vão de 26·s + 4 px) e nunca no mesmo ponto. É só geometria e contas: não desenha nem guarda estado além do que põe em cada axônio (`plano`, `dC`, `dPara`,
+ * `dRep`, `c`, `head`). O estado vem de Est e as funções das irmãs chegam em d, passadas pela juntadora (cena/quadro). */
+function (usa) {
+  'use strict';
+
+  function criar(Est, d) {
+    var esf = Est.esf;
+    var volta = usa.curvas.volta, esboco = usa.pistas.esboco;
+    var raioVent = d.raioVent, refazEixo = d.refazEixo;
+
+    // `lista`: todos os axônios montados por cena/ligar (os de entrada, `tipo` 'i', e os violetas, 'o'). Ao sair, cada axônio de entrada tem `plano` { dir, lane },
+    // o ponto de pouso (`dC`, `dPara`, `dRep`) e o caminho refeito (`refazEixo`); os violetas servem só de obstáculo para a escolha.
+    function escolher(lista) {
+      var Nn = esf.nucleo, rvN = raioVent(Nn.R), iA = lista.filter(function (x) { return x.tipo === 'i'; }), oA = lista.filter(function (x) { return x.tipo === 'o'; });
+      var fixos = oA.map(function (x) { return { ax: x, pts: x.base.filter(function (q, i) { return i % 4 === 0; }) }; });
+      var cruz = function (A, B) {
+        var n = 0, i, j, a0, a1, b0, b1, o = function (p, q, r) { return (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x); };
+        for (i = 2; i + 1 < A.length; i++) { a0 = A[i]; a1 = A[i + 1];
+          for (j = 2; j + 1 < B.length; j++) { b0 = B[j]; b1 = B[j + 1];
+            if (Math.max(a0.x, a1.x) < Math.min(b0.x, b1.x) || Math.max(b0.x, b1.x) < Math.min(a0.x, a1.x) || Math.max(a0.y, a1.y) < Math.min(b0.y, b1.y) || Math.max(b0.y, b1.y) < Math.min(a0.y, a1.y)) continue;
+            if ((o(a0, a1, b0) > 0) !== (o(a0, a1, b1) > 0) && (o(b0, b1, a0) > 0) !== (o(b0, b1, a1) > 0)) n++; } }
+        return n;
+      };
+      var perto = function (A, B, lim) { var n = 0, i, j; for (i = 2; i < A.length; i++) for (j = 2; j < B.length; j++) if (Math.abs(A[i].x - B[j].x) < lim && Math.abs(A[i].y - B[j].y) < lim && Math.hypot(A[i].x - B[j].x, A[i].y - B[j].y) < lim) n++; return n; };
+      var giro = function (ax) { var D = volta(ax.thL + ax.dC - Math.atan2(ax.head[2].y - Nn.cy, ax.head[2].x - Nn.cx)); if (D * ax.plano.dir < 0) D += ax.plano.dir * 2 * Math.PI; return Math.abs(D); };
+      var esb = function (ax) { var P = esboco(Nn, rvN, ax, ax.plano, Est.s), L = 0; for (var q = 1; q < P.length; q++) L += Math.hypot(P[q].x - P[q - 1].x, P[q].y - P[q - 1].y); ax.esbL = L; return P; };
+      var dCurto = function (ax) { return volta(ax.thL + ax.dC - Math.atan2(ax.head[2].y - Nn.cy, ax.head[2].x - Nn.cx)); };
+      var custoDe = function (ax) {
+        var P = ax.esb, c = 0, lim0 = 5 * Est.s + 3;
+        iA.forEach(function (o) { if (o === ax) return; c += 100 * cruz(P, o.esb) + 4 * Math.min(15, perto(P, o.esb, (ax.larg + o.larg) / 2 + lim0)); });
+        fixos.forEach(function (f) { c += 100 * cruz(P, f.pts) + 4 * Math.min(15, perto(P, f.pts, (ax.larg + f.ax.larg) / 2 + lim0)); });
+        return c + 2.5 * ax.plano.lane + (ax.plano.dir * dCurto(ax) < 0 ? 25 : 0) + 0.12 * (ax.esbL || 0)    // volta longa custa (o caminho reto é preferido); mais de ~200° em volta do Núcleo, nem se tenta
+      };
+      // os terminais de um mesmo módulo ficam lado a lado no vidro (nenhum pousa em cima do outro), na ordem de quem chega: quem vem dos ângulos menores pousa do
+      // lado dos menores; entre os que vêm do mesmo lado, a pista de dentro pousa primeiro (a de fora passa por cima dela). O vão é o de um terminal: 26·s + 4 px
+      var porMod = {}, gapM = (26 * Est.s + 4) / rvN;
+      iA.forEach(function (ax) { (porMod[ax.mod] = porMod[ax.mod] || []).push(ax); });
+      var espalha = function () {
+        Object.keys(porMod).forEach(function (m) {
+          var L = porMod[m], fx = Est.fixoMod[m], k = L.length, chave = function (ax) { return ax.plano.dir > 0 ? ax.plano.lane : 100 - ax.plano.lane; };
+          L.sort(function (a, b) { return chave(a) - chave(b) || (a.id < b.id ? -1 : 1); });
+          L.forEach(function (ax, j) {
+            ax.dPara = ax.dC = ax.dRep = volta(fx.ang + (j - (k - 1) / 2) * gapM - ax.thL);
+            if (giro(ax) > 3.5) ax.plano = { dir: -ax.plano.dir, lane: ax.plano.lane };   // o terminal mudou de lado: nada de dar a volta no Núcleo
+          });
+        });
+        iA.forEach(function (ax) { ax.esb = esb(ax); });
+      };
+      iA.forEach(function (ax) { ax.plano = { dir: dCurto(ax) >= 0 ? 1 : -1, lane: 0 }; });
+      espalha();
+      for (var rd = 0; rd < 4; rd++) {
+        iA.forEach(function (ax) {
+          var melhor = ax.plano, cm = 1e18;
+          [1, -1].forEach(function (dr) { for (var ln = 0; ln < 6; ln++) { ax.plano = { dir: dr, lane: ln }; if (giro(ax) > 3.5) continue; ax.esb = esb(ax); var cc = custoDe(ax); if (cc < cm - 1e-9) { cm = cc; melhor = ax.plano; } } });
+          ax.plano = melhor; ax.esb = esb(ax);
+        });
+        iA.forEach(function (a) { iA.forEach(function (b) {
+          if (a.ag !== b.ag || a.c >= b.c) return;
+          var antes = custoDe(a) + custoDe(b), ca = a.c, cb = b.c;
+          a.c = cb; b.c = ca; a.head = a.mkHead(a.c); b.head = b.mkHead(b.c); a.esb = esb(a); b.esb = esb(b);
+          if (custoDe(a) + custoDe(b) >= antes - 1e-9) { a.c = ca; b.c = cb; a.head = a.mkHead(a.c); b.head = b.mkHead(b.c); a.esb = esb(a); b.esb = esb(b); }
+        }); });
+        espalha();
+      }
+      iA.forEach(function (ax) { ax.esb = null; refazEixo(ax); });
+    }
+
+    return { escolher: escolher };
+  }
+
+  return { criar: criar };
+}

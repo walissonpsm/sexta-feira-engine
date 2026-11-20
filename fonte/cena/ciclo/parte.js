@@ -1,26 +1,27 @@
-/* Sexta-Feira Engine v0.4.2: cena/ciclo. o ciclo de um pedido: quem pede, o pulso que vai e volta, a fila de tarefas e o recomeço do ciclo quando a vista muda.
- * Código movido sem reescrever de neuronio/celula: o estado vem de Est (a tabela dos campos está no LEIA-ME.md da juntadora e deste) e as funções
- * das irmãs chegam em d, passadas pela juntadora. Só desenha/calcula o que está na lista da porta. */
+/* Sexta-Feira Engine v0.5.0: cena/ciclo. o ciclo de um pedido: quem pede, o pulso que vai e volta, a fila de tarefas e o recomeço do ciclo quando a vista muda.
+ * Desde a v0.5.0 cada agente tem um axônio PARADO para cada módulo que pede (`i-<agente>#<módulo>`): o pedido não move nada, o pulso corre direto no axônio do módulo
+ * pedido (sem plugar nem cone de crescimento). O estado vem de Est (a tabela dos campos está no LEIA-ME.md da juntadora e deste) e as funções das irmãs chegam em d,
+ * passadas pela juntadora. */
 function (usa) {
   'use strict';
 
   function criar(Est, d) {
     var esf = Est.esf, cfg = Est.cfg;
     var rgbDe = usa.cores.rgbDe;
-    var irPara = d.irPara, modulosDe = d.modulosDe, alvoRel = d.alvoRel;
+    var modulosDe = d.modulosDe;
 
 function agendar(seg, fn) { Est.fila.push({ t: Est.tempo + seg, fn: fn }); }
 
 function disparar(lid, hex) { var ax = Est.eixoById[lid]; if (!ax) return; ax.pulso = { u: 0, k: 0 }; ax.pulsoCor = rgbDe(hex); }
 
 function pedir(id, idxMod) {
-      var a = esf[id], ax = Est.eixoById['i-' + id]; if (!a || !ax || !Est.ligMapa['i-' + id] || Est.ocupado[id]) return false;
-      var lm = modulosDe(id); if (idxMod == null) idxMod = lm[Math.floor(usa.base.acaso() * lm.length)];
-      if (!Est.fixoMod[idxMod]) return false;
+      var a = esf[id]; if (!a || Est.ocupado[id]) return false;
+      var lm = modulosDe(id); if (idxMod == null) idxMod = lm[Math.floor(usa.base.acaso() * lm.length)];     // sem módulo dito, sorteia entre os que o agente tem axônio
+      var ax = Est.eixoById['i-' + id + '#' + idxMod];
+      if (!ax || !Est.ligMapa[ax.id] || !Est.fixoMod[idxMod]) return false;                                  // módulo sem axônio dele (ou fora de foco) não pode ser pedido
       Est.ocupado[id] = true; Est.pedidoDe[id] = idxMod;
       a.n.excitar(a.cor);
-      var dP = alvoRel(ax, idxMod);                    // o axônio inteiro se curva até o módulo pedido (depois corre o pulso)
-      ax.estado = 'indo'; ax.pulso = null; ax.pAlvo = 0; irPara(ax, dP, 0.3 + 0.5 * Math.min(1, Math.abs(dP - ax.dC) / 1.0));     // a ventosa se solta e vira cone de crescimento, que vai até o módulo
+      ax.estado = 'pulso'; ax.pulso = { u: 0, k: 0 }; ax.pulsoCor = ax.corRgb;                                // o axônio do módulo já está ligado: só o sinal corre
       return true;
     }
 
@@ -48,7 +49,7 @@ function chegou(lid) {
     }
 
 function sortear() {
-      var livres = cfg.agentes.filter(function (a) { return !Est.ocupado[a.id] && Est.ligMapa['i-' + a.id]; }), em = Object.keys(Est.ocupado).filter(function (k) { return Est.ocupado[k]; }).length;
+      var livres = cfg.agentes.filter(function (a) { return !Est.ocupado[a.id] && Est.ligMapa['o-' + a.id]; }), em = Object.keys(Est.ocupado).filter(function (k) { return Est.ocupado[k]; }).length;
       if (!livres.length || em >= 3) return;
       pedir(livres[Math.floor(usa.base.acaso() * livres.length)].id);
     }
@@ -56,7 +57,7 @@ function sortear() {
 function reiniciaCiclo() {            // a troca de vista refaz as ligações: o que estava no ar recomeça do zero
       Est.ciclo++; Est.fila.length = 0; Est.ocupado = {}; Est.pedidoDe = {};
       Est.ventosas.forEach(function (v) { v.flash = 0; v.anel = 0; });
-      Est.eixos.forEach(function (ax) { ax.pulso = null; ax.estado = 'repouso'; ax.mdur = 0; ax.nos.fill(0); if (ax.tipo === 'i') { ax.dC = ax.dPara = ax.dRep; ax.p = ax.pAlvo = 1; ax.sujoG = true; } });
+      Est.eixos.forEach(function (ax) { ax.pulso = null; ax.estado = 'repouso'; ax.mdur = 0; ax.nos.fill(0); if (ax.tipo === 'i') { ax.dC = ax.dPara = ax.dRep; ax.p = ax.pAlvo = 1; } });     // o caminho não muda (os axônios são parados): nada a refazer
       Est.sujo = true;
     }
 

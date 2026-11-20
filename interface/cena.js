@@ -26,8 +26,8 @@ function (usa) {
       // as ligações que tocam essa esfera ficam e seguem a lupa dela (axônios e pulsos); a esfera inteira cabe no palco
       var Rf = Math.min(Est.W, Est.H) / 2 - Est.MG, k = Rf / e.R;
       Est.TF = { k: k, tx: Est.W / 2 - k * e.cx, ty: Est.H / 2 - k * e.cy };
-      var ids = id === 'nucleo' ? null : ['o-' + id, 'i-' + id];
-      Est.ligMapa = {}; Object.keys(Est.ligMapaTodo).forEach(function (q) { if (!ids || ids.indexOf(q) >= 0) Est.ligMapa[q] = Est.ligMapaTodo[q]; });
+      var ids = id === 'nucleo' ? null : ['o-' + id];
+      Est.ligMapa = {}; Object.keys(Est.ligMapaTodo).forEach(function (q) { if (!ids || ids.indexOf(q) >= 0 || q.indexOf('i-' + id + '#') === 0) Est.ligMapa[q] = Est.ligMapaTodo[q]; });     // os axônios de entrada do agente são um por módulo (i-<agente>#<módulo>)
       reiniciaCiclo();
       vistaTotal(1, 0, 0, true);
       if (Est.ouvinte) Est.ouvinte({ foco: Est.foco, z: 1 });
@@ -63,29 +63,30 @@ function vistaTotal(z, ox, oy, forca) {       // a vista das camadas da parede: 
 );
 // ---- fonte/cena/ciclo/parte.js
 SF.parte({nome:'cena/ciclo',porta:1,compativelDesde:1,requer:['comum/cores@1'],guarda:false,dom:false},
-/* Sexta-Feira Engine v0.4.2: cena/ciclo. o ciclo de um pedido: quem pede, o pulso que vai e volta, a fila de tarefas e o recomeço do ciclo quando a vista muda.
- * Código movido sem reescrever de neuronio/celula: o estado vem de Est (a tabela dos campos está no LEIA-ME.md da juntadora e deste) e as funções
- * das irmãs chegam em d, passadas pela juntadora. Só desenha/calcula o que está na lista da porta. */
+/* Sexta-Feira Engine v0.5.0: cena/ciclo. o ciclo de um pedido: quem pede, o pulso que vai e volta, a fila de tarefas e o recomeço do ciclo quando a vista muda.
+ * Desde a v0.5.0 cada agente tem um axônio PARADO para cada módulo que pede (`i-<agente>#<módulo>`): o pedido não move nada, o pulso corre direto no axônio do módulo
+ * pedido (sem plugar nem cone de crescimento). O estado vem de Est (a tabela dos campos está no LEIA-ME.md da juntadora e deste) e as funções das irmãs chegam em d,
+ * passadas pela juntadora. */
 function (usa) {
   'use strict';
 
   function criar(Est, d) {
     var esf = Est.esf, cfg = Est.cfg;
     var rgbDe = usa.cores.rgbDe;
-    var irPara = d.irPara, modulosDe = d.modulosDe, alvoRel = d.alvoRel;
+    var modulosDe = d.modulosDe;
 
 function agendar(seg, fn) { Est.fila.push({ t: Est.tempo + seg, fn: fn }); }
 
 function disparar(lid, hex) { var ax = Est.eixoById[lid]; if (!ax) return; ax.pulso = { u: 0, k: 0 }; ax.pulsoCor = rgbDe(hex); }
 
 function pedir(id, idxMod) {
-      var a = esf[id], ax = Est.eixoById['i-' + id]; if (!a || !ax || !Est.ligMapa['i-' + id] || Est.ocupado[id]) return false;
-      var lm = modulosDe(id); if (idxMod == null) idxMod = lm[Math.floor(usa.base.acaso() * lm.length)];
-      if (!Est.fixoMod[idxMod]) return false;
+      var a = esf[id]; if (!a || Est.ocupado[id]) return false;
+      var lm = modulosDe(id); if (idxMod == null) idxMod = lm[Math.floor(usa.base.acaso() * lm.length)];     // sem módulo dito, sorteia entre os que o agente tem axônio
+      var ax = Est.eixoById['i-' + id + '#' + idxMod];
+      if (!ax || !Est.ligMapa[ax.id] || !Est.fixoMod[idxMod]) return false;                                  // módulo sem axônio dele (ou fora de foco) não pode ser pedido
       Est.ocupado[id] = true; Est.pedidoDe[id] = idxMod;
       a.n.excitar(a.cor);
-      var dP = alvoRel(ax, idxMod);                    // o axônio inteiro se curva até o módulo pedido (depois corre o pulso)
-      ax.estado = 'indo'; ax.pulso = null; ax.pAlvo = 0; irPara(ax, dP, 0.3 + 0.5 * Math.min(1, Math.abs(dP - ax.dC) / 1.0));     // a ventosa se solta e vira cone de crescimento, que vai até o módulo
+      ax.estado = 'pulso'; ax.pulso = { u: 0, k: 0 }; ax.pulsoCor = ax.corRgb;                                // o axônio do módulo já está ligado: só o sinal corre
       return true;
     }
 
@@ -113,7 +114,7 @@ function chegou(lid) {
     }
 
 function sortear() {
-      var livres = cfg.agentes.filter(function (a) { return !Est.ocupado[a.id] && Est.ligMapa['i-' + a.id]; }), em = Object.keys(Est.ocupado).filter(function (k) { return Est.ocupado[k]; }).length;
+      var livres = cfg.agentes.filter(function (a) { return !Est.ocupado[a.id] && Est.ligMapa['o-' + a.id]; }), em = Object.keys(Est.ocupado).filter(function (k) { return Est.ocupado[k]; }).length;
       if (!livres.length || em >= 3) return;
       pedir(livres[Math.floor(usa.base.acaso() * livres.length)].id);
     }
@@ -121,7 +122,7 @@ function sortear() {
 function reiniciaCiclo() {            // a troca de vista refaz as ligações: o que estava no ar recomeça do zero
       Est.ciclo++; Est.fila.length = 0; Est.ocupado = {}; Est.pedidoDe = {};
       Est.ventosas.forEach(function (v) { v.flash = 0; v.anel = 0; });
-      Est.eixos.forEach(function (ax) { ax.pulso = null; ax.estado = 'repouso'; ax.mdur = 0; ax.nos.fill(0); if (ax.tipo === 'i') { ax.dC = ax.dPara = ax.dRep; ax.p = ax.pAlvo = 1; ax.sujoG = true; } });
+      Est.eixos.forEach(function (ax) { ax.pulso = null; ax.estado = 'repouso'; ax.mdur = 0; ax.nos.fill(0); if (ax.tipo === 'i') { ax.dC = ax.dPara = ax.dRep; ax.p = ax.pAlvo = 1; } });     // o caminho não muda (os axônios são parados): nada a refazer
       Est.sujo = true;
     }
 
@@ -209,10 +210,11 @@ function maisLonge(g) {                // o ponto de dendrito mais longe do cent
 
 );
 // ---- fonte/cena/ligar/parte.js
-SF.parte({nome:'cena/ligar',porta:1,compativelDesde:1,requer:['comum/cores@1','comum/sorteio@1','comum/curvas@1'],guarda:false,dom:false},
-/* Sexta-Feira Engine v0.4.2: cena/ligar. monta as ligações da cena: os axônios de ida e volta de cada agente e as ventosas.
- * Código movido sem reescrever de neuronio/celula: o estado vem de Est (a tabela dos campos está no LEIA-ME.md da juntadora e deste) e as funções
- * das irmãs chegam em d, passadas pela juntadora. Só desenha/calcula o que está na lista da porta. */
+SF.parte({nome:'cena/ligar',porta:2,compativelDesde:1,requer:['comum/cores@1','comum/sorteio@1','comum/curvas@2'],guarda:false,dom:false},
+/* Sexta-Feira Engine v0.5.0: cena/ligar. Monta as ligações da cena: o axônio violeta de volta de cada agente e um axônio de entrada PARADO para cada módulo que o agente
+ * pede (no máximo 4; sem pedidos, um só, para o módulo mais perto), cada um com o seu terminal no vidro do Núcleo, junto do módulo. A escolha do lado, da pista e do ponto de
+ * pouso é de cena/rotas; o ajuste fino do caminho de cada axônio, de ligacoes/caminho. O estado vem de Est (a tabela dos campos está no LEIA-ME.md da juntadora e deste) e as
+ * funções das irmãs chegam em d, passadas pela juntadora. */
 function (usa) {
   'use strict';
 
@@ -220,7 +222,7 @@ function (usa) {
     var esf = Est.esf, cfg = Est.cfg, UC = Est.UC, VIOLETA = Est.VIOLETA;
     var rgbDe = usa.cores.rgbDe, hash = usa.sorteio.hash;
     var volta = usa.curvas.volta, curva = usa.curvas.curva, polar = usa.curvas.polar;
-    var raioVent = d.raioVent, modulosDe = d.modulosDe, alvoRel = d.alvoRel, canalUC = d.canalUC, caixaDe = d.caixaDe, paraPalco = d.paraPalco, contornoMaisPerto = d.contornoMaisPerto, maisLonge = d.maisLonge, medeEixo = d.medeEixo, refazEixo = d.refazEixo;
+    var raioVent = d.raioVent, modulosDe = d.modulosDe, alvoRel = d.alvoRel, canalUC = d.canalUC, caixaDe = d.caixaDe, paraPalco = d.paraPalco, contornoMaisPerto = d.contornoMaisPerto, maisLonge = d.maisLonge, medeEixo = d.medeEixo, refazEixo = d.refazEixo, escolherRotas = d.escolherRotas;
 
 function montarLigacoes() {
       var N = esf.nucleo, gN = paraPalco(N, N.n.geometria()), lista = [], mapa = {};
@@ -275,23 +277,74 @@ function montarLigacoes() {
 
         var vO = { id: 'o-' + a.id, cx: Acx, cy: Acy, R: A.R, ang: omA, cor: rgbDe(VIOLETA), ag: a.id, flash: 0, anel: 0 };
         var vI = { id: 'i-' + a.id, cx: N.cx, cy: N.cy, R: N.R, ang: thI, cor: cor, ag: a.id, noN: true, flash: 0, anel: 0 };
-        Est.ventosas.push(vO, vI); Est.ventById[vO.id] = vO; Est.ventById[vI.id] = vI;
+        Est.ventosas.push(vO); Est.ventById[vO.id] = vO;
         var novo = function (id, tipo, larg, corRgb, vent) {
           var ax = { id: id, tipo: tipo, ag: a.id, larg: larg, corRgb: corRgb, vent: vent, base: [], pts: [], cum: [], nx: [], ny: [], len: 1, bb: null, a0: 3.2 * larg, pitch: 5.5 * larg, nNos: 0,
-            nos: new Array(160).fill(0), pulso: null, pulsoCor: cor, estado: 'repouso', vel: 1500 * Est.s, fase: (hash(id) % 628) / 100, passo: passo, pulo: Math.max(1, Math.round(10 / passo)), ativo: false, sujoG: false,
+            nos: new Array(160).fill(0), pulso: null, pulsoCor: cor, estado: 'repouso', vel: 1200 * Est.s, fase: (hash(id) % 628) / 100, passo: passo, pulo: Math.max(1, Math.round(10 / passo)), ativo: false, sujoG: false,
             mdur: 0, mt: 0, dC: 0, dDe: 0, dPara: 0, dRep: 0, espera: 0, p: 1, pAlvo: 1, thL: thI, rA: rA, head: head, drop: drop };
           Est.eixos.push(ax); Est.eixoById[id] = ax; return ax;
         };
-        var axO = novo('o-' + a.id, 'o', 24 * Est.s, rgbDe(VIOLETA), vO); axO.base = curva(pO, passo); medeEixo(axO);
-        var axI = novo('i-' + a.id, 'i', 15 * Est.s, cor, vI);
-        var rest = modulosDe(a.id)[0];
-        axI.dPara = axI.dC = axI.dRep = Est.fixoMod[rest] ? alvoRel(axI, rest) : 0;
-        refazEixo(axI);
-        lista.push(axO, axI);
+        var axO = novo('o-' + a.id, 'o', 10.8 * Est.s, rgbDe(VIOLETA), vO); axO.base = curva(pO, passo); medeEixo(axO);
+        // o agente tem um axônio PARADO para cada módulo que pede (no máximo 4; sem pedidos, um só, para o módulo mais perto): sem o movimento de plugar. Cada um sai do
+        // corpo num ponto um pouco diferente, corre na sua pista e termina, com o seu terminal, no vidro do Núcleo junto do módulo
+        lista.push(axO);
+        var mods = modulosDe(a.id).filter(function (m, i, L) { return L.indexOf(m) === i && Est.fixoMod[m]; }), nm = mods.length;
+        mods.forEach(function (m, k) {
+          var c = k - (nm - 1) / 2, sp = 40 * Est.s;
+          var sgP = (uI.x * -Math.sin(phi) + uI.y * Math.cos(phi)) >= 0 ? 1 : -1;       // a ordem no contorno do agente acompanha a ordem da fila (sem cruzar dentro do agente)
+          var mk = function (cc) { var Sk = contornoMaisPerto(gA, phi + sgP * cc * 0.34); return head.map(function (q, j) { return j === 0 ? Sk : { x: q.x + uI.x * cc * sp, y: q.y + uI.y * cc * sp }; }); };
+          var hk = mk(c);
+          var vk = { id: 'i-' + a.id + '#' + m, cx: N.cx, cy: N.cy, R: N.R, ang: thI, cor: cor, ag: a.id, noN: true, flash: 0, anel: 0 };
+          Est.ventosas.push(vk); Est.ventById[vk.id] = vk;
+          var axK = novo(vk.id, 'i', 6.75 * Est.s, cor, vk);
+          axK.head = hk; axK.rA = rA + k * 7 * Est.s; axK.mod = m; axK.mkHead = mk; axK.c = c; axK.sc = Est.s;
+          axK.dPara = axK.dC = axK.dRep = alvoRel(axK, m);
+          axK.plano = { dir: volta(thI + axK.dC - Math.atan2(hk[2].y - N.cy, hk[2].x - N.cx)) >= 0 ? 1 : -1, lane: 0 };
+          refazEixo(axK); lista.push(axK);
+          mapa[vk.id] = { agente: a, para: null };
+        });
         var bA = caixaDe(A);
         mapa['o-' + a.id] = { agente: a, para: A, alvo: { x: ponta.x - bA.x, y: ponta.y - bA.y } };
-        mapa['i-' + a.id] = { agente: a, para: null };
       });
+      escolherRotas(lista);          // cena/rotas: o lado, a pista, a ordem e o ponto de pouso de cada axônio de entrada (e o caminho refeito)
+      // a grade dos trechos de dendrito (de todas as esferas, no palco) para achar onde um dendrito cruza um axônio; metade passa por cima (a escolha é fixa por trecho)
+      var G = { cel: Math.max(16, 26 * Est.s), m: {} }, nid = 0;
+      Object.keys(esf).forEach(function (id) {
+        var e = esf[id]; if (!e || !e.n) return;
+        var g = paraPalco(e, e.n.geometria()), hs = hash(id), corD = usa.cores.rgba(usa.cores.clar(rgbDe(e.cor)), 0.9);
+        g.dendritos.forEach(function (d, bi) {
+          var P = d.pts;
+          for (var j = 0; j + 1 < P.length; j++) {
+            var a = P[Math.max(0, j - 1)], b = P[j], c = P[j + 1], q = P[Math.min(P.length - 1, j + 2)];
+            var seg = { id: nid++, x0: a[0], y0: a[1], x1: b[0], y1: b[1], x2: c[0], y2: c[1], x3: q[0], y3: q[1], w: Math.max(0.8, (b[2] + c[2]) / 2), cor: corD,
+              cima: ((hs + bi * 7919 + Math.floor(j / 3) * 104729) % 97) < 48 };
+            var k = Math.floor((b[0] + c[0]) / 2 / G.cel) + ',' + Math.floor((b[1] + c[1]) / 2 / G.cel);
+            (G.m[k] = G.m[k] || []).push(seg);
+          }
+        });
+      });
+      Est.grade = G;
+      // os obstáculos de cada axônio (as outras esferas e os neurônios menores do Núcleo) e o Núcleo (quem está fora fica fora)
+      var gN2 = N.n.geometria(), bN2 = caixaDe(N), rMini = 48 * 0.42 * gN2.k;
+      var minis = N.n.minisGeometria().map(function (m) { return { x: m.soma[0] + bN2.x, y: m.soma[1] + bN2.y, r: rMini * 2.4 }; });
+      Est.eixos.forEach(function (ax) {
+        var obst = minis.slice();
+        Object.keys(esf).forEach(function (id) { var e = esf[id]; if (!e || id === 'nucleo' || id === ax.ag) return; obst.push({ x: e.cx, y: e.cy, r: e.R + 10 * Est.s }); });
+        ax.obst = obst; ax.nucleo = { x: N.cx, y: N.cy, R: N.R }; ax.grade = G; medeEixo(ax);
+      });
+      // três rodadas em que cada axônio vê onde os outros estão e se afasta de quem corre em cima dele, um de cada vez: quem acabou de se ajustar já aparece na grade
+      // para o próximo (assim dois vizinhos não fogem para o mesmo lado)
+      var VG = { cel: Math.max(12, 18 * Est.s), m: {}, folga: 5 * Est.s + 3 };
+      var poe = function (ax, sinal) {
+        var P = ax.pts;
+        P.forEach(function (q, i) {
+          var k = (Math.floor(q.x / VG.cel) + 4096) * 8192 + Math.floor(q.y / VG.cel) + 4096, a = P[Math.max(0, i - 1)], c = P[Math.min(P.length - 1, i + 1)], tl = Math.hypot(c.x - a.x, c.y - a.y) || 1;
+          if (sinal > 0) (VG.m[k] = VG.m[k] || []).push({ x: q.x, y: q.y, l: ax.larg, id: ax.id, tx: (c.x - a.x) / tl, ty: (c.y - a.y) / tl });
+          else if (VG.m[k]) VG.m[k] = VG.m[k].filter(function (w) { return w.id !== ax.id; });
+        });
+      };
+      Est.eixos.forEach(function (ax) { poe(ax, 1); });
+      for (var rodada = 0; rodada < 3; rodada++) Est.eixos.forEach(function (ax) { poe(ax, -1); ax.vizG = VG; medeEixo(ax); poe(ax, 1); });
       Est.nLig = lista;
       Est.ligMapa = mapa; Est.ligMapaTodo = mapa;
       Est.sujo = true; Est.sujoE = true;
@@ -304,18 +357,96 @@ function montarLigacoes() {
 }
 
 );
+// ---- fonte/cena/rotas/parte.js
+SF.parte({nome:'cena/rotas',porta:1,compativelDesde:1,requer:['comum/curvas@2','ligacoes/pistas@2'],guarda:false,dom:false},
+/* Sexta-Feira Engine v0.5.0: cena/rotas. Escolhe, para cada axônio de entrada (um por módulo que o agente pede), o lado e a pista em volta do Núcleo que menos cruzam os
+ * outros, a ordem dos axônios de um mesmo agente (a que não cruza dentro do corpo dele) e o ponto do vidro onde cada terminal pousa: os terminais de um mesmo módulo ficam
+ * lado a lado (vão de 26·s + 4 px) e nunca no mesmo ponto. É só geometria e contas: não desenha nem guarda estado além do que põe em cada axônio (`plano`, `dC`, `dPara`,
+ * `dRep`, `c`, `head`). O estado vem de Est e as funções das irmãs chegam em d, passadas pela juntadora (cena/quadro). */
+function (usa) {
+  'use strict';
+
+  function criar(Est, d) {
+    var esf = Est.esf;
+    var volta = usa.curvas.volta, esboco = usa.pistas.esboco;
+    var raioVent = d.raioVent, refazEixo = d.refazEixo;
+
+    // `lista`: todos os axônios montados por cena/ligar (os de entrada, `tipo` 'i', e os violetas, 'o'). Ao sair, cada axônio de entrada tem `plano` { dir, lane },
+    // o ponto de pouso (`dC`, `dPara`, `dRep`) e o caminho refeito (`refazEixo`); os violetas servem só de obstáculo para a escolha.
+    function escolher(lista) {
+      var Nn = esf.nucleo, rvN = raioVent(Nn.R), iA = lista.filter(function (x) { return x.tipo === 'i'; }), oA = lista.filter(function (x) { return x.tipo === 'o'; });
+      var fixos = oA.map(function (x) { return { ax: x, pts: x.base.filter(function (q, i) { return i % 4 === 0; }) }; });
+      var cruz = function (A, B) {
+        var n = 0, i, j, a0, a1, b0, b1, o = function (p, q, r) { return (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x); };
+        for (i = 2; i + 1 < A.length; i++) { a0 = A[i]; a1 = A[i + 1];
+          for (j = 2; j + 1 < B.length; j++) { b0 = B[j]; b1 = B[j + 1];
+            if (Math.max(a0.x, a1.x) < Math.min(b0.x, b1.x) || Math.max(b0.x, b1.x) < Math.min(a0.x, a1.x) || Math.max(a0.y, a1.y) < Math.min(b0.y, b1.y) || Math.max(b0.y, b1.y) < Math.min(a0.y, a1.y)) continue;
+            if ((o(a0, a1, b0) > 0) !== (o(a0, a1, b1) > 0) && (o(b0, b1, a0) > 0) !== (o(b0, b1, a1) > 0)) n++; } }
+        return n;
+      };
+      var perto = function (A, B, lim) { var n = 0, i, j; for (i = 2; i < A.length; i++) for (j = 2; j < B.length; j++) if (Math.abs(A[i].x - B[j].x) < lim && Math.abs(A[i].y - B[j].y) < lim && Math.hypot(A[i].x - B[j].x, A[i].y - B[j].y) < lim) n++; return n; };
+      var giro = function (ax) { var D = volta(ax.thL + ax.dC - Math.atan2(ax.head[2].y - Nn.cy, ax.head[2].x - Nn.cx)); if (D * ax.plano.dir < 0) D += ax.plano.dir * 2 * Math.PI; return Math.abs(D); };
+      var esb = function (ax) { var P = esboco(Nn, rvN, ax, ax.plano, Est.s), L = 0; for (var q = 1; q < P.length; q++) L += Math.hypot(P[q].x - P[q - 1].x, P[q].y - P[q - 1].y); ax.esbL = L; return P; };
+      var dCurto = function (ax) { return volta(ax.thL + ax.dC - Math.atan2(ax.head[2].y - Nn.cy, ax.head[2].x - Nn.cx)); };
+      var custoDe = function (ax) {
+        var P = ax.esb, c = 0, lim0 = 5 * Est.s + 3;
+        iA.forEach(function (o) { if (o === ax) return; c += 100 * cruz(P, o.esb) + 4 * Math.min(15, perto(P, o.esb, (ax.larg + o.larg) / 2 + lim0)); });
+        fixos.forEach(function (f) { c += 100 * cruz(P, f.pts) + 4 * Math.min(15, perto(P, f.pts, (ax.larg + f.ax.larg) / 2 + lim0)); });
+        return c + 2.5 * ax.plano.lane + (ax.plano.dir * dCurto(ax) < 0 ? 25 : 0) + 0.12 * (ax.esbL || 0)    // volta longa custa (o caminho reto é preferido); mais de ~200° em volta do Núcleo, nem se tenta
+      };
+      // os terminais de um mesmo módulo ficam lado a lado no vidro (nenhum pousa em cima do outro), na ordem de quem chega: quem vem dos ângulos menores pousa do
+      // lado dos menores; entre os que vêm do mesmo lado, a pista de dentro pousa primeiro (a de fora passa por cima dela). O vão é o de um terminal: 26·s + 4 px
+      var porMod = {}, gapM = (26 * Est.s + 4) / rvN;
+      iA.forEach(function (ax) { (porMod[ax.mod] = porMod[ax.mod] || []).push(ax); });
+      var espalha = function () {
+        Object.keys(porMod).forEach(function (m) {
+          var L = porMod[m], fx = Est.fixoMod[m], k = L.length, chave = function (ax) { return ax.plano.dir > 0 ? ax.plano.lane : 100 - ax.plano.lane; };
+          L.sort(function (a, b) { return chave(a) - chave(b) || (a.id < b.id ? -1 : 1); });
+          L.forEach(function (ax, j) {
+            ax.dPara = ax.dC = ax.dRep = volta(fx.ang + (j - (k - 1) / 2) * gapM - ax.thL);
+            if (giro(ax) > 3.5) ax.plano = { dir: -ax.plano.dir, lane: ax.plano.lane };   // o terminal mudou de lado: nada de dar a volta no Núcleo
+          });
+        });
+        iA.forEach(function (ax) { ax.esb = esb(ax); });
+      };
+      iA.forEach(function (ax) { ax.plano = { dir: dCurto(ax) >= 0 ? 1 : -1, lane: 0 }; });
+      espalha();
+      for (var rd = 0; rd < 4; rd++) {
+        iA.forEach(function (ax) {
+          var melhor = ax.plano, cm = 1e18;
+          [1, -1].forEach(function (dr) { for (var ln = 0; ln < 6; ln++) { ax.plano = { dir: dr, lane: ln }; if (giro(ax) > 3.5) continue; ax.esb = esb(ax); var cc = custoDe(ax); if (cc < cm - 1e-9) { cm = cc; melhor = ax.plano; } } });
+          ax.plano = melhor; ax.esb = esb(ax);
+        });
+        iA.forEach(function (a) { iA.forEach(function (b) {
+          if (a.ag !== b.ag || a.c >= b.c) return;
+          var antes = custoDe(a) + custoDe(b), ca = a.c, cb = b.c;
+          a.c = cb; b.c = ca; a.head = a.mkHead(a.c); b.head = b.mkHead(b.c); a.esb = esb(a); b.esb = esb(b);
+          if (custoDe(a) + custoDe(b) >= antes - 1e-9) { a.c = ca; b.c = cb; a.head = a.mkHead(a.c); b.head = b.mkHead(b.c); a.esb = esb(a); b.esb = esb(b); }
+        }); });
+        espalha();
+      }
+      iA.forEach(function (ax) { ax.esb = null; refazEixo(ax); });
+    }
+
+    return { escolher: escolher };
+  }
+
+  return { criar: criar };
+}
+
+);
 // ---- fonte/cena/eixos/parte.js
 SF.parte({nome:'cena/eixos',porta:1,compativelDesde:1,requer:['ligacoes/tronco@1','ligacoes/pistas@1'],guarda:false,dom:false},
-/* Sexta-Feira Engine v0.4.2: cena/eixos. a vida de cada axônio da cena: medir, pintar, refazer o caminho e o passo do tempo (cone de crescimento, pulso).
- * Código movido sem reescrever de neuronio/celula: o estado vem de Est (a tabela dos campos está no LEIA-ME.md da juntadora e deste) e as funções
- * das irmãs chegam em d, passadas pela juntadora. Só desenha/calcula o que está na lista da porta. */
+/* Sexta-Feira Engine v0.5.0: cena/eixos. a vida de cada axônio da cena: medir, pintar, refazer o caminho e o passo do tempo (pulso, nódulos, o terminal que acende).
+ * Desde a v0.5.0 o terminal fica onde está: depois do pulso o axônio só espera um instante e volta ao repouso (sem desplugar). O estado vem de Est (a tabela dos campos
+ * está no LEIA-ME.md da juntadora e deste) e as funções das irmãs chegam em d, passadas pela juntadora. */
 function (usa) {
   'use strict';
 
   function criar(Est, d) {
     var esf = Est.esf;
     var tronco = usa.tronco, pistas = usa.pistas;
-    var raioVent = d.raioVent, irPara = d.irPara, chegou = d.chegou;
+    var raioVent = d.raioVent, chegou = d.chegou;
 
 function medeEixo(ax) { tronco.medir(Est.s, ax); }
 
@@ -341,7 +472,7 @@ function passoEixo(ax, dt) {
         }
         if (ax.estado === 'pousando-ida' && ax.p >= 0.999) { ax.estado = 'pulso'; ax.pulso = { u: 0, k: 0 }; ax.pulsoCor = ax.corRgb; v.anel = 1; }
         else if (ax.estado === 'pousando-volta' && ax.p >= 0.999) ax.estado = 'repouso';
-        if (ax.estado === 'preso') { ax.espera -= dt; if (ax.espera <= 0) { ax.estado = 'voltando'; ax.pAlvo = 0; irPara(ax, ax.dRep, 0.5 + 0.7 * Math.min(1, Math.abs(ax.dRep - ax.dC))); } }
+        if (ax.estado === 'preso') { ax.espera -= dt; if (ax.espera <= 0) ax.estado = 'repouso'; }      // o terminal fica onde está (sem desplugar)
         if (ax.sujoG) refazEixo(ax);
         v.ang = ax.thL + ax.dC;
       }
@@ -368,7 +499,7 @@ function passoEixo(ax, dt) {
 
 );
 // ---- fonte/cena/quadro/parte.js
-SF.parte({nome:'cena/quadro',porta:1,compativelDesde:1,requer:['neuronio/celula@1','comum/sorteio@1','comum/cores@1','comum/curvas@1','ligacoes/ponta@1','ligacoes/tronco@1','ligacoes/pistas@1','cena/posicoes@1','cena/ciclo@1','cena/foco@1','cena/eixos@1','cena/ligar@1'],guarda:true,dom:true},
+SF.parte({nome:'cena/quadro',porta:2,compativelDesde:1,requer:['neuronio/celula@1','comum/sorteio@1','comum/cores@1','comum/curvas@2','ligacoes/ponta@2','ligacoes/tronco@2','ligacoes/pistas@2','cena/posicoes@1','cena/ciclo@1','cena/foco@1','cena/eixos@1','cena/ligar@2','cena/rotas@1'],guarda:true,dom:true},
 /* Sexta-Feira Engine v0.3.0: a cena. O Núcleo no centro, seis agentes ao redor (três de cada lado) e a Corretora parada ao lado do Robô.
  * Cada esfera é um Neuronio.criar próprio. Axônio só leva e dendrito só recebe, e a PAREDE de vidro é a sinapse: para cada agente há um par de
  * axônios de mão única, lado a lado, e os dois PARAM no vidro (por fora). Do lado de dentro, um dendrito encosta no mesmo ponto.
@@ -424,8 +555,8 @@ function (usa) {
       e.giro = 0; ordem.push(a.id);
     });
     if (cfg.satelite) { novaEsfera(cfg.satelite.id, cfg.satelite.nome, cfg.satelite.cor, 94127 + (hash(cfg.satelite.id) % 90000), { semEixo: true, quieto: true }, null); ordem.push(cfg.satelite.id); }
-    novaEsfera('nucleo', cfg.nucleo.nome, cfg.nucleo.cor, cfg.nucleo.semente || 94127, Object.assign({ semEixo: true, quieto: true, rede: (cfg.nucleo.modulos || []).length, anel: 400, raioMax: 500, sobra: 0.55, miniEsc: 0.42,
-      cores: cfg.nucleo.modulos || [], arcos: [[-150, -38], [38, 124]], corredor: 42 }, cfg.nucleo.opcoes || {}), null);
+    novaEsfera('nucleo', cfg.nucleo.nome, cfg.nucleo.cor, cfg.nucleo.semente || 94127, Object.assign({ semEixo: true, quieto: true, rede: (cfg.nucleo.modulos || []).length, anel: 470, raioMax: 500, sobra: 0.55, miniEsc: 0.42,
+      cores: cfg.nucleo.modulos || [], arcos: [[-180, 180]], corredor: -9999 }, cfg.nucleo.opcoes || {}), null);     // v0.5.0: os módulos em volta de todo o vidro (sem corredor), em raios alternados
     ordem.push('nucleo');
 
     // as ligações: uma camada de tela cheia por cima das esferas, e por cima dela a camada da parede (ramos e receptores)
@@ -467,7 +598,6 @@ function (usa) {
     // Cada um tem uma linha central (base) que o agente-para-Núcleo recalcula quando o alvo se move; por cima dela vai a ondulação parada. A bainha de mielina
     // são tubos de tamanho fixo contados a partir do começo (então crescem pela ponta quando o tronco se estica), com a cintura do nódulo entre eles.
     Est.eixos = []; Est.eixoById = {}; Est.sujoE = true; Est.eixosAntes = false; Est.relogio = 0;
-    function irPara(ax, dPara, dur) { ax.dDe = ax.dC; ax.dPara = dPara; ax.mt = 0; ax.mdur = Math.max(0.05, dur); }
     function pintaEstatico() {
       var salvo = Est.ctxP; Est.ctxP = Est.ctxF;
       Est.ctxF.setTransform(Est.dprP, 0, 0, Est.dprP, 0, 0); Est.ctxF.clearRect(0, 0, Est.W, Est.H); aplicaT(Est.ctxF); Est.ctxF.globalCompositeOperation = 'lighter';
@@ -499,11 +629,15 @@ function (usa) {
 
     // ---------------------------------------------------------------- as ligações (pares de axônios de mão única, que terminam em ventosa no vidro)
     Est.ligMapa = {}; Est.ligMapaTodo = {}; Est.nomeMod = {}; Est.idAg = cfg.agentes.map(function (a) { return a.id; });
+    // v0.5.0: os módulos para os quais o agente tem axônio: os que ele pede, na ordem dos dados, sem repetir e no máximo 4; sem pedidos, um só, o módulo mais perto dele
+    // (a distância do centro do agente até o ponto do módulo no vidro do Núcleo). Só vale depois de `montarLigacoes` (precisa de `Est.fixoMod`).
     function modulosDe(id) {
       var ids = cfg.nucleo.modulosIds || [], lista = (cfg.pedidos && cfg.pedidos[id]) || [], out = [];
-      lista.forEach(function (m) { var i = ids.indexOf(m); if (i >= 0) out.push(i); });
-      if (!out.length) (cfg.nucleo.modulos || []).forEach(function (_, i) { out.push(i); });
-      return out;
+      lista.forEach(function (m) { var i = ids.indexOf(m); if (i >= 0 && out.indexOf(i) < 0 && out.length < 4) out.push(i); });
+      if (out.length) return out;
+      var E = esf[id], melhor = -1, dm = 1e18;
+      if (E) Est.fixoMod.forEach(function (f, i) { if (!f) return; var dd = Math.hypot(f.pw.x - E.cx, f.pw.y - E.cy); if (dd < dm) { dm = dd; melhor = i; } });
+      return melhor >= 0 ? [melhor] : [];
     }
     // o ângulo (relativo à pista do axônio) do ponto do vidro do módulo; dois axônios no mesmo módulo pousam um ao lado do outro
     function alvoRel(ax, idx) {
@@ -577,16 +711,18 @@ function (usa) {
     const P_posicoes = usa.posicoes.criar(Est, {});
     const canalUC = P_posicoes.canalUC, medir = P_posicoes.medir, caixaDe = P_posicoes.caixaDe, pos = P_posicoes.pos, paraPalco = P_posicoes.paraPalco, contornoMaisPerto = P_posicoes.contornoMaisPerto, maisLonge = P_posicoes.maisLonge;
     // cena/ciclo (v0.4.2): o ciclo de um pedido: quem pede, o pulso que vai e volta, a fila de tarefas e o recomeço do ciclo quando a vista muda.
-    const P_ciclo = usa.ciclo.criar(Est, { irPara: irPara, modulosDe: modulosDe, alvoRel: alvoRel });
+    const P_ciclo = usa.ciclo.criar(Est, { modulosDe: modulosDe });
     const pedir = P_ciclo.pedir, chegou = P_ciclo.chegou, sortear = P_ciclo.sortear, reiniciaCiclo = P_ciclo.reiniciaCiclo;
     // cena/foco (v0.4.2): o foco numa esfera: ela ocupa o palco e ganha a lupa; a vista das camadas da parede e a volta à vista geral.
     const P_foco = usa.foco.criar(Est, { caixaDe: P_posicoes.caixaDe, pos: P_posicoes.pos, reiniciaCiclo: P_ciclo.reiniciaCiclo });
     const focar = P_foco.focar, sair = P_foco.sair, vistaTotal = P_foco.vistaTotal;
     // cena/eixos (v0.4.2): a vida de cada axônio da cena: medir, pintar, refazer o caminho e o passo do tempo (cone de crescimento, pulso).
-    const P_eixos = usa.eixos.criar(Est, { raioVent: raioVent, irPara: irPara, chegou: P_ciclo.chegou });
+    const P_eixos = usa.eixos.criar(Est, { raioVent: raioVent, chegou: P_ciclo.chegou });
     const medeEixo = P_eixos.medeEixo, pintaEixo = P_eixos.pintaEixo, refazEixo = P_eixos.refazEixo, visEixo = P_eixos.visEixo, passoEixo = P_eixos.passoEixo;
-    // cena/ligar (v0.4.2): monta as ligações da cena: os axônios de ida e volta de cada agente e as ventosas.
-    const P_ligar = usa.ligar.criar(Est, { raioVent: raioVent, modulosDe: modulosDe, alvoRel: alvoRel, canalUC: P_posicoes.canalUC, caixaDe: P_posicoes.caixaDe, paraPalco: P_posicoes.paraPalco, contornoMaisPerto: P_posicoes.contornoMaisPerto, maisLonge: P_posicoes.maisLonge, medeEixo: P_eixos.medeEixo, refazEixo: P_eixos.refazEixo });
+    // cena/rotas (v0.5.0): escolhe o lado, a pista, a ordem e o ponto de pouso de cada axônio de entrada.
+    const P_rotas = usa.rotas.criar(Est, { raioVent: raioVent, refazEixo: P_eixos.refazEixo });
+    // cena/ligar (v0.5.0): monta as ligações da cena: o axônio violeta de volta de cada agente e um axônio de entrada parado para cada módulo que ele pede.
+    const P_ligar = usa.ligar.criar(Est, { raioVent: raioVent, modulosDe: modulosDe, alvoRel: alvoRel, canalUC: P_posicoes.canalUC, caixaDe: P_posicoes.caixaDe, paraPalco: P_posicoes.paraPalco, contornoMaisPerto: P_posicoes.contornoMaisPerto, maisLonge: P_posicoes.maisLonge, medeEixo: P_eixos.medeEixo, refazEixo: P_eixos.refazEixo, escolherRotas: P_rotas.escolher });
     const montarLigacoes = P_ligar.montarLigacoes;
     // FIM DOS BLOCOS DAS PARTES
     nomes();

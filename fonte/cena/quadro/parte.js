@@ -53,8 +53,8 @@ function (usa) {
       e.giro = 0; ordem.push(a.id);
     });
     if (cfg.satelite) { novaEsfera(cfg.satelite.id, cfg.satelite.nome, cfg.satelite.cor, 94127 + (hash(cfg.satelite.id) % 90000), { semEixo: true, quieto: true }, null); ordem.push(cfg.satelite.id); }
-    novaEsfera('nucleo', cfg.nucleo.nome, cfg.nucleo.cor, cfg.nucleo.semente || 94127, Object.assign({ semEixo: true, quieto: true, rede: (cfg.nucleo.modulos || []).length, anel: 400, raioMax: 500, sobra: 0.55, miniEsc: 0.42,
-      cores: cfg.nucleo.modulos || [], arcos: [[-150, -38], [38, 124]], corredor: 42 }, cfg.nucleo.opcoes || {}), null);
+    novaEsfera('nucleo', cfg.nucleo.nome, cfg.nucleo.cor, cfg.nucleo.semente || 94127, Object.assign({ semEixo: true, quieto: true, rede: (cfg.nucleo.modulos || []).length, anel: 470, raioMax: 500, sobra: 0.55, miniEsc: 0.42,
+      cores: cfg.nucleo.modulos || [], arcos: [[-180, 180]], corredor: -9999 }, cfg.nucleo.opcoes || {}), null);     // v0.5.0: os módulos em volta de todo o vidro (sem corredor), em raios alternados
     ordem.push('nucleo');
 
     // as ligações: uma camada de tela cheia por cima das esferas, e por cima dela a camada da parede (ramos e receptores)
@@ -96,7 +96,6 @@ function (usa) {
     // Cada um tem uma linha central (base) que o agente-para-Núcleo recalcula quando o alvo se move; por cima dela vai a ondulação parada. A bainha de mielina
     // são tubos de tamanho fixo contados a partir do começo (então crescem pela ponta quando o tronco se estica), com a cintura do nódulo entre eles.
     Est.eixos = []; Est.eixoById = {}; Est.sujoE = true; Est.eixosAntes = false; Est.relogio = 0;
-    function irPara(ax, dPara, dur) { ax.dDe = ax.dC; ax.dPara = dPara; ax.mt = 0; ax.mdur = Math.max(0.05, dur); }
     function pintaEstatico() {
       var salvo = Est.ctxP; Est.ctxP = Est.ctxF;
       Est.ctxF.setTransform(Est.dprP, 0, 0, Est.dprP, 0, 0); Est.ctxF.clearRect(0, 0, Est.W, Est.H); aplicaT(Est.ctxF); Est.ctxF.globalCompositeOperation = 'lighter';
@@ -128,11 +127,15 @@ function (usa) {
 
     // ---------------------------------------------------------------- as ligações (pares de axônios de mão única, que terminam em ventosa no vidro)
     Est.ligMapa = {}; Est.ligMapaTodo = {}; Est.nomeMod = {}; Est.idAg = cfg.agentes.map(function (a) { return a.id; });
+    // v0.5.0: os módulos para os quais o agente tem axônio: os que ele pede, na ordem dos dados, sem repetir e no máximo 4; sem pedidos, um só, o módulo mais perto dele
+    // (a distância do centro do agente até o ponto do módulo no vidro do Núcleo). Só vale depois de `montarLigacoes` (precisa de `Est.fixoMod`).
     function modulosDe(id) {
       var ids = cfg.nucleo.modulosIds || [], lista = (cfg.pedidos && cfg.pedidos[id]) || [], out = [];
-      lista.forEach(function (m) { var i = ids.indexOf(m); if (i >= 0) out.push(i); });
-      if (!out.length) (cfg.nucleo.modulos || []).forEach(function (_, i) { out.push(i); });
-      return out;
+      lista.forEach(function (m) { var i = ids.indexOf(m); if (i >= 0 && out.indexOf(i) < 0 && out.length < 4) out.push(i); });
+      if (out.length) return out;
+      var E = esf[id], melhor = -1, dm = 1e18;
+      if (E) Est.fixoMod.forEach(function (f, i) { if (!f) return; var dd = Math.hypot(f.pw.x - E.cx, f.pw.y - E.cy); if (dd < dm) { dm = dd; melhor = i; } });
+      return melhor >= 0 ? [melhor] : [];
     }
     // o ângulo (relativo à pista do axônio) do ponto do vidro do módulo; dois axônios no mesmo módulo pousam um ao lado do outro
     function alvoRel(ax, idx) {
@@ -206,16 +209,18 @@ function (usa) {
     const P_posicoes = usa.posicoes.criar(Est, {});
     const canalUC = P_posicoes.canalUC, medir = P_posicoes.medir, caixaDe = P_posicoes.caixaDe, pos = P_posicoes.pos, paraPalco = P_posicoes.paraPalco, contornoMaisPerto = P_posicoes.contornoMaisPerto, maisLonge = P_posicoes.maisLonge;
     // cena/ciclo (v0.4.2): o ciclo de um pedido: quem pede, o pulso que vai e volta, a fila de tarefas e o recomeço do ciclo quando a vista muda.
-    const P_ciclo = usa.ciclo.criar(Est, { irPara: irPara, modulosDe: modulosDe, alvoRel: alvoRel });
+    const P_ciclo = usa.ciclo.criar(Est, { modulosDe: modulosDe });
     const pedir = P_ciclo.pedir, chegou = P_ciclo.chegou, sortear = P_ciclo.sortear, reiniciaCiclo = P_ciclo.reiniciaCiclo;
     // cena/foco (v0.4.2): o foco numa esfera: ela ocupa o palco e ganha a lupa; a vista das camadas da parede e a volta à vista geral.
     const P_foco = usa.foco.criar(Est, { caixaDe: P_posicoes.caixaDe, pos: P_posicoes.pos, reiniciaCiclo: P_ciclo.reiniciaCiclo });
     const focar = P_foco.focar, sair = P_foco.sair, vistaTotal = P_foco.vistaTotal;
     // cena/eixos (v0.4.2): a vida de cada axônio da cena: medir, pintar, refazer o caminho e o passo do tempo (cone de crescimento, pulso).
-    const P_eixos = usa.eixos.criar(Est, { raioVent: raioVent, irPara: irPara, chegou: P_ciclo.chegou });
+    const P_eixos = usa.eixos.criar(Est, { raioVent: raioVent, chegou: P_ciclo.chegou });
     const medeEixo = P_eixos.medeEixo, pintaEixo = P_eixos.pintaEixo, refazEixo = P_eixos.refazEixo, visEixo = P_eixos.visEixo, passoEixo = P_eixos.passoEixo;
-    // cena/ligar (v0.4.2): monta as ligações da cena: os axônios de ida e volta de cada agente e as ventosas.
-    const P_ligar = usa.ligar.criar(Est, { raioVent: raioVent, modulosDe: modulosDe, alvoRel: alvoRel, canalUC: P_posicoes.canalUC, caixaDe: P_posicoes.caixaDe, paraPalco: P_posicoes.paraPalco, contornoMaisPerto: P_posicoes.contornoMaisPerto, maisLonge: P_posicoes.maisLonge, medeEixo: P_eixos.medeEixo, refazEixo: P_eixos.refazEixo });
+    // cena/rotas (v0.5.0): escolhe o lado, a pista, a ordem e o ponto de pouso de cada axônio de entrada.
+    const P_rotas = usa.rotas.criar(Est, { raioVent: raioVent, refazEixo: P_eixos.refazEixo });
+    // cena/ligar (v0.5.0): monta as ligações da cena: o axônio violeta de volta de cada agente e um axônio de entrada parado para cada módulo que ele pede.
+    const P_ligar = usa.ligar.criar(Est, { raioVent: raioVent, modulosDe: modulosDe, alvoRel: alvoRel, canalUC: P_posicoes.canalUC, caixaDe: P_posicoes.caixaDe, paraPalco: P_posicoes.paraPalco, contornoMaisPerto: P_posicoes.contornoMaisPerto, maisLonge: P_posicoes.maisLonge, medeEixo: P_eixos.medeEixo, refazEixo: P_eixos.refazEixo, escolherRotas: P_rotas.escolher });
     const montarLigacoes = P_ligar.montarLigacoes;
     // FIM DOS BLOCOS DAS PARTES
     nomes();

@@ -1,13 +1,13 @@
-/* Sexta-Feira Engine v0.4.2: cena/eixos. a vida de cada axônio da cena: medir, pintar, refazer o caminho e o passo do tempo (cone de crescimento, pulso).
- * Código movido sem reescrever de neuronio/celula: o estado vem de Est (a tabela dos campos está no LEIA-ME.md da juntadora e deste) e as funções
- * das irmãs chegam em d, passadas pela juntadora. Só desenha/calcula o que está na lista da porta. */
+/* Sexta-Feira Engine v0.5.0: cena/eixos. a vida de cada axônio da cena: medir, pintar, refazer o caminho e o passo do tempo (pulso, nódulos, o terminal que acende).
+ * Desde a v0.5.0 o terminal fica onde está: depois do pulso o axônio só espera um instante e volta ao repouso (sem desplugar). O estado vem de Est (a tabela dos campos
+ * está no LEIA-ME.md da juntadora e deste) e as funções das irmãs chegam em d, passadas pela juntadora. */
 function (usa) {
   'use strict';
 
   function criar(Est, d) {
     var esf = Est.esf;
     var tronco = usa.tronco, pistas = usa.pistas;
-    var raioVent = d.raioVent, irPara = d.irPara, chegou = d.chegou;
+    var raioVent = d.raioVent, chegou = d.chegou;
 
 function medeEixo(ax) { tronco.medir(Est.s, ax); }
 
@@ -33,7 +33,7 @@ function passoEixo(ax, dt) {
         }
         if (ax.estado === 'pousando-ida' && ax.p >= 0.999) { ax.estado = 'pulso'; ax.pulso = { u: 0, k: 0 }; ax.pulsoCor = ax.corRgb; v.anel = 1; }
         else if (ax.estado === 'pousando-volta' && ax.p >= 0.999) ax.estado = 'repouso';
-        if (ax.estado === 'preso') { ax.espera -= dt; if (ax.espera <= 0) { ax.estado = 'voltando'; ax.pAlvo = 0; irPara(ax, ax.dRep, 0.5 + 0.7 * Math.min(1, Math.abs(ax.dRep - ax.dC))); } }
+        if (ax.estado === 'preso') { ax.espera -= dt; if (ax.espera <= 0) ax.estado = 'repouso'; }      // o terminal fica onde está (sem desplugar)
         if (ax.sujoG) refazEixo(ax);
         v.ang = ax.thL + ax.dC;
       }

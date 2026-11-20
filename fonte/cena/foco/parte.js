@@ -23,8 +23,8 @@ function (usa) {
       // as ligações que tocam essa esfera ficam e seguem a lupa dela (axônios e pulsos); a esfera inteira cabe no palco
       var Rf = Math.min(Est.W, Est.H) / 2 - Est.MG, k = Rf / e.R;
       Est.TF = { k: k, tx: Est.W / 2 - k * e.cx, ty: Est.H / 2 - k * e.cy };
-      var ids = id === 'nucleo' ? null : ['o-' + id, 'i-' + id];
-      Est.ligMapa = {}; Object.keys(Est.ligMapaTodo).forEach(function (q) { if (!ids || ids.indexOf(q) >= 0) Est.ligMapa[q] = Est.ligMapaTodo[q]; });
+      var ids = id === 'nucleo' ? null : ['o-' + id];
+      Est.ligMapa = {}; Object.keys(Est.ligMapaTodo).forEach(function (q) { if (!ids || ids.indexOf(q) >= 0 || q.indexOf('i-' + id + '#') === 0) Est.ligMapa[q] = Est.ligMapaTodo[q]; });     // os axônios de entrada do agente são um por módulo (i-<agente>#<módulo>)
       reiniciaCiclo();
       vistaTotal(1, 0, 0, true);
       if (Est.ouvinte) Est.ouvinte({ foco: Est.foco, z: 1 });

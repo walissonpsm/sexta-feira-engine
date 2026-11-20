@@ -62,7 +62,57 @@ function (usa) {
       ctxP.restore();
     }
 
+    // v0.5.0: o terminal axonal (no lugar da ventosa). O axônio, já sem mielina, atravessa o vidro e se abre em telodendros finos (4 a 6 galhos), cada um com uma
+    // placa achatada na ponta (o pé pré-sináptico, sem bolinha), encostados no dendrito de quem recebe. Quando o sinal chega (sq 0..1, vai sumindo): os pés acendem e
+    // soltam neurotransmissores (pontinhos) que atravessam a fenda até o dendrito. `E` é o ponto onde o tronco termina (a bainha acaba um pouco antes); `fase` é o
+    // sorteio fixo do axônio (muda o número e o jeito dos galhos, nunca a cada quadro).
+    function pintaTerminal(ctxP, s, cx, cy, rIn, ang, cor, sq, wTronco, fase, E) {
+      var ux = Math.cos(ang), uy = Math.sin(ang), ou = Math.max(0.8, 1.1 * s), wn = Math.max(1.0, wTronco * 0.40);
+      var fora = altVent(s), fundo = Math.max(6, 13 * s), P = function (r, o) { return { x: cx + ux * r - uy * o, y: cy + uy * r + ux * o }; };
+      var A0 = E || P(rIn + fora * 0.55, 0), B = P(rIn - fundo, Math.sin(fase * 5.1) * 3 * s), C = P(rIn + fora * 0.15, Math.sin(fase * 2.3) * 2 * s);
+      var n = 4 + Math.floor(((fase * 13.7) % 1) * 2.99), galhos = [], i;
+      for (i = 0; i < n; i++) {
+        var fr = n > 1 ? i / (n - 1) - 0.5 : 0, jit = Math.sin(fase * 9.7 + i * 2.1) * 0.18, aa = ang + Math.PI + fr * 1.6 + jit;
+        var len = Math.max(6, 13 * s) * (0.75 + 0.5 * Math.abs(Math.sin(fase * 4.3 + i * 1.7)));
+        var meio = { x: B.x + Math.cos(aa - jit * 1.5) * len * 0.55, y: B.y + Math.sin(aa - jit * 1.5) * len * 0.55 };
+        galhos.push({ m: meio, t: { x: B.x + Math.cos(aa) * len, y: B.y + Math.sin(aa) * len }, a: aa });
+      }
+      ctxP.save(); ctxP.lineCap = 'round'; ctxP.lineJoin = 'round'; ctxP.globalCompositeOperation = 'source-over';
+      var tracar = function (w, cc) {
+        ctxP.strokeStyle = cc; ctxP.lineWidth = w;
+        ctxP.beginPath(); ctxP.moveTo(A0.x, A0.y); ctxP.quadraticCurveTo(C.x, C.y, B.x, B.y); ctxP.stroke();
+        galhos.forEach(function (g) { ctxP.beginPath(); ctxP.moveTo(B.x, B.y); ctxP.quadraticCurveTo(g.m.x, g.m.y, g.t.x, g.t.y); ctxP.lineWidth = w * 0.62; ctxP.stroke(); });
+      };
+      tracar(wn, rgba(clar(cor), 0.9));
+      // sem bolinhas: cada telodendro afina e, na ponta, alarga num pé achatado (a placa pré-sináptica) encostado no dendrito
+      var rb = Math.max(1.0, 1.6 * s);
+      galhos.forEach(function (g) {
+        var dx = g.t.x - g.m.x, dy = g.t.y - g.m.y, l = Math.hypot(dx, dy) || 1, tx = dx / l, ty = dy / l, nx2 = -ty, ny2 = tx, lp = rb * (1.1 + 0.5 * sq);
+        var e = { x: g.t.x + tx * rb * 0.5, y: g.t.y + ty * rb * 0.5 };
+        ctxP.beginPath(); ctxP.moveTo(g.t.x - tx * rb * 1.6 + nx2 * wn * 0.3, g.t.y - ty * rb * 1.6 + ny2 * wn * 0.3);
+        ctxP.quadraticCurveTo(g.t.x + nx2 * lp * 0.6, g.t.y + ny2 * lp * 0.6, e.x + nx2 * lp, e.y + ny2 * lp);
+        ctxP.quadraticCurveTo(e.x + tx * rb * 0.5, e.y + ty * rb * 0.5, e.x - nx2 * lp, e.y - ny2 * lp);
+        ctxP.quadraticCurveTo(g.t.x - nx2 * lp * 0.6, g.t.y - ny2 * lp * 0.6, g.t.x - tx * rb * 1.6 - nx2 * wn * 0.3, g.t.y - ty * rb * 1.6 - ny2 * wn * 0.3);
+        ctxP.closePath();
+        ctxP.fillStyle = rgba(clar(cor), 0.55 + 0.4 * sq); ctxP.fill();
+      });
+      ctxP.restore();
+      if (sq > 0.02) {                                  // a transmissão: os pés brilham e os neurotransmissores atravessam a fenda
+        ctxP.save(); ctxP.globalCompositeOperation = 'lighter';
+        var q = 1 - sq;
+        galhos.forEach(function (g, gi) {
+          luz(ctxP, g.t.x, g.t.y, rb * (2.2 + 2.5 * sq), cor, 0.7 * sq);
+          for (var k = 0; k < 4; k++) {
+            var da = g.a + (k - 1.5) * 0.35 + Math.sin(fase * 3 + gi + k) * 0.2, dist = rb + q * Math.max(4, 9 * s) * (0.7 + 0.15 * k);
+            ctxP.beginPath(); ctxP.arc(g.t.x + Math.cos(da) * dist, g.t.y + Math.sin(da) * dist, Math.max(0.6, 1.1 * s), 0, 6.2832);
+            ctxP.fillStyle = rgba(clar(cor), 0.9 * Math.min(1, sq * 1.6)); ctxP.fill();
+          }
+        });
+        ctxP.restore();
+      }
+    }
+
   return {
-    luz: luz, ventosa: pintaVentosa, cone: pintaCone, espVent: espVent, raioVent: raioVent, altVent: altVent
+    terminal: pintaTerminal, luz: luz, ventosa: pintaVentosa, cone: pintaCone, espVent: espVent, raioVent: raioVent, altVent: altVent
   };
 }
