@@ -1,0 +1,4 @@
+nome: cena/ciclo
+porta: 1
+compativel-desde: 1
+requer: comum/cores@1
