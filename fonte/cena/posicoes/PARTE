@@ -1,0 +1,4 @@
+nome: cena/posicoes
+porta: 1
+compativel-desde: 1
+requer: comum/curvas@1
