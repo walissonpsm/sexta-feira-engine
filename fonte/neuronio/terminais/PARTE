@@ -1,0 +1,4 @@
+nome: neuronio/terminais
+porta: 1
+compativel-desde: 1
+requer: comum/ramos@1 comum/sorteio@1
