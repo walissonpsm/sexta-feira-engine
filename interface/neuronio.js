@@ -2572,30 +2572,8 @@ function (usa) {
           ctx.fill();
         }
 
-        // Renderização completa do neurônio montado
-        function drawFrame() {
-          if (!ctx || !canvas) return;
-          passoAnimLupa();
-          cuidarRefino();
-
-          ctx.save();
-          ctx.scale(runtime.dpr, runtime.dpr);
-
-          ctx.clearRect(0, 0, runtime.width, runtime.height);
-          moverParalaxe();
-          vidroNaVista('fundo');
-
-          // Camada anatômica estática pré-renderizada (já na vista da esfera; com a lupa, a que foi refeita para ela)
-          estaticoNaVista();
-          // o que é vivo (pulsos, vesículas, neurotransmissores) é desenhado no espaço do neurônio e entra na mesma vista e na mesma lupa
-          ctx.transform(lupa.z, 0, 0, lupa.z, lupa.ox, lupa.oy);
-          Est.pulsoZ = Math.pow(lupa.z, -0.45);
-          const zcL = zcDe(lupa.z);
-          if (recortaNaEsfera()) ctx.clip(recorte2D());
-          ctx.translate(vista.tx, vista.ty);
-          ctx.scale(vista.k, vista.k);
-          giroCelula(ctx, Est.anatomy);
-
+        // A tinta do desenho animado: as cores e os brilhos da célula (e o usaCor, que troca a cor para o axônio ou a esfera de quem vai desenhar).
+        function tintaViva(zcL) {
           let [r, g, b] = config.rgb;
           let lightR = Math.min(255, r + 95);
           let lightG = Math.min(255, g + 95);
@@ -2603,16 +2581,22 @@ function (usa) {
           let deepR = Math.round(r * 0.28);
           let deepG = Math.round(g * 0.28);
           let deepB = Math.round(b * 0.28);
-          // cada axônio das ligações tem a sua cor: quem desenha o que é dele chama usaCor(cor); sem cor vale a da célula
-          const usaCor = function (c) {
-            c = c || config.rgb; r = c[0]; g = c[1]; b = c[2];
-            lightR = Math.min(255, r + 95); lightG = Math.min(255, g + 95); lightB = Math.min(255, b + 95);
-            deepR = Math.round(r * 0.28); deepG = Math.round(g * 0.28); deepB = Math.round(b * 0.28);
-          };
           const glowFactor = Math.max(0.15, config.brilhoGeral / 100);
           const dendriteAlpha = Math.max(0.08, config.opacidadeDendritos / 100);
+          const T = { zcL: zcL, r: r, g: g, b: b, lightR: lightR, lightG: lightG, lightB: lightB, deepR: deepR, deepG: deepG, deepB: deepB, glowFactor: glowFactor, dendriteAlpha: dendriteAlpha };
+          // cada axônio das ligações tem a sua cor: quem desenha o que é dele chama T.usaCor(cor); sem cor vale a da célula
+          T.usaCor = function (c) {
+            c = c || config.rgb; T.r = c[0]; T.g = c[1]; T.b = c[2];
+            T.lightR = Math.min(255, T.r + 95); T.lightG = Math.min(255, T.g + 95); T.lightB = Math.min(255, T.b + 95);
+            T.deepR = Math.round(T.r * 0.28); T.deepG = Math.round(T.g * 0.28); T.deepB = Math.round(T.b * 0.28);
+          };
+          return T;
+        }
 
-          // 1. Névoa de Dispersão translúcida
+        // 1. Névoa de Dispersão translúcida
+        function pintarNevoa(T) {
+          var zcL = T.zcL, r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
+          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
           if (config.enableMist && zcL < 0.98) {
             mistClouds.forEach((m) => {
               usaCor(m.rgb);
@@ -2626,10 +2610,12 @@ function (usa) {
               ctx.fill();
             });
           }
+        }
 
-          ctx.globalCompositeOperation = 'lighter';
-
-          // 1b. Os neurônios menores: o disparo no soma, o sinal no axônio e nos telodendros, o brilho nos terminais
+        // 1b. Os neurônios menores: o disparo no soma, o sinal no axônio e nos telodendros, o brilho nos terminais
+        function pintarMinisVivo(T) {
+          var glowFactor = T.glowFactor, r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
+          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
           Est.minis.forEach(function (m) {
             const cm = (m.ativoT > 0 && m.ativo) || m.rgb;
             const mr = cm[0], mg = cm[1], mb = cm[2], ml = Math.min(255, mr + 95), mgl = Math.min(255, mg + 95), mbl = Math.min(255, mb + 95);
@@ -2671,9 +2657,11 @@ function (usa) {
               });
             }
           });
+        }
 
-          usaCor();
-          // 2. Excitação dinâmica suave no Soma
+        // 2. Excitação dinâmica suave no Soma
+        function pintarExcitacaoSoma(T) {
+          var zcL = T.zcL, r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, glowFactor = T.glowFactor;
           if (runtime.somaExcitation > 0.02) {
             const exRad = Est.anatomy.somaRadius * (1.25 + runtime.somaExcitation * 0.45);
             const exGrad = ctx.createRadialGradient(
@@ -2688,8 +2676,11 @@ function (usa) {
             ctx.arc(Est.anatomy.somaX, Est.anatomy.somaY, exRad, 0, Math.PI * 2);
             ctx.fill();
           }
+        }
 
-          // 3. Pulsos de entrada nos dendritos
+        // 3. Pulsos de entrada nos dendritos
+        function pintarPulsosEntrada(T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, glowFactor = T.glowFactor;
           incomingSignals.forEach((sig) => {
             const pts = sig.pts;
             if (!pts || pts.length < 2) return;
@@ -2703,8 +2694,12 @@ function (usa) {
             if (sig.rgb) drawUnifiedSmoothPulse(x, y, 6.5 * Est.anatomy.scale, Math.min(255, sig.rgb[0] + 95), Math.min(255, sig.rgb[1] + 95), Math.min(255, sig.rgb[2] + 95), sig.rgb[0], sig.rgb[1], sig.rgb[2], glowFactor, 1);
             else drawUnifiedSmoothPulse(x, y, 6.5 * Est.anatomy.scale, lightR, lightG, lightB, r, g, b, glowFactor, 1);
           });
+        }
 
-          // 4. Nódulos de Ranvier
+        // 4. Nódulos de Ranvier
+        function pintarNodulos(T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, glowFactor = T.glowFactor, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
+          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
           Est.anatomy.nosTodos.forEach((node) => {
             usaCor(node.rgb);
             if (node.flash > 0.02) {
@@ -2713,8 +2708,12 @@ function (usa) {
               if (foraN > 0.01) drawUnifiedSmoothPulse(node.x, node.y, nRad, lightR, lightG, lightB, r, g, b, glowFactor, node.flash * 0.85 * foraN);
             }
           });
+        }
 
-          // 5. Potenciais de ação percorrendo o axônio e entrando nos telodendros até os bulbos
+        // 5. Potenciais de ação percorrendo o axônio e entrando nos telodendros até os bulbos
+        function pintarPotenciais(T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, glowFactor = T.glowFactor, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
+          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
           actionPotentials.forEach((ap) => {
             usaCor(ap.rgb || ap.eixo.rgb);
             const eixoPts = ap.eixo.axonPath;
@@ -2758,10 +2757,12 @@ function (usa) {
               });
             }
           });
+        }
 
-          ctx.globalCompositeOperation = 'source-over';
-
-          // 6. Bulbos Pré-Sinápticos Unificados em Sino Contínuo + Vesículas + Bolsas de Exocitose
+        // 6. Bulbos Pré-Sinápticos Unificados em Sino Contínuo + Vesículas + Bolsas de Exocitose
+        function pintarBulbos(T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB, dendriteAlpha = T.dendriteAlpha;
+          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
           const boutonsMain = Est.anatomy.terminalBoutons;
           const detalheFino = lupa.z >= 1.5;                                  // os pontinhos das vesículas e os sulcos só aparecem com a lupa
           Est.anatomy.boutonsTodos.forEach((bouton) => {
@@ -2886,9 +2887,12 @@ function (usa) {
 
             ctx.restore();
           });
+        }
 
-          // 7. Neurotransmissores esféricos liberados na fenda sináptica
-          ctx.globalCompositeOperation = 'lighter';
+        // 7. Neurotransmissores esféricos liberados na fenda sináptica
+        function pintarNeurotransmissores(T) {
+          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB;
+          var usaCor = function (c) { T.usaCor(c); r = T.r; g = T.g; b = T.b; lightR = T.lightR; lightG = T.lightG; lightB = T.lightB; deepR = T.deepR; deepG = T.deepG; deepB = T.deepB; };
           releasedNeurotransmitters.forEach((nt) => {
             usaCor(nt.rgb);
             if (nt.progress < 0) return;
@@ -2916,6 +2920,51 @@ function (usa) {
             ctx.arc(nt.x, nt.y, nt.size * 0.72, 0, Math.PI * 2);
             ctx.fill();
           });
+        }
+
+        // Renderização completa do neurônio montado
+        function drawFrame() {
+          if (!ctx || !canvas) return;
+          passoAnimLupa();
+          cuidarRefino();
+
+          ctx.save();
+          ctx.scale(runtime.dpr, runtime.dpr);
+
+          ctx.clearRect(0, 0, runtime.width, runtime.height);
+          moverParalaxe();
+          vidroNaVista('fundo');
+
+          // Camada anatômica estática pré-renderizada (já na vista da esfera; com a lupa, a que foi refeita para ela)
+          estaticoNaVista();
+          // o que é vivo (pulsos, vesículas, neurotransmissores) é desenhado no espaço do neurônio e entra na mesma vista e na mesma lupa
+          ctx.transform(lupa.z, 0, 0, lupa.z, lupa.ox, lupa.oy);
+          Est.pulsoZ = Math.pow(lupa.z, -0.45);
+          const zcL = zcDe(lupa.z);
+          if (recortaNaEsfera()) ctx.clip(recorte2D());
+          ctx.translate(vista.tx, vista.ty);
+          ctx.scale(vista.k, vista.k);
+          giroCelula(ctx, Est.anatomy);
+
+          const T = tintaViva(zcL);
+          pintarNevoa(T);                        // 1
+
+          ctx.globalCompositeOperation = 'lighter';
+
+          pintarMinisVivo(T);                    // 1b
+          T.usaCor();
+          pintarExcitacaoSoma(T);                // 2
+          pintarPulsosEntrada(T);                // 3
+          pintarNodulos(T);                      // 4
+          pintarPotenciais(T);                   // 5
+
+          ctx.globalCompositeOperation = 'source-over';
+
+          pintarBulbos(T);                       // 6
+
+          ctx.globalCompositeOperation = 'lighter';
+
+          pintarNeurotransmissores(T);           // 7
 
           ctx.globalCompositeOperation = 'source-over';
 
