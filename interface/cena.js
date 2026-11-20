@@ -376,10 +376,11 @@ function (usa) {
     function escolher(lista) {
       var Nn = esf.nucleo, rvN = raioVent(Nn.R), iA = lista.filter(function (x) { return x.tipo === 'i'; }), oA = lista.filter(function (x) { return x.tipo === 'o'; });
       // a caixa de cada linha (dos pontos a partir do 3º): `cruz` e `perto` só olham os trechos que podem encostar na outra linha (o resultado é o mesmo, a conta é bem menor)
+      var uidN = 0;
       var caixa = function (P) {
         var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, i, q;
         for (i = 2; i < P.length; i++) { q = P[i]; if (q.x < x0) x0 = q.x; if (q.x > x1) x1 = q.x; if (q.y < y0) y0 = q.y; if (q.y > y1) y1 = q.y; }
-        P.bb = { x0: x0, y0: y0, x1: x1, y1: y1 }; return P;
+        P.bb = { x0: x0, y0: y0, x1: x1, y1: y1 }; P.uid = ++uidN; return P;
       };
       var fixos = oA.map(function (x) { return { ax: x, pts: caixa(x.base.filter(function (q, i) { return i % 4 === 0; })) }; });
       var cruz = function (A, B) {
@@ -404,12 +405,29 @@ function (usa) {
         return n;
       };
       var giro = function (ax) { var D = volta(ax.thL + ax.dC - Math.atan2(ax.head[2].y - Nn.cy, ax.head[2].x - Nn.cx)); if (D * ax.plano.dir < 0) D += ax.plano.dir * 2 * Math.PI; return Math.abs(D); };
-      var esb = function (ax) { var P = esboco(Nn, rvN, ax, ax.plano, Est.s), L = 0; for (var q = 1; q < P.length; q++) L += Math.hypot(P[q].x - P[q - 1].x, P[q].y - P[q - 1].y); ax.esbL = L; return caixa(P); };
+      // o esboço de um axônio só depende do lado, da pista, do ponto de saída (`c`) e do ponto de pouso (`dC`): para o mesmo estado, é a mesma linha (e já com a conta do
+      // comprimento); as rodadas repetem muitos estados, e o resultado de cada par de linhas também fica guardado (a conta de cruzar e de chegar perto é pura)
+      var esbMemo = {}, parMemo = new Map();
+      var esb = function (ax) {
+        var chave = ax.id + '|' + ax.plano.dir + '|' + ax.plano.lane + '|' + ax.c + '|' + ax.dC, h = esbMemo[chave];
+        if (!h) {
+          var P = esboco(Nn, rvN, ax, ax.plano, Est.s), L = 0;
+          for (var q = 1; q < P.length; q++) L += Math.hypot(P[q].x - P[q - 1].x, P[q].y - P[q - 1].y);
+          h = esbMemo[chave] = { P: caixa(P), L: L };
+        }
+        ax.esbL = h.L; return h.P;
+      };
+      var custoPar = function (A, B, lim) {
+        var k = A.uid < B.uid ? A.uid * 1048576 + B.uid : B.uid * 1048576 + A.uid, v = parMemo.get(k);
+        if (v === undefined) { v = 100 * cruz(A, B) + 4 * Math.min(15, perto(A, B, lim)); parMemo.set(k, v); }
+        return v;
+      };
       var dCurto = function (ax) { return volta(ax.thL + ax.dC - Math.atan2(ax.head[2].y - Nn.cy, ax.head[2].x - Nn.cx)); };
-      var custoDe = function (ax) {
-        var P = ax.esb, c = 0, lim0 = 5 * Est.s + 3;
-        iA.forEach(function (o) { if (o === ax) return; c += 100 * cruz(P, o.esb) + 4 * Math.min(15, perto(P, o.esb, (ax.larg + o.larg) / 2 + lim0)); });
-        fixos.forEach(function (f) { c += 100 * cruz(P, f.pts) + 4 * Math.min(15, perto(P, f.pts, (ax.larg + f.ax.larg) / 2 + lim0)); });
+      // `teto` (opcional): a soma dos pares só cresce, então, ao passar do teto (o melhor custo até agora), esta pista já não ganha e a conta para (devolve uma soma qualquer >= teto)
+      var custoDe = function (ax, teto) {
+        var P = ax.esb, c = 0, lim0 = 5 * Est.s + 3, i, o;
+        for (i = 0; i < iA.length; i++) { o = iA[i]; if (o === ax) continue; c += custoPar(P, o.esb, (ax.larg + o.larg) / 2 + lim0); if (c >= teto) return c; }
+        for (i = 0; i < fixos.length; i++) { c += custoPar(P, fixos[i].pts, (ax.larg + fixos[i].ax.larg) / 2 + lim0); if (c >= teto) return c; }
         return c + 2.5 * ax.plano.lane + (ax.plano.dir * dCurto(ax) < 0 ? 25 : 0) + 0.12 * (ax.esbL || 0)    // volta longa custa (o caminho reto é preferido); mais de ~200° em volta do Núcleo, nem se tenta
       };
       // os terminais de um mesmo módulo ficam lado a lado no vidro (nenhum pousa em cima do outro), na ordem de quem chega: quem vem dos ângulos menores pousa do
@@ -432,7 +450,7 @@ function (usa) {
       for (var rd = 0; rd < 4; rd++) {
         iA.forEach(function (ax) {
           var melhor = ax.plano, cm = 1e18;
-          [1, -1].forEach(function (dr) { for (var ln = 0; ln < 6; ln++) { ax.plano = { dir: dr, lane: ln }; if (giro(ax) > 3.5) continue; ax.esb = esb(ax); var cc = custoDe(ax); if (cc < cm - 1e-9) { cm = cc; melhor = ax.plano; } } });
+          [1, -1].forEach(function (dr) { for (var ln = 0; ln < 6; ln++) { ax.plano = { dir: dr, lane: ln }; if (giro(ax) > 3.5) continue; ax.esb = esb(ax); var cc = custoDe(ax, cm - 1e-9); if (cc < cm - 1e-9) { cm = cc; melhor = ax.plano; } } });
           ax.plano = melhor; ax.esb = esb(ax);
         });
         iA.forEach(function (a) { iA.forEach(function (b) {
