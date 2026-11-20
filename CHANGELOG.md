@@ -1,5 +1,19 @@
 # Changelog — Sexta-Feira Engine
 
+## v0.4.3 — provas por parte (20/11)
+
+Pastas: todas
+
+- **A tela sai idêntica à da v0.4.2** (101 pontos do `testes/imagens.py`); nenhuma referência de imagem foi regravada.
+- **Uma parte quebrada de cada vez** (`testes/camadas.py`): `SF_TESTE = { quebrar: '<parte>' }` faz a parte falhar ao montar; o teste quebra cada uma das 38 e confere que caem exatamente ela e quem depende dela (pelo `requer`), que o aviso aparece e que não sobra erro solto. Para isso o aviso virou a parte `tela/aviso` (sem dependências): antes, se a cena ou a `tela/inicio` caíssem, ficava tela preta sem aviso.
+- **Roteiro do ciclo** (`testes/roteiro.py`, `testes/referencias/roteiro.json`): um pedido inteiro e um pedido com troca de foco no meio, passo a passo (estado dos dois axônios, brilho, ramos fora do repouso), com o tempo de cada passo.
+- **Tempo por parte** (`SF_TESTE = { medir: true }`, `SF.tempos()`): só informa; o `camadas.py` imprime as 12 funções que mais gastam.
+- **Falha contida por órgão**: dentro de cada esfera, cada órgão do desenho (halo, dendritos, soma, núcleo, axônio, terminais, névoa, minis, excitação, pulsos, nódulos, potenciais, bulbos, neurotransmissores) roda em `usa.base.seguro`; se der erro, só ele para naquela esfera e o contexto volta ao estado de antes. A guarda nas funções internas continua NÃO existindo (mudou o desenho na v0.4.1).
+- A foto da porta agora compara também o `compativel-desde`.
+- **Instabilidade do `imagens.py`: uma causa achada e corrigida.** Os quadros caem em múltiplos de 16 ms e o relógio falso parte de 2 a 5 ms conforme a carga; um "rodar 1500" de duração fixa terminava antes ou depois do quadro de 1504, que então rodava antes ou depois do passo seguinte (o pedido): o axônio ficava um quadro (4% do crescimento) atrás e a imagem mudava por alguns pontos. Agora os passos andam até instantes absolutos do relógio (também no `roteiro.py`). **Sobra uma instabilidade rara (cerca de 1 rodada em 100, só o canvas da parede em `ciclo-cripto-2x`/t01) cuja causa NÃO foi achada**; a nova tentativa (até 4 rodadas) continua, e agora o resumo final lista as cenas que precisaram dela.
+- O `ferramentas/empacotar.sh` também roda o roteiro e o `camadas.py` antes de criar o bundle.
+- Fica para as próximas (declarado, não feito): sorteio separado por parte (v0.4.4); a causa da instabilidade que sobrou; guarda em funções internas (só se não mudar o desenho). Nada visto no PC real nem no systemd.
+
 ## v0.4.2 — o isolamento terminado: celula e quadro em partes, falha contida e foto da porta (20/11)
 
 Pastas: todas
