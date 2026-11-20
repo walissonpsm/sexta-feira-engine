@@ -312,6 +312,29 @@ class Tela(unittest.TestCase):
                 self.assertGreater(atual["porta"], antes["porta"], "%s: a porta mudou (membros, dependências ou compativel-desde) sem subir `porta:` no PARTE; mude e grave a foto com SF_GRAVAR_PORTAS=1" % nome)
             self.assertGreaterEqual(atual["porta"], antes["porta"], nome)
 
+    def test_sorteio_separado_por_pedaco_da_anatomia(self):
+        pg = self.abre(auto=False)
+        r = pg.evaluate("""() => {
+          const C = window.SF.porta('neuronio/celula');
+          const mk = (extra, sem) => { const cv = document.createElement('canvas'); cv.width = 900; cv.height = 700;
+            const n = C.criar(cv, Object.assign({ cor: '#4aa8ff', semente: sem || 4242, leve: false, lupa: false, margem: 9, id: 't' }, extra));
+            n.redimensionar(900, 700); const A = n.anatomia(); return { contorno: JSON.stringify(A.somaOutline), rams: A.dendriteBranches.map(b => JSON.stringify([b.level, !!b.extra, b.pts])) }; };
+          const X1 = { ang: -1.2, comp: 40, larg: 2.4, nivel: 1 }, X2 = { ang: 1.2, comp: 36, larg: 2.2, nivel: 1 };
+          return { base: mk({}), um: mk({ dendritosExtra: [X1] }), dois: mk({ dendritosExtra: [X1, X2] }), outra: mk({}, 777), gasto: mk({ gastarContorno: 7 }) };
+        }""")
+        sem = lambda o: [b for b in o["rams"] if '"extra"' not in b and ",true," not in b]
+        extras = lambda o: [b for b in o["rams"] if ",true," in b]
+        self.assertGreater(len(extras(r["um"])), 0, "o dendrito de contato não apareceu")
+        self.assertEqual(r["um"]["contorno"], r["base"]["contorno"], "um dendrito de contato mexeu no contorno do corpo")
+        self.assertEqual(sem(r["um"]), sem(r["base"]), "um dendrito de contato mexeu nos troncos primários")
+        self.assertEqual(sem(r["dois"]), sem(r["base"]))
+        n1 = len(extras(r["um"]))
+        self.assertEqual(extras(r["dois"])[:n1], extras(r["um"]), "o segundo contato mexeu no primeiro")
+        self.assertGreater(len(extras(r["dois"])), n1)
+        self.assertNotEqual(r["outra"]["contorno"], r["base"]["contorno"], "outra semente tem de dar outro corpo")
+        self.assertNotEqual(r["gasto"]["contorno"], r["base"]["contorno"], "gastar sorteios do contorno tem de mudar o contorno")
+        self.assertEqual(r["gasto"]["rams"], r["base"]["rams"], "os dendritos dependem do sorteio do contorno do corpo")
+
     def test_fps_so_informa(self):
         pg = self.abre()
         fps = pg.evaluate("() => new Promise(r => { let n = 0, t0 = performance.now(); function f() { n++; if (performance.now() - t0 > 2000) r(Math.round(n / 2)); else requestAnimationFrame(f); } requestAnimationFrame(f); })")

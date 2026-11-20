@@ -498,6 +498,7 @@ function (usa) {
         dispararMini(m, /^#[0-9a-fA-F]{6}$/.test(hex) ? hexToRgb(hex) : null, cb);
         return true;
       },
+      anatomia: function () { return Est.anatomy; },                         // só geometria (sem dados); o teste do sorteio por pedaço compara os dendritos
       setGiro: function (g) { opc.giro0 = g; buildCompleteNeuron(); drawFrame(); },
       // o foco numa esfera: só as ligações dela, na vista dela (X = {k, tx, ty}); sem X volta tudo ao normal
       focoLigacoes: function (lista, X) {

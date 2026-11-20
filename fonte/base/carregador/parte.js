@@ -67,13 +67,24 @@
     ordemReg.push(manifesto.nome);
   }
 
+  // só no teste (v0.4.4): cada parte recebe a sua PRÓPRIA sequência de sorteio (semente fixa + o nome da parte), então um sorteio a mais numa parte não muda o das outras;
+  // `usa.base.teste` fica verdadeiro. Na tela real todas seguem com o Math.random (o desenho não depende dele: as sementes das esferas são fixas).
+  function baseDe(nome) {
+    var s = 2166136261 >>> 0, i;
+    for (i = 0; i < nome.length; i++) { s ^= nome.charCodeAt(i); s = Math.imul(s, 16777619) >>> 0; }
+    return Object.freeze(Object.assign({}, base, {
+      teste: true,
+      acaso: function () { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }
+    }));
+  }
+
   function construir(nome, pilha) {
     var p = registro[nome];
     if (!p) return false;
     if (p.estado === 2) return !!p.porta;
     if (p.estado === 1) { desliga(nome, new Error('ciclo: ' + pilha.join(' > '))); return false; }
     p.estado = 1;
-    var usa = { base: base }, i, r, dep, ver, d;
+    var usa = { base: T ? baseDe(nome) : base }, i, r, dep, ver, d;
     for (i = 0; i < p.m.requer.length; i++) {
       r = p.m.requer[i]; dep = r.slice(0, r.indexOf('@')); ver = +r.slice(r.indexOf('@') + 1); d = registro[dep];
       if (!d) { desliga(nome, new Error('falta a parte ' + dep)); p.estado = 2; return false; }
@@ -109,5 +120,5 @@
     return o;
   }
 
-  global.SF = Object.freeze({ parte: parte, iniciar: iniciar, versao: base.versao, portas: T ? portas : undefined, desligadas: T ? function () { return falhas.slice(); } : undefined, tempos: T ? function () { return JSON.parse(JSON.stringify(tempos)); } : undefined });
+  global.SF = Object.freeze({ parte: parte, iniciar: iniciar, versao: base.versao, portas: T ? portas : undefined, desligadas: T ? function () { return falhas.slice(); } : undefined, porta: T ? function (n) { return registro[n] && registro[n].porta || null; } : undefined, tempos: T ? function () { return JSON.parse(JSON.stringify(tempos)); } : undefined });
 }(window));

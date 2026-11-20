@@ -16,7 +16,10 @@ function (usa) {
 
 // Monta a anatomia completa de um neurônio (o desenho aprovado) a partir de uma semente; não desenha nada
         function montarAnatomia(semente, fimAxonio, principal, extrasMini) {
-          const rng = createSeededRandom(semente);
+          // sorteio SEPARADO por pedaço (v0.4.4): cada pedaço tem a sua sequência (semente da esfera + o nome do pedaço); mexer num pedaço não move os outros
+          const rngDe = function (nome) { return createSeededRandom(((semente >>> 0) ^ usa.sorteio.hash(nome)) >>> 0); };
+          const rng = rngDe('contorno');                                    // o contorno do corpo, as espículas, o anel e o núcleo
+          if (usa.base.teste && opc.gastarContorno) for (let g = 0; g < opc.gastarContorno; g++) rng();      // só no teste: gasta sorteios do contorno para provar que os dendritos não dependem dele
           const somaX = DW * 0.25;
           const somaY = DH * 0.52;
           const scale = 1;
@@ -114,7 +117,7 @@ function (usa) {
           const dendriteTips = [];
           const synapticSpines = [];
 
-          function growDendrite(startX, startY, angle, length, startWidth, level, maxLevel, pai, idxPai, reto) {
+          function growDendrite(startX, startY, angle, length, startWidth, level, maxLevel, pai, idxPai, reto, rd) {
             const segCount = Math.max(12, Math.round(length / (4.3 * scale)));
             const pts = [{ x: startX, y: startY, w: startWidth }];
             const entrada = { pts, tipX: startX, tipY: startY, level, pai: pai || null, idxPai: idxPai || 0 };
@@ -123,39 +126,39 @@ function (usa) {
             let curY = startY;
             let curAng = angle;
             const stepLen = length / segCount;
-            const curlFreq = 0.24 + rng() * 0.26;
-            const curlAmp = (0.075 + rng() * 0.065) * (rng() > 0.5 ? 1 : -1);
+            const curlFreq = 0.24 + rd() * 0.26;
+            const curlAmp = (0.075 + rd() * 0.065) * (rd() > 0.5 ? 1 : -1);
 
             for (let s = 1; s <= segCount; s++) {
               const progress = s / segCount;
-              curAng += (Math.sin(s * curlFreq + level) * curlAmp + (rng() - 0.5) * 0.055) * (reto || 1);
+              curAng += (Math.sin(s * curlFreq + level) * curlAmp + (rd() - 0.5) * 0.055) * (reto || 1);
               curX += Math.cos(curAng) * stepLen;
               curY += Math.sin(curAng) * stepLen;
 
               const w = startWidth * Math.pow(1 - progress, 1.38);
               pts.push({ x: curX, y: curY, w: Math.max(0.02, w) });
 
-              if (s > 2 && s < segCount - 1 && rng() < 0.44 * branchFactor) {
-                const side = rng() > 0.5 ? 1 : -1;
-                const spineAng = curAng + side * (1.06 + rng() * 0.42);
-                const spineLen = (3.3 + rng() * 4.4) * scale;
+              if (s > 2 && s < segCount - 1 && rd() < 0.44 * branchFactor) {
+                const side = rd() > 0.5 ? 1 : -1;
+                const spineAng = curAng + side * (1.06 + rd() * 0.42);
+                const spineLen = (3.3 + rd() * 4.4) * scale;
                 synapticSpines.push({
                   x1: curX,
                   y1: curY,
                   x2: curX + Math.cos(spineAng) * spineLen,
                   y2: curY + Math.sin(spineAng) * spineLen,
-                  hasReceptor: rng() < 0.45
+                  hasReceptor: rd() < 0.45
                 });
               }
 
               if (level < maxLevel && s >= Math.floor(segCount * 0.28) && s <= Math.floor(segCount * 0.84)) {
                 const splitChance = level === 1 ? 0.29 : 0.19;
-                if (rng() < splitChance * branchFactor) {
+                if (rd() < splitChance * branchFactor) {
                   const forkSide = s % 2 === 0 ? 1 : -1;
-                  const forkAng = curAng + forkSide * (0.40 + rng() * 0.28);
-                  const childLen = length * (1 - progress * 0.38) * (0.65 + rng() * 0.16);
+                  const forkAng = curAng + forkSide * (0.40 + rd() * 0.28);
+                  const childLen = length * (1 - progress * 0.38) * (0.65 + rd() * 0.16);
                   const childW = Math.max(0.8 * scale, w * 0.78);
-                  growDendrite(curX, curY, forkAng, childLen, childW, level + 1, maxLevel, entrada, s);
+                  growDendrite(curX, curY, forkAng, childLen, childW, level + 1, maxLevel, entrada, s, undefined, rd);
                 }
               }
             }
@@ -166,20 +169,21 @@ function (usa) {
           }
 
           const maxDepth = branchFactor > 0.65 ? 3 : branchFactor > 0.3 ? 2 : 1;
-          primaryAngles.forEach((ang) => {
+          primaryAngles.forEach((ang, i) => {
+            const rd = rngDe('dendrito:' + i);                              // um sorteio por tronco primário, com todos os seus galhos
             const sx = somaX + Math.cos(ang) * (somaRadius * 1.02);
             const sy = somaY + Math.sin(ang) * (somaRadius * 1.02);
-            const trunkLen = (148 + rng() * 50) * scale * (0.65 + branchFactor * 0.45);
-            const trunkWidth = (7.4 + rng() * 1.8) * scale;
-            growDendrite(sx, sy, ang, trunkLen, trunkWidth, 1, maxDepth);
+            const trunkLen = (148 + rd() * 50) * scale * (0.65 + branchFactor * 0.45);
+            const trunkWidth = (7.4 + rd() * 1.8) * scale;
+            growDendrite(sx, sy, ang, trunkLen, trunkWidth, 1, maxDepth, null, 0, undefined, rd);
           });
 
           // dendritos de contato (opcionais, só no principal): um ramo fino e curto, sorteado depois dos primários (os primários não mudam),
           // para onde uma ligação precisa tocar um dendrito e a folga entre os primários não tem nenhum
           if ((principal && opc.dendritosExtra) || extrasMini) {
-            (principal ? opc.dendritosExtra : extrasMini).forEach(function (x) {
+            (principal ? opc.dendritosExtra : extrasMini).forEach(function (x, j) {
               const n0 = dendriteTips.length, b0 = dendriteBranches.length;
-              growDendrite(somaX + Math.cos(x.ang) * somaRadius * 1.02, somaY + Math.sin(x.ang) * somaRadius * 1.02, x.ang, x.comp * scale, x.larg * scale, 1, x.nivel || 1, null, 0, 0.18);
+              growDendrite(somaX + Math.cos(x.ang) * somaRadius * 1.02, somaY + Math.sin(x.ang) * somaRadius * 1.02, x.ang, x.comp * scale, x.larg * scale, 1, x.nivel || 1, null, 0, 0.18, rngDe('contato:' + j));
               for (let q = n0; q < dendriteTips.length; q++) dendriteTips[q].extra = true;
               for (let q = b0; q < dendriteBranches.length; q++) dendriteBranches[q].extra = true;
             });
