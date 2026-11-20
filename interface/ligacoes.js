@@ -451,6 +451,7 @@ function (usa) {
       for (i = 1; i < n; i++) c[i] = c[i - 1] + Math.hypot(ax.pts[i].x - ax.pts[i - 1].x, ax.pts[i].y - ax.pts[i - 1].y);
       ax.len = c[n - 1];
       ax.sobre = ax.grade ? cruzamentos(ax) : [];
+      ax.cT = null;                      // a linha mudou: o que o desenho guardou dela (caminhos do fio e das bainhas) já não vale
     }
     // onde um dendrito cruza o axônio, metade das vezes ele passa POR CIMA (é repintado por cima do axônio, na cor dele); na outra metade passa por baixo.
     // A escolha é fixa para cada cruzamento (`d.cima`, sorteada em cena/ligar).
@@ -501,29 +502,36 @@ function (usa) {
       ax.pitch = pitch; ax.nNos = out.length; ax.nosU = nos; return out;
     }
     var QG = [1, 0.86, 0.72];
-    function pintaEixo(ctxP, s, relogio, ax) {
-      var w = ax.larg, ou = Math.max(0.9, 1.3 * s), cor = ax.corRgb, fim = ax.len - ponta.altVent(s) * 0.5, tr = trechos(s, ax), g, i;
-      ctxP.lineCap = 'butt'; ctxP.lineJoin = 'bevel'; ctxP.miterLimit = 2; ctxP.globalCompositeOperation = 'source-over';
-      var fio = new Path2D();                                    // só onde não há bainha: o começo, a cintura de cada nódulo e o fim
+    // O que só depende da linha (as bainhas, o caminho do fio nu, o das bainhas de cada espessura, os trechos de dendrito por cima e as cores) é montado na primeira vez
+    // que o axônio é desenhado e guardado em `ax.cT`; `medeEixo` apaga o guardado quando a linha muda. Refazer tudo isso a cada quadro custava ~3.900 chamadas de caminho
+    // por quadro só nos troncos. Só o que se mexe (o inchaço e o pulso, os nódulos acesos, o terminal) é calculado de novo a cada quadro.
+    function guardaTronco(s, ax, fim) {
+      var cor = ax.corRgb, tr = trechos(s, ax), fio = new Path2D(), mains = [new Path2D(), new Path2D()], tem = [false, false], i;
       if (!tr.length) caminhoSub(ax, 0, fim, fio);
       else { caminhoSub(ax, 0, tr[0][0] + 0.5, fio); for (i = 0; i + 1 < tr.length; i++) caminhoSub(ax, tr[i][1] - 0.5, tr[i + 1][0] + 0.5, fio); caminhoSub(ax, tr[tr.length - 1][1] - 0.5, fim, fio); }       // o fio nu, de ponta a ponta (aparece na cintura dos nódulos e perto da ponta)
-      ctxP.strokeStyle = rgba(clar(cor), 0.85); ctxP.lineWidth = 0.40 * w; ctxP.stroke(fio);
-      var mains = [new Path2D(), new Path2D()], tem = [false, false];
       tr.forEach(function (t) { var g2 = t[2] ? 1 : 0; tem[g2] = true; caminhoSub(ax, t[0], t[1], mains[g2]); });
-      var dk = 'rgb(6,4,14)', c42 = rgba(esc(cor, 0.42), 1), c80 = rgba(esc(cor, 0.80), 1), cl = null;
+      var sobre = (ax.sobre || []).map(function (d) { var pd = new Path2D(); pd.moveTo(d.x0, d.y0); pd.lineTo(d.x1, d.y1); pd.lineTo(d.x2, d.y2); pd.lineTo(d.x3, d.y3); return { p: pd, cor: d.cor, w: d.w }; });
+      return { fio: fio, mains: mains, tem: tem, sobre: sobre, fim: fim, cFio: rgba(clar(cor), 0.85), c42: rgba(esc(cor, 0.42), 1), c80: rgba(esc(cor, 0.80), 1) };
+    }
+    function pintaEixo(ctxP, s, relogio, ax) {
+      var w = ax.larg, fim = ax.len - ponta.altVent(s) * 0.5, g, i, K = ax.cT;
+      if (!K || K.fim !== fim) K = ax.cT = guardaTronco(s, ax, fim);
+      ctxP.lineCap = 'butt'; ctxP.lineJoin = 'bevel'; ctxP.miterLimit = 2; ctxP.globalCompositeOperation = 'source-over';
+      ctxP.strokeStyle = K.cFio; ctxP.lineWidth = 0.40 * w; ctxP.stroke(K.fio);
+      var c42 = K.c42, c80 = K.c80;
       for (g = 0; g < 2; g++) {
-        if (!tem[g]) continue; var q = w * QG[g * 2];
-        ctxP.strokeStyle = c42; ctxP.lineWidth = q; ctxP.stroke(mains[g]);
-        ctxP.strokeStyle = c80; ctxP.lineWidth = 0.60 * q; ctxP.stroke(mains[g]);
+        if (!K.tem[g]) continue; var q = w * QG[g * 2];
+        ctxP.strokeStyle = c42; ctxP.lineWidth = q; ctxP.stroke(K.mains[g]);
+        ctxP.strokeStyle = c80; ctxP.lineWidth = 0.60 * q; ctxP.stroke(K.mains[g]);
       }
       if (ax.pulso) {                                  // onde o potencial de ação passa, o axônio incha de leve
         var inch = new Path2D(); caminhoSub(ax, Math.max(0, ax.pulso.u - 26 * s), Math.min(fim, ax.pulso.u + 6 * s), inch);
         ctxP.strokeStyle = c42; ctxP.lineWidth = w * 1.16; ctxP.stroke(inch);
         ctxP.strokeStyle = c80; ctxP.lineWidth = 0.66 * w; ctxP.stroke(inch);
       }
-      if (ax.sobre && ax.sobre.length) {              // o dendrito que passa por cima: o trecho dele é pintado por cima do axônio, na cor dele (sem buraco nem sombra)
+      if (K.sobre.length) {                            // o dendrito que passa por cima: o trecho dele é pintado por cima do axônio, na cor dele (sem buraco nem sombra)
         ctxP.save(); ctxP.lineCap = 'round'; ctxP.lineJoin = 'round';
-        ax.sobre.forEach(function (d) { ctxP.strokeStyle = d.cor; ctxP.lineWidth = d.w; ctxP.beginPath(); ctxP.moveTo(d.x0, d.y0); ctxP.lineTo(d.x1, d.y1); ctxP.lineTo(d.x2, d.y2); ctxP.lineTo(d.x3, d.y3); ctxP.stroke(); });
+        K.sobre.forEach(function (d) { ctxP.strokeStyle = d.cor; ctxP.lineWidth = d.w; ctxP.stroke(d.p); });
         ctxP.restore();
       }
       ctxP.globalCompositeOperation = 'lighter';
