@@ -369,6 +369,58 @@ function dispararMini(m, rgb, cb) {
 }
 
 );
+// ---- fonte/neuronio/escala/parte.js
+SF.parte({nome:'neuronio/escala',porta:1,compativelDesde:1,requer:['comum/ramos@1'],guarda:false,dom:true},
+/* Sexta-Feira Engine v0.4.2: neuronio/escala. o tamanho e o detalhe: o degrau de detalhe da lupa (nivel), 1 px em unidades do desenho (un), o zoom máximo, o contraste da lupa (zcDe), o giro da célula, o bitmap novo e os dois ramos que dependem do degrau (polígono afilado e ramo encorpado).
+ * Código movido sem reescrever de neuronio/celula: o estado vem de Est (a tabela dos campos está no LEIA-ME.md da juntadora e deste) e as funções
+ * das irmãs chegam em d, passadas pela juntadora. Só desenha/calcula o que está na lista da porta. */
+function (usa) {
+  'use strict';
+
+  function criar(Est, d) {
+    var dendritos = usa.ramos;
+    var opc = Est.opc, runtime = Est.runtime, vista = Est.vista;
+
+function agora() { return usa.base.agora(); }
+
+function zcDe(z) { return Math.max(0, Math.min(1, (z - 1) / 3)); }
+
+// o quanto a lupa já puxou o contraste (0 sem lupa, 1 a partir de 4x)
+        // Degraus de detalhe, pelos pixels de tela por unidade do desenho da célula que está sendo pintada (0 = o desenho aprovado)
+        function nivel() {
+          if (Est.detZ <= 1.05) return 0;
+          const p = vista.k * Est.detZ * runtime.dpr * Est.detLocal;
+          return p >= 3.6 ? 3 : p >= 2.1 ? 2 : p >= 1.25 ? 1 : 0;
+        }
+
+function un() { return 1 / Math.max(1e-6, vista.k * Est.detZ * Est.detLocal); }
+
+// 1 px do canvas, em unidades do desenho da célula
+        function zMax() { return Math.max(4, Math.min(48, 16 / Math.max(0.05, vista.k))); }
+
+function giroCelula(c, A) {
+          if (!opc.giro0) return;
+          c.translate(A.somaX, A.somaY); c.rotate(opc.giro0); c.translate(-A.somaX, -A.somaY);
+        }
+
+function novoBitmap() {
+          const c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(runtime.width * runtime.dpr));
+          c.height = Math.max(1, Math.round(runtime.height * runtime.dpr));
+          return c;
+        }
+
+function drawSharpDendritePolygon(targetCtx, points) { dendritos.poligonoAfilado(targetCtx, points, nivel()); }
+
+function drawTaperedBranch(targetCtx, points) { dendritos.ramoEncorpado(targetCtx, points, nivel()); }
+
+    return { agora: agora, zcDe: zcDe, nivel: nivel, un: un, zMax: zMax, giroCelula: giroCelula, novoBitmap: novoBitmap, drawSharpDendritePolygon: drawSharpDendritePolygon, drawTaperedBranch: drawTaperedBranch };
+  }
+
+  return { criar: criar };
+}
+
+);
 // ---- fonte/neuronio/minis/parte.js
 SF.parte({nome:'neuronio/minis',porta:1,compativelDesde:1,requer:['comum/sorteio@1','comum/cores@1'],guarda:false,dom:false},
 /* Sexta-Feira Engine v0.4.2: neuronio/minis. os neurônios menores dentro da esfera: monta cada um (anatomia em escala, posição, profundidade, caixa) a partir da anatomia do principal. A anatomia chega pela juntadora.
@@ -1172,7 +1224,7 @@ function calcularVista() {
 
 );
 // ---- fonte/neuronio/celula/parte.js
-SF.parte({nome:'neuronio/celula',porta:1,compativelDesde:1,requer:['comum/sorteio@1','comum/cores@1','comum/ramos@1','neuronio/recorte@1','neuronio/anatomia@1','neuronio/sinais@1','neuronio/minis@1'],guarda:true,dom:true},
+SF.parte({nome:'neuronio/celula',porta:1,compativelDesde:1,requer:['comum/sorteio@1','comum/cores@1','comum/ramos@1','neuronio/recorte@1','neuronio/anatomia@1','neuronio/sinais@1','neuronio/minis@1','neuronio/escala@1'],guarda:true,dom:true},
 /* Sexta-Feira Engine: o motor do neurônio (v0.3.0).
  * Vem do neuronio.html do dono (desenho aprovado: soma, dendritos, axônio, terminais), transformado em fábrica: cada canvas tem o seu
  * neurônio, com estado próprio. Só desenha; não lê dado, não usa rede, não mexe em nada fora do canvas que recebe.
@@ -1310,14 +1362,15 @@ function (usa) {
         // neuronio/minis (v0.4.2): os neurônios menores dentro da esfera: monta cada um (anatomia em escala, posição, profundidade, caixa) a partir da anatomia do principal. A anatomia chega pela juntadora.
         const P_minis = usa.minis.criar(Est, { axonStartFim: P_anatomia.axonStartFim, montarAnatomia: P_anatomia.montarAnatomia, caixaDe: P_anatomia.caixaDe, pontasTerminais: P_anatomia.pontasTerminais });
         const montarMinis = P_minis.montarMinis;
+        // neuronio/escala (v0.4.2): o tamanho e o detalhe: o degrau de detalhe da lupa (nivel), 1 px em unidades do desenho (un), o zoom máximo, o contraste da lupa (zcDe), o giro da célula, o bitmap novo e os dois ramos que dependem do degrau (polígono afilado e ramo encorpado).
+        const P_escala = usa.escala.criar(Est, {});
+        const agora = P_escala.agora, zcDe = P_escala.zcDe, nivel = P_escala.nivel, un = P_escala.un, zMax = P_escala.zMax, giroCelula = P_escala.giroCelula, novoBitmap = P_escala.novoBitmap, drawSharpDendritePolygon = P_escala.drawSharpDendritePolygon, drawTaperedBranch = P_escala.drawTaperedBranch;
         // FIM DOS BLOCOS DAS PARTES
         const par = Est.par, PAREDE = Est.PAREDE;
 
 
         const dendritos = usa.ramos;
         const trilhaSuave = dendritos.trilhaSuave, bordasRamo = dendritos.bordasRamo, desviar = dendritos.desviar, mitocondrias = dendritos.mitocondrias;
-        function drawSharpDendritePolygon(targetCtx, points) { dendritos.poligonoAfilado(targetCtx, points, nivel()); }
-        function drawTaperedBranch(targetCtx, points) { dendritos.ramoEncorpado(targetCtx, points, nivel()); }
 
 
 
@@ -1344,20 +1397,6 @@ function (usa) {
 
 
 
-        function giroCelula(c, A) {
-          if (!opc.giro0) return;
-          c.translate(A.somaX, A.somaY); c.rotate(opc.giro0); c.translate(-A.somaX, -A.somaY);
-        }
-        function agora() { return usa.base.agora(); }
-        function zcDe(z) { return Math.max(0, Math.min(1, (z - 1) / 3)); }      // o quanto a lupa já puxou o contraste (0 sem lupa, 1 a partir de 4x)
-        // Degraus de detalhe, pelos pixels de tela por unidade do desenho da célula que está sendo pintada (0 = o desenho aprovado)
-        function nivel() {
-          if (Est.detZ <= 1.05) return 0;
-          const p = vista.k * Est.detZ * runtime.dpr * Est.detLocal;
-          return p >= 3.6 ? 3 : p >= 2.1 ? 2 : p >= 1.25 ? 1 : 0;
-        }
-        function un() { return 1 / Math.max(1e-6, vista.k * Est.detZ * Est.detLocal); }  // 1 px do canvas, em unidades do desenho da célula
-        function zMax() { return Math.max(4, Math.min(48, 16 / Math.max(0.05, vista.k))); }
 
         // As camadas, do fundo para a frente (o principal fica no meio)
         function camadasOrdenadas() {
@@ -1405,12 +1444,6 @@ function (usa) {
           iluminarCamada(tctx, R, c.z, v);
           comporCamada(octx, tmp, c.z, c.m ? c.m.dA : 1, R, v);
           Est.detZ = 1; Est.detLocal = 1;
-        }
-        function novoBitmap() {
-          const c = document.createElement('canvas');
-          c.width = Math.max(1, Math.round(runtime.width * runtime.dpr));
-          c.height = Math.max(1, Math.round(runtime.height * runtime.dpr));
-          return c;
         }
         function iniciarAssado(v) {
           const off = novoBitmap();
