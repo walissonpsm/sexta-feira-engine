@@ -14,18 +14,36 @@ function (usa) {
     // o ponto de pouso (`dC`, `dPara`, `dRep`) e o caminho refeito (`refazEixo`); os violetas servem só de obstáculo para a escolha.
     function escolher(lista) {
       var Nn = esf.nucleo, rvN = raioVent(Nn.R), iA = lista.filter(function (x) { return x.tipo === 'i'; }), oA = lista.filter(function (x) { return x.tipo === 'o'; });
-      var fixos = oA.map(function (x) { return { ax: x, pts: x.base.filter(function (q, i) { return i % 4 === 0; }) }; });
+      // a caixa de cada linha (dos pontos a partir do 3º): `cruz` e `perto` só olham os trechos que podem encostar na outra linha (o resultado é o mesmo, a conta é bem menor)
+      var caixa = function (P) {
+        var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, i, q;
+        for (i = 2; i < P.length; i++) { q = P[i]; if (q.x < x0) x0 = q.x; if (q.x > x1) x1 = q.x; if (q.y < y0) y0 = q.y; if (q.y > y1) y1 = q.y; }
+        P.bb = { x0: x0, y0: y0, x1: x1, y1: y1 }; return P;
+      };
+      var fixos = oA.map(function (x) { return { ax: x, pts: caixa(x.base.filter(function (q, i) { return i % 4 === 0; })) }; });
       var cruz = function (A, B) {
-        var n = 0, i, j, a0, a1, b0, b1, o = function (p, q, r) { return (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x); };
-        for (i = 2; i + 1 < A.length; i++) { a0 = A[i]; a1 = A[i + 1];
-          for (j = 2; j + 1 < B.length; j++) { b0 = B[j]; b1 = B[j + 1];
+        var ba = A.bb, bb = B.bb;
+        if (ba.x1 < bb.x0 || bb.x1 < ba.x0 || ba.y1 < bb.y0 || bb.y1 < ba.y0) return 0;
+        var n = 0, i, j, a0, a1, b0, b1, ia, jb, IA = [], JB = [], o = function (p, q, r) { return (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x); };
+        for (i = 2; i + 1 < A.length; i++) { a0 = A[i]; a1 = A[i + 1]; if (Math.max(a0.x, a1.x) < bb.x0 || bb.x1 < Math.min(a0.x, a1.x) || Math.max(a0.y, a1.y) < bb.y0 || bb.y1 < Math.min(a0.y, a1.y)) continue; IA.push(i); }
+        for (j = 2; j + 1 < B.length; j++) { b0 = B[j]; b1 = B[j + 1]; if (Math.max(b0.x, b1.x) < ba.x0 || ba.x1 < Math.min(b0.x, b1.x) || Math.max(b0.y, b1.y) < ba.y0 || ba.y1 < Math.min(b0.y, b1.y)) continue; JB.push(j); }
+        for (ia = 0; ia < IA.length; ia++) { a0 = A[IA[ia]]; a1 = A[IA[ia] + 1];
+          for (jb = 0; jb < JB.length; jb++) { b0 = B[JB[jb]]; b1 = B[JB[jb] + 1];
             if (Math.max(a0.x, a1.x) < Math.min(b0.x, b1.x) || Math.max(b0.x, b1.x) < Math.min(a0.x, a1.x) || Math.max(a0.y, a1.y) < Math.min(b0.y, b1.y) || Math.max(b0.y, b1.y) < Math.min(a0.y, a1.y)) continue;
             if ((o(a0, a1, b0) > 0) !== (o(a0, a1, b1) > 0) && (o(b0, b1, a0) > 0) !== (o(b0, b1, a1) > 0)) n++; } }
         return n;
       };
-      var perto = function (A, B, lim) { var n = 0, i, j; for (i = 2; i < A.length; i++) for (j = 2; j < B.length; j++) if (Math.abs(A[i].x - B[j].x) < lim && Math.abs(A[i].y - B[j].y) < lim && Math.hypot(A[i].x - B[j].x, A[i].y - B[j].y) < lim) n++; return n; };
+      var perto = function (A, B, lim) {
+        var ba = A.bb, bb = B.bb;
+        if (bb.x0 - ba.x1 >= lim || ba.x0 - bb.x1 >= lim || bb.y0 - ba.y1 >= lim || ba.y0 - bb.y1 >= lim) return 0;
+        var n = 0, i, j, q, ia, jb, IA = [], JB = [];
+        for (i = 2; i < A.length; i++) { q = A[i]; if (q.x > bb.x0 - lim && q.x < bb.x1 + lim && q.y > bb.y0 - lim && q.y < bb.y1 + lim) IA.push(q); }
+        for (j = 2; j < B.length; j++) { q = B[j]; if (q.x > ba.x0 - lim && q.x < ba.x1 + lim && q.y > ba.y0 - lim && q.y < ba.y1 + lim) JB.push(q); }
+        for (ia = 0; ia < IA.length; ia++) for (jb = 0; jb < JB.length; jb++) if (Math.abs(IA[ia].x - JB[jb].x) < lim && Math.abs(IA[ia].y - JB[jb].y) < lim && Math.hypot(IA[ia].x - JB[jb].x, IA[ia].y - JB[jb].y) < lim) n++;
+        return n;
+      };
       var giro = function (ax) { var D = volta(ax.thL + ax.dC - Math.atan2(ax.head[2].y - Nn.cy, ax.head[2].x - Nn.cx)); if (D * ax.plano.dir < 0) D += ax.plano.dir * 2 * Math.PI; return Math.abs(D); };
-      var esb = function (ax) { var P = esboco(Nn, rvN, ax, ax.plano, Est.s), L = 0; for (var q = 1; q < P.length; q++) L += Math.hypot(P[q].x - P[q - 1].x, P[q].y - P[q - 1].y); ax.esbL = L; return P; };
+      var esb = function (ax) { var P = esboco(Nn, rvN, ax, ax.plano, Est.s), L = 0; for (var q = 1; q < P.length; q++) L += Math.hypot(P[q].x - P[q - 1].x, P[q].y - P[q - 1].y); ax.esbL = L; return caixa(P); };
       var dCurto = function (ax) { return volta(ax.thL + ax.dC - Math.atan2(ax.head[2].y - Nn.cy, ax.head[2].x - Nn.cx)); };
       var custoDe = function (ax) {
         var P = ax.esb, c = 0, lim0 = 5 * Est.s + 3;
