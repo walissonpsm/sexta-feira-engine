@@ -138,6 +138,12 @@ function (usa) {
         // neuronio/escala (v0.4.2): o tamanho e o detalhe: o degrau de detalhe da lupa (nivel), 1 px em unidades do desenho (un), o zoom máximo, o contraste da lupa (zcDe), o giro da célula, o bitmap novo e os dois ramos que dependem do degrau (polígono afilado e ramo encorpado).
         const P_escala = usa.escala.criar(Est, {});
         const agora = P_escala.agora, zcDe = P_escala.zcDe, nivel = P_escala.nivel, un = P_escala.un, zMax = P_escala.zMax, giroCelula = P_escala.giroCelula, novoBitmap = P_escala.novoBitmap, drawSharpDendritePolygon = P_escala.drawSharpDendritePolygon, drawTaperedBranch = P_escala.drawTaperedBranch;
+        // neuronio/tinta (v0.4.2): as cores e os brilhos derivados de uma célula (o topo do desenho aprovado): cor clara, cor funda, transparências e brilhos, o degrau de detalhe e o contraste da lupa. Quem pinta recebe o objeto T e lê daqui.
+        const P_tinta = usa.tinta.criar(Est, { zcDe: P_escala.zcDe, nivel: P_escala.nivel, un: P_escala.un });
+        const tintaFixa = P_tinta.tintaFixa;
+        // neuronio/dendritos (v0.4.2): o desenho parado dos dendritos afilados e das espinhas sinápticas (seção 2 do desenho aprovado). Recebe a tinta T.
+        const P_dendritos = usa.dendritos.criar(Est, { drawSharpDendritePolygon: P_escala.drawSharpDendritePolygon });
+        const pintarDendritos = P_dendritos.pintarDendritos;
         // FIM DOS BLOCOS DAS PARTES
         const par = Est.par, PAREDE = Est.PAREDE;
 
@@ -615,24 +621,6 @@ function (usa) {
           par.y += (ay - par.y) * 0.07;
         }
 
-        // A tinta de uma célula: as cores e os brilhos derivados (o topo do desenho aprovado). Quem pinta recebe T e lê daqui.
-        function tintaFixa(rgb) {
-          let [r, g, b] = rgb || config.rgb;
-          let lightR = Math.min(255, r + 90);
-          let lightG = Math.min(255, g + 90);
-          let lightB = Math.min(255, b + 90);
-          let deepR = Math.round(r * 0.26);
-          let deepG = Math.round(g * 0.26);
-          let deepB = Math.round(b * 0.26);
-
-          const bodyAlpha = Math.max(0.10, 1 - (config.transparenciaCorpo / 100) * 0.82);
-          const dendriteAlpha = Math.max(0.08, config.opacidadeDendritos / 100);
-          const glowFactor = config.brilhoGeral / 100;
-          const nucFactor = config.brilhoNucleo / 100;
-          const nv = nivel(), q = zcDe(Est.detZ), u = un();                     // com a lupa: degrau de detalhe, contraste e 1 px em unidades
-          const corOrg = { dr: deepR, dg: deepG, db: deepB, lr: lightR, lg: lightG, lb: lightB };
-          return { r: r, g: g, b: b, lightR: lightR, lightG: lightG, lightB: lightB, deepR: deepR, deepG: deepG, deepB: deepB, bodyAlpha: bodyAlpha, dendriteAlpha: dendriteAlpha, glowFactor: glowFactor, nucFactor: nucFactor, nv: nv, q: q, u: u, corOrg: corOrg };
-        }
 
         // 1. Halo atmosférico suave ao redor do Soma
         function pintarHalo(octx, A, T) {
@@ -652,92 +640,6 @@ function (usa) {
           }
         }
 
-        // 2. DENDRITOS AFILADOS E ESPINHAS SINÁPTICAS
-        function pintarDendritos(octx, A, T) {
-          var r = T.r, g = T.g, b = T.b, lightR = T.lightR, lightG = T.lightG, lightB = T.lightB, deepR = T.deepR, deepG = T.deepG, deepB = T.deepB, dendriteAlpha = T.dendriteAlpha, glowFactor = T.glowFactor, nv = T.nv, q = T.q, u = T.u, corOrg = T.corOrg;
-          octx.save();
-          A.dendriteBranches.forEach((branch) => {
-            const levelMult = branch.level === 1 ? 1.0 : branch.level === 2 ? 0.85 : 0.72;
-            const alpha = dendriteAlpha * levelMult;
-
-            octx.fillStyle = `rgba(${r}, ${g}, ${b}, ${Math.min(1, alpha * (0.96 + 0.22 * q))})`;
-            drawSharpDendritePolygon(octx, branch.pts);
-
-            if (branch.pts.length > 3) {
-              octx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${Math.min(0.95, alpha * (0.70 + 0.42 * glowFactor) * (1 + 0.3 * q))})`;
-              octx.lineWidth = Math.max(0.55, (branch.level === 1 ? 1.35 : branch.level === 2 ? 0.8 : 0.55) * A.scale);
-              octx.beginPath();
-              const endLimit = Math.floor(branch.pts.length * 0.97);
-              if (nv >= 1) trilhaSuave(octx, branch.pts.slice(0, endLimit), true);
-              else {
-                octx.moveTo(branch.pts[0].x, branch.pts[0].y);
-                for (let i = 1; i < endLimit; i++) {
-                  octx.lineTo(branch.pts[i].x, branch.pts[i].y);
-                }
-              }
-              octx.stroke();
-            }
-          });
-          if (nv >= 1) {                                                      // de perto: as duas bordas da membrana de cada ramo, nítidas
-            octx.lineJoin = 'round';
-            A.dendriteBranches.forEach(function (branch) {
-              if (branch.pts.length < 4) return;
-              const bb = bordasRamo(branch.pts);
-              octx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${(branch.level === 1 ? 0.62 : 0.5) * (0.75 + 0.25 * q)})`;
-              octx.lineWidth = (branch.level === 1 ? 0.95 : 0.75) * u;
-              octx.beginPath(); trilhaSuave(octx, bb.L, true); octx.stroke();
-              octx.beginPath(); trilhaSuave(octx, bb.R, true); octx.stroke();
-            });
-          }
-          if (nv >= 2) {                                                      // mais perto: microtúbulos e mitocôndrias nos ramos grossos
-            const rm = createSeededRandom(((A.semente || 1) + 4049) >>> 0);
-            A.dendriteBranches.forEach(function (branch) {
-              if (branch.level > 2 || branch.pts.length < 6) return;
-              const n = Math.floor(branch.pts.length * (branch.level === 1 ? 0.8 : 0.6));
-              octx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, 0.30)`;
-              octx.lineWidth = 0.55 * u;
-              [-0.24, 0, 0.24].forEach(function (f) {
-                if (branch.level === 2 && f === 0) return;
-                octx.beginPath(); trilhaSuave(octx, desviar(branch.pts.slice(0, n), f), true); octx.stroke();
-              });
-              mitocondrias(octx, branch.pts, branch.level === 1 ? 0.75 : 0.5, rm, corOrg, u);
-            });
-          }
-
-          octx.strokeStyle = `rgba(${lightR}, ${lightG}, ${lightB}, ${Math.min(0.95, dendriteAlpha * 0.95)})`;
-          octx.lineWidth = Math.max(0.55, 0.85 * A.scale);
-          octx.beginPath();
-          A.synapticSpines.forEach((sp) => {
-            octx.moveTo(sp.x1, sp.y1);
-            octx.lineTo(sp.x2, sp.y2);
-          });
-          octx.stroke();
-
-          octx.fillStyle = `rgba(255, 255, 255, ${dendriteAlpha * 0.78})`;
-          A.synapticSpines.forEach((sp) => {
-            if (sp.hasReceptor) {
-              octx.beginPath();
-              octx.arc(sp.x2, sp.y2, 0.95 * A.scale, 0, Math.PI * 2);
-              octx.fill();
-            }
-          });
-          if (nv >= 1) {                                                      // de perto: a cabeça de cada espinha (onde chega a sinapse)
-            A.synapticSpines.forEach(function (sp) {
-              const rr = 1.05 + (sp.hasReceptor ? 0.35 : 0);
-              octx.fillStyle = `rgba(${lightR}, ${lightG}, ${lightB}, 0.88)`;
-              octx.beginPath(); octx.arc(sp.x2, sp.y2, rr, 0, Math.PI * 2); octx.fill();
-              octx.fillStyle = 'rgba(255, 255, 255, 0.78)';
-              octx.beginPath(); octx.arc(sp.x2 - rr * 0.3, sp.y2 - rr * 0.3, rr * 0.38, 0, Math.PI * 2); octx.fill();
-              if (nv >= 3) {                                                  // a densidade pós-sináptica: a borda escura da cabeça
-                const ang = Math.atan2(sp.y2 - sp.y1, sp.x2 - sp.x1);
-                octx.strokeStyle = `rgba(${deepR}, ${deepG}, ${deepB}, 0.9)`;
-                octx.lineWidth = 0.6 * u;
-                octx.beginPath(); octx.arc(sp.x2, sp.y2, rr * 0.9, ang - 0.9, ang + 0.9); octx.stroke();
-              }
-            });
-          }
-          octx.restore();
-        }
 
         // 3. SOMA COM PAREDE CELULAR 3D
         function pintarSoma(octx, A, T) {
